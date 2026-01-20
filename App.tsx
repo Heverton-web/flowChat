@@ -264,7 +264,7 @@ const FlowChatApp: React.FC = () => {
           {activeView === 'contacts' && <Contacts currentUser={currentUser} />}
           {activeView === 'financial' && currentUser.role === 'manager' && <Financial currentUser={currentUser} />}
           {activeView === 'subscription' && currentUser.role === 'manager' && <Subscription />}
-          {activeView === 'team' && currentUser.role === 'manager' && <Team />}
+          {activeView === 'team' && currentUser.role === 'manager' && <Team onNavigate={setActiveView} />}
           {activeView === 'settings' && currentUser.role === 'manager' && <Settings />}
           {activeView === 'reports' && currentUser.role === 'manager' && <Reports />}
         </div>

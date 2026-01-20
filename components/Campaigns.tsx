@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
@@ -304,7 +303,17 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
   };
 
   const handleCreate = async () => {
-    if (!formData.name || !formData.date || formData.contactsCount === 0 || workflowSteps.length === 0) return;
+    // Recalculate count based on mode to be sure
+    let finalContactCount = 0;
+    if (formData.contactsMode === 'text') {
+        finalContactCount = formData.contactsInput.split('\n').filter(l => l.trim().length > 0).length;
+    } else if (formData.contactsMode === 'csv') {
+        finalContactCount = csvPreviewData.length;
+    } else {
+        finalContactCount = selectedContactIds.size;
+    }
+
+    if (!formData.name || !formData.date || finalContactCount === 0 || workflowSteps.length === 0) return;
 
     await campaignService.createCampaign({
         name: formData.name,
@@ -312,7 +321,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
         objective: formData.objective,
         agentName: currentUser.name,
         ownerId: currentUser.id,
-        totalContacts: formData.contactsCount,
+        totalContacts: finalContactCount,
         workflow: workflowSteps,
         minDelay: formData.minDelay,
         maxDelay: formData.maxDelay
@@ -436,6 +445,12 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
       }
   };
 
+  const getSafetyInfo = (min: number) => {
+      if (min < 15) return { icon: Zap, color: 'text-red-600 dark:text-red-400' };
+      if (min < 30) return { icon: Shield, color: 'text-amber-600 dark:text-amber-400' };
+      return { icon: ShieldCheck, color: 'text-green-600 dark:text-green-400' };
+  };
+
   const allTags = Array.from(new Set(availableContacts.flatMap(c => c.tags || []))).sort();
 
   const filteredContacts = availableContacts.filter(c => {
@@ -481,7 +496,11 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
           <div className="flex justify-center py-20"><Loader2 className="animate-spin text-blue-600" size={32}/></div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {campaigns.map(campaign => (
+            {campaigns.map(campaign => {
+                const safetyInfo = getSafetyInfo(campaign.minDelay);
+                const SafetyIcon = safetyInfo.icon;
+                
+                return (
                 <div 
                     key={campaign.id} 
                     className={`bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col transition-all`}
@@ -519,7 +538,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                             <div className="flex justify-between text-sm">
                                 <span className="text-slate-500 dark:text-slate-400">{t('safety_level')}</span>
                                 <span className="font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                                    <ShieldCheck size={12} className="text-green-600 dark:text-green-400"/>
+                                    <SafetyIcon size={12} className={safetyInfo.color}/>
                                     {campaign.minDelay}s - {campaign.maxDelay}s
                                 </span>
                             </div>
@@ -558,7 +577,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                         )}
                     </div>
                 </div>
-            ))}
+            );})}
         </div>
       )}
 

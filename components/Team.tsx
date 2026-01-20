@@ -1,13 +1,17 @@
 
 import React, { useState, useEffect } from 'react';
-import { Users, Shield, Plus, Trash2, Mail, CheckCircle, Search, Loader2, AlertCircle, Edit2, Eye, X, Key, User } from 'lucide-react';
-import { AgentPlan, AgentPermissions, LicenseStatus } from '../types';
+import { Users, Shield, Plus, Trash2, Mail, CheckCircle, Search, Loader2, AlertCircle, Edit2, Eye, EyeOff, X, Key, User, Crown, ArrowRight, RefreshCw } from 'lucide-react';
+import { AgentPlan, AgentPermissions, LicenseStatus, ViewState } from '../types';
 import * as teamService from '../services/teamService';
 import * as financialService from '../services/financialService';
 import { useApp } from '../contexts/AppContext';
 import Modal from './Modal';
 
-const Team: React.FC = () => {
+interface TeamProps {
+    onNavigate?: (view: ViewState) => void;
+}
+
+const Team: React.FC<TeamProps> = ({ onNavigate }) => {
   const { showToast } = useApp();
   const [agents, setAgents] = useState<AgentPlan[]>([]);
   const [licenseStatus, setLicenseStatus] = useState<LicenseStatus | null>(null);
@@ -18,6 +22,10 @@ const Team: React.FC = () => {
   const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view' | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<AgentPlan | null>(null);
   
+  // Upgrade Modal
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [isProcessingUpgrade, setIsProcessingUpgrade] = useState(false);
+
   // Form State
   const [formData, setFormData] = useState({
       name: '',
@@ -25,6 +33,7 @@ const Team: React.FC = () => {
       password: '',
       permissions: { canCreate: true, canEdit: true, canDelete: false } as AgentPermissions
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Delete State
@@ -46,7 +55,14 @@ const Team: React.FC = () => {
   };
 
   const openCreateModal = () => {
+      // Check limits before opening form
+      if (licenseStatus && licenseStatus.usage.usedSeats >= licenseStatus.totalSeats) {
+          setIsUpgradeModalOpen(true);
+          return;
+      }
+
       setModalMode('create');
+      setShowPassword(false);
       setFormData({
           name: '',
           email: '',
@@ -58,6 +74,7 @@ const Team: React.FC = () => {
   const openEditModal = (agent: AgentPlan) => {
       setSelectedAgent(agent);
       setModalMode('edit');
+      setShowPassword(false);
       setFormData({
           name: agent.name,
           email: agent.email,
@@ -74,6 +91,17 @@ const Team: React.FC = () => {
   const closeModal = () => {
       setModalMode(null);
       setSelectedAgent(null);
+      setShowPassword(false);
+  };
+
+  const generateRandomPassword = () => {
+      const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&";
+      let retVal = "";
+      for (let i = 0, n = charset.length; i < 12; ++i) {
+          retVal += charset.charAt(Math.floor(Math.random() * n));
+      }
+      setFormData(prev => ({ ...prev, password: retVal }));
+      setShowPassword(true); // Show the password so user can see/copy it
   };
 
   const handleSubmit = async () => {
@@ -90,7 +118,9 @@ const Team: React.FC = () => {
       try {
           if (modalMode === 'create') {
                 if (licenseStatus && licenseStatus.usage.usedSeats >= licenseStatus.totalSeats) {
-                    throw new Error(`Limite de Seats atingido (${licenseStatus.totalSeats}).`);
+                    setIsUpgradeModalOpen(true);
+                    setIsSubmitting(false);
+                    return;
                 }
                 await teamService.addAgent({
                     name: formData.name,
@@ -139,6 +169,22 @@ const Team: React.FC = () => {
       }));
   };
 
+  const handleQuickAddSeat = async () => {
+      setIsProcessingUpgrade(true);
+      try {
+          await financialService.requestAddonSeat(1);
+          await loadData();
+          setIsUpgradeModalOpen(false);
+          showToast('Seat adicional contratado com sucesso!', 'success');
+          // Optionally auto-open create modal
+          // setModalMode('create'); 
+      } catch (error) {
+          showToast('Erro ao contratar seat.', 'error');
+      } finally {
+          setIsProcessingUpgrade(false);
+      }
+  };
+
   const filteredAgents = agents.filter(a => 
       a.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
       a.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -146,241 +192,254 @@ const Team: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
             <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Gestão da Equipe</h2>
             <p className="text-slate-500 dark:text-slate-400">Gerencie usuários, permissões e acesso.</p>
         </div>
-        <button onClick={openCreateModal} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow-md transition-colors">
-            <Plus size={18} /> Novo Atendente
-        </button>
+        <div className="flex items-center gap-4 w-full md:w-auto">
+            {licenseStatus && (
+                <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600">
+                    <Users size={16} className="text-slate-500 dark:text-slate-400" />
+                    <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                        {licenseStatus.usage.usedSeats} / {licenseStatus.totalSeats} Seats
+                    </span>
+                    {licenseStatus.usage.usedSeats >= licenseStatus.totalSeats && (
+                        <span className="text-xs bg-amber-100 text-amber-600 px-1.5 rounded font-bold">Cheio</span>
+                    )}
+                </div>
+            )}
+            <button 
+                onClick={openCreateModal}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all shadow-md shadow-blue-600/20 whitespace-nowrap"
+            >
+                <Plus size={18} /> Novo Usuário
+            </button>
+        </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
-          {/* Search Bar inside panel could go here */}
-          <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/30 flex items-center gap-2">
-                <Search size={16} className="text-slate-400" />
-                <input 
-                    type="text" 
-                    placeholder="Buscar atendente..." 
-                    className="bg-transparent outline-none text-sm w-full dark:text-white"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-700/30">
+                <div className="relative w-full max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <input 
+                        type="text" 
+                        placeholder="Buscar por nome ou email..." 
+                        className="w-full pl-10 pr-4 py-2 text-sm border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                <div className="flex gap-2">
+                    <button onClick={loadData} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" title="Atualizar">
+                        <RefreshCw size={18} />
+                    </button>
+                </div>
           </div>
 
-          {loading ? (
-              <div className="p-12 flex justify-center"><Loader2 className="animate-spin text-blue-600" size={32} /></div>
-          ) : filteredAgents.length === 0 ? (
-              <div className="p-12 text-center text-slate-500">Nenhum atendente encontrado.</div>
-          ) : (
-              <div className="divide-y divide-slate-100 dark:divide-slate-700">
-                  {filteredAgents.map(agent => (
-                      <div key={agent.id} className="p-6 flex flex-col md:flex-row justify-between items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                          <div className="flex items-center gap-4 w-full md:w-auto">
-                              <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-lg">
-                                  {agent.name.charAt(0)}
-                              </div>
-                              <div>
-                                  <h3 className="font-bold text-slate-800 dark:text-white">{agent.name}</h3>
-                                  <span className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                                      <Mail size={12}/> {agent.email}
+          <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                  <thead className="bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-100 dark:border-slate-700">
+                      <tr>
+                          <th className="px-6 py-4">Usuário</th>
+                          <th className="px-6 py-4">Permissões</th>
+                          <th className="px-6 py-4">Status</th>
+                          <th className="px-6 py-4">Mensagens Enviadas</th>
+                          <th className="px-6 py-4 text-right">Ações</th>
+                      </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
+                      {loading ? (
+                          <tr><td colSpan={5} className="p-8 text-center"><Loader2 className="animate-spin mx-auto text-blue-600"/></td></tr>
+                      ) : filteredAgents.length === 0 ? (
+                          <tr><td colSpan={5} className="p-8 text-center text-slate-500">Nenhum usuário encontrado.</td></tr>
+                      ) : filteredAgents.map(agent => (
+                          <tr key={agent.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                              <td className="px-6 py-4">
+                                  <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center font-bold text-slate-600 dark:text-slate-300">
+                                          {agent.name.charAt(0)}
+                                      </div>
+                                      <div>
+                                          <div className="font-bold text-slate-800 dark:text-white">{agent.name}</div>
+                                          <div className="text-xs text-slate-500 dark:text-slate-400">{agent.email}</div>
+                                      </div>
+                                  </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                  <div className="flex gap-1 flex-wrap">
+                                      {agent.permissions.canCreate && <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 rounded text-xs border border-blue-100 dark:border-blue-800">Criar</span>}
+                                      {agent.permissions.canEdit && <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300 rounded text-xs border border-indigo-100 dark:border-indigo-800">Editar</span>}
+                                      {agent.permissions.canDelete && <span className="px-2 py-0.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 rounded text-xs border border-red-100 dark:border-red-800">Excluir</span>}
+                                  </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                  <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${
+                                      agent.status === 'active' 
+                                      ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' 
+                                      : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+                                  }`}>
+                                      {agent.status === 'active' ? 'Ativo' : agent.status}
                                   </span>
-                              </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-                              <div className="hidden md:flex gap-2 mr-4">
-                                  {agent.permissions.canCreate && <span className="text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded border border-green-200 dark:border-green-800">Criar</span>}
-                                  {agent.permissions.canEdit && <span className="text-[10px] bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded border border-blue-200 dark:border-blue-800">Editar</span>}
-                                  {agent.permissions.canDelete && <span className="text-[10px] bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-2 py-1 rounded border border-red-200 dark:border-red-800">Deletar</span>}
-                              </div>
-
-                              <button 
-                                onClick={() => openViewModal(agent)} 
-                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                                title="Visualizar"
-                              >
-                                  <Eye size={18} />
-                              </button>
-                              <button 
-                                onClick={() => openEditModal(agent)} 
-                                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
-                                title="Editar"
-                              >
-                                  <Edit2 size={18} />
-                              </button>
-                              <button 
-                                onClick={() => setAgentToDelete(agent)} 
-                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                title="Excluir"
-                              >
-                                  <Trash2 size={18} />
-                              </button>
-                          </div>
-                      </div>
-                  ))}
-              </div>
-          )}
+                              </td>
+                              <td className="px-6 py-4 font-mono text-slate-600 dark:text-slate-300">
+                                  {agent.messagesUsed.toLocaleString()}
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                  <div className="flex justify-end gap-2">
+                                      <button onClick={() => openEditModal(agent)} className="p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded hover:bg-slate-100 dark:hover:bg-slate-700">
+                                          <Edit2 size={16} />
+                                      </button>
+                                      <button onClick={() => setAgentToDelete(agent)} className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded hover:bg-slate-100 dark:hover:bg-slate-700">
+                                          <Trash2 size={16} />
+                                      </button>
+                                  </div>
+                              </td>
+                          </tr>
+                      ))}
+                  </tbody>
+              </table>
+          </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
-      <Modal 
-        isOpen={!!agentToDelete} 
-        onClose={() => setAgentToDelete(null)} 
-        title="Remover Atendente" 
-        type="danger" 
-        footer={
-          <>
-            <button onClick={() => setAgentToDelete(null)} className="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg">Cancelar</button>
-            <button onClick={confirmDeleteAgent} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Remover</button>
-          </>
-        }
+      {/* CREATE / EDIT MODAL */}
+      <Modal
+        isOpen={!!modalMode}
+        onClose={closeModal}
+        title={modalMode === 'create' ? 'Novo Usuário' : 'Editar Usuário'}
       >
-          Tem certeza que deseja remover <strong>{agentToDelete?.name}</strong>? Esta ação não pode ser desfeita.
-      </Modal>
-
-      {/* Create / Edit Modal */}
-      {(modalMode === 'create' || modalMode === 'edit') && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in">
-              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl w-full max-w-md shadow-2xl border border-slate-200 dark:border-slate-700">
-                  <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-xl font-bold text-slate-800 dark:text-white">
-                          {modalMode === 'create' ? 'Novo Atendente' : 'Editar Atendente'}
-                      </h3>
-                      <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><X size={24}/></button>
+          <div className="space-y-4">
+              <div className="space-y-1">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Nome Completo</label>
+                  <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <input 
+                        type="text"
+                        className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={formData.name}
+                        onChange={e => setFormData({...formData, name: e.target.value})}
+                      />
                   </div>
-                  
-                  <div className="space-y-4">
-                      <div className="space-y-2">
-                          <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Nome Completo</label>
-                          <div className="relative">
-                              <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
-                              <input 
-                                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 dark:text-white" 
-                                placeholder="Ex: João Silva" 
-                                value={formData.name} 
-                                onChange={e => setFormData({...formData, name: e.target.value})} 
-                              />
-                          </div>
-                      </div>
+              </div>
 
-                      <div className="space-y-2">
-                          <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Email Corporativo</label>
-                          <div className="relative">
-                              <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
-                              <input 
-                                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 dark:text-white" 
-                                placeholder="nome@empresa.com" 
-                                value={formData.email} 
-                                onChange={e => setFormData({...formData, email: e.target.value})} 
-                              />
-                          </div>
-                      </div>
-
-                      <div className="space-y-2">
-                          <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Senha de Acesso</label>
-                          <div className="relative">
-                              <Key size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
-                              <input 
-                                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 dark:text-white" 
-                                placeholder={modalMode === 'edit' ? "Deixe em branco para manter" : "Mínimo 6 caracteres"} 
-                                type="password" 
-                                value={formData.password} 
-                                onChange={e => setFormData({...formData, password: e.target.value})} 
-                              />
-                          </div>
-                      </div>
-
-                      <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
-                          <label className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3 block">Permissões de Acesso</label>
-                          <div className="space-y-2">
-                              <label className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer">
-                                  <input type="checkbox" checked={formData.permissions.canCreate} onChange={() => togglePermission('canCreate')} className="rounded text-blue-600 w-4 h-4"/>
-                                  <div>
-                                      <span className="block text-sm font-bold text-slate-700 dark:text-white">Criar Registros</span>
-                                      <span className="block text-xs text-slate-500 dark:text-slate-400">Pode criar contatos e campanhas</span>
-                                  </div>
-                              </label>
-                              <label className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer">
-                                  <input type="checkbox" checked={formData.permissions.canEdit} onChange={() => togglePermission('canEdit')} className="rounded text-blue-600 w-4 h-4"/>
-                                  <div>
-                                      <span className="block text-sm font-bold text-slate-700 dark:text-white">Editar Registros</span>
-                                      <span className="block text-xs text-slate-500 dark:text-slate-400">Pode modificar contatos existentes</span>
-                                  </div>
-                              </label>
-                              <label className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer">
-                                  <input type="checkbox" checked={formData.permissions.canDelete} onChange={() => togglePermission('canDelete')} className="rounded text-blue-600 w-4 h-4"/>
-                                  <div>
-                                      <span className="block text-sm font-bold text-slate-700 dark:text-white">Excluir Registros</span>
-                                      <span className="block text-xs text-slate-500 dark:text-slate-400">Pode remover contatos e campanhas</span>
-                                  </div>
-                              </label>
-                          </div>
-                      </div>
+              <div className="space-y-1">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Email Corporativo</label>
+                  <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <input 
+                        type="email"
+                        className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={formData.email}
+                        onChange={e => setFormData({...formData, email: e.target.value})}
+                      />
                   </div>
+              </div>
 
-                  <div className="flex justify-end gap-2 mt-6">
-                      <button onClick={closeModal} className="px-6 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">Cancelar</button>
-                      <button onClick={handleSubmit} disabled={isSubmitting} className="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors flex items-center gap-2">
-                          {isSubmitting && <Loader2 className="animate-spin" size={18}/>}
-                          {modalMode === 'create' ? 'Criar Atendente' : 'Salvar Alterações'}
+              <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        {modalMode === 'edit' ? 'Redefinir Senha (Opcional)' : 'Senha de Acesso'}
+                    </label>
+                    <button onClick={generateRandomPassword} type="button" className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                        <Key size={12}/> Gerar Senha Segura
+                    </button>
+                  </div>
+                  <div className="relative">
+                      <input 
+                        type={showPassword ? "text" : "password"}
+                        className="w-full pl-4 pr-10 py-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono"
+                        value={formData.password}
+                        onChange={e => setFormData({...formData, password: e.target.value})}
+                        placeholder={modalMode === 'edit' ? "Deixe em branco para manter a atual" : "••••••••"}
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      >
+                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
                   </div>
               </div>
-          </div>
-      )}
 
-      {/* View Modal */}
-      {modalMode === 'view' && selectedAgent && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in">
-              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl w-full max-w-sm shadow-2xl border border-slate-200 dark:border-slate-700">
-                  <div className="flex justify-end">
-                      <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><X size={24}/></button>
+              <div className="pt-2">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 block">Permissões de Acesso</label>
+                  <div className="space-y-2 border border-slate-200 dark:border-slate-700 rounded-lg p-3 bg-slate-50 dark:bg-slate-700/30">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                          <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked={formData.permissions.canCreate} onChange={() => togglePermission('canCreate')} />
+                          <span className="text-sm text-slate-700 dark:text-slate-300">Pode criar novos contatos e instâncias</span>
+                      </label>
+                      <label className="flex items-center gap-3 cursor-pointer">
+                          <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked={formData.permissions.canEdit} onChange={() => togglePermission('canEdit')} />
+                          <span className="text-sm text-slate-700 dark:text-slate-300">Pode editar informações existentes</span>
+                      </label>
+                      <label className="flex items-center gap-3 cursor-pointer">
+                          <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked={formData.permissions.canDelete} onChange={() => togglePermission('canDelete')} />
+                          <span className="text-sm text-slate-700 dark:text-slate-300">Pode excluir registros (Cuidado)</span>
+                      </label>
                   </div>
-                  
-                  <div className="flex flex-col items-center -mt-4">
-                      <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-3xl font-bold mb-4">
-                          {selectedAgent.name.charAt(0)}
-                      </div>
-                      <h3 className="text-xl font-bold text-slate-800 dark:text-white text-center">{selectedAgent.name}</h3>
-                      <p className="text-slate-500 dark:text-slate-400 text-sm">{selectedAgent.email}</p>
-                      
-                      <span className="mt-2 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold rounded-full uppercase">
-                          {selectedAgent.status === 'active' ? 'Ativo' : 'Inativo'}
-                      </span>
-                  </div>
+              </div>
 
-                  <div className="mt-8 space-y-4">
-                      <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl flex justify-between items-center">
-                          <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Mensagens Enviadas</span>
-                          <span className="text-lg font-bold text-blue-600 dark:text-blue-400">{selectedAgent.messagesUsed}</span>
-                      </div>
-
-                      <div>
-                          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 text-center">Permissões Ativas</h4>
-                          <div className="flex flex-wrap gap-2 justify-center">
-                              {selectedAgent.permissions.canCreate ? (
-                                  <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 text-xs rounded-lg border border-blue-100 dark:border-blue-800">Criar</span>
-                              ) : <span className="px-3 py-1 bg-slate-50 dark:bg-slate-700 text-slate-400 text-xs rounded-lg line-through opacity-60">Criar</span>}
-                              
-                              {selectedAgent.permissions.canEdit ? (
-                                  <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 text-xs rounded-lg border border-blue-100 dark:border-blue-800">Editar</span>
-                              ) : <span className="px-3 py-1 bg-slate-50 dark:bg-slate-700 text-slate-400 text-xs rounded-lg line-through opacity-60">Editar</span>}
-                              
-                              {selectedAgent.permissions.canDelete ? (
-                                  <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 text-xs rounded-lg border border-blue-100 dark:border-blue-800">Excluir</span>
-                              ) : <span className="px-3 py-1 bg-slate-50 dark:bg-slate-700 text-slate-400 text-xs rounded-lg line-through opacity-60">Excluir</span>}
-                          </div>
-                      </div>
-                  </div>
-
-                  <button onClick={() => { closeModal(); openEditModal(selectedAgent); }} className="w-full mt-8 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-white rounded-xl font-bold transition-colors">
-                      Editar Perfil
+              <div className="pt-4 flex justify-end gap-3">
+                  <button onClick={closeModal} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">Cancelar</button>
+                  <button onClick={handleSubmit} disabled={isSubmitting} className="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2 hover:bg-blue-700 disabled:opacity-70">
+                      {isSubmitting && <Loader2 className="animate-spin" size={16} />} Salvar
                   </button>
               </div>
           </div>
-      )}
+      </Modal>
+
+      {/* UPGRADE MODAL */}
+      <Modal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        title="Limite de Seats Atingido"
+        type="info"
+      >
+          <div className="text-center p-4">
+              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Crown size={32} />
+              </div>
+              <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Expanda sua Equipe</h4>
+              <p className="text-slate-600 dark:text-slate-300 mb-6">
+                  Sua licença Enterprise atual atingiu o limite de {licenseStatus?.totalSeats} usuários.
+                  Adicione um Seat adicional agora para continuar crescendo.
+              </p>
+              
+              <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 mb-6 text-left">
+                  <div className="flex justify-between items-center mb-1">
+                      <span className="font-bold text-slate-800 dark:text-white">Seat Adicional (Usuário + Instância)</span>
+                      <span className="font-bold text-blue-600 dark:text-blue-400">R$ 150,00</span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Mensal - Cobrado na próxima fatura</p>
+              </div>
+
+              <div className="flex gap-3 justify-center">
+                  <button onClick={() => setIsUpgradeModalOpen(false)} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">Cancelar</button>
+                  <button onClick={handleQuickAddSeat} disabled={isProcessingUpgrade} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 flex items-center gap-2 shadow-lg shadow-blue-600/20">
+                      {isProcessingUpgrade ? <Loader2 className="animate-spin" size={18} /> : <ArrowRight size={18} />}
+                      Contratar Agora
+                  </button>
+              </div>
+          </div>
+      </Modal>
+
+      {/* DELETE MODAL */}
+      <Modal
+        isOpen={!!agentToDelete}
+        onClose={() => setAgentToDelete(null)}
+        title="Remover Usuário?"
+        type="danger"
+        footer={
+            <>
+                <button onClick={() => setAgentToDelete(null)} className="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg">Cancelar</button>
+                <button onClick={confirmDeleteAgent} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Remover</button>
+            </>
+        }
+      >
+          <p>Tem certeza que deseja remover <strong>{agentToDelete?.name}</strong>? O acesso será revogado imediatamente e a instância vinculada (se houver) será desconectada.</p>
+      </Modal>
+
     </div>
   );
 };
