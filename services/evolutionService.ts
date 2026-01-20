@@ -2,7 +2,7 @@
 import { Instance } from '../types';
 import * as financialService from './financialService';
 
-// Mock Instances - Paridade 1:1 com os Agentes criados em teamService
+// Mock Instances - Parity with Team (20 instances for 20 users)
 const MOCK_INSTANCES: Instance[] = [
   { 
     id: '1', name: 'Suporte Geral', status: 'connected', phone: '5511999999999', 
@@ -13,7 +13,7 @@ const MOCK_INSTANCES: Instance[] = [
     id: '2', name: 'Vendas Júnior', status: 'disconnected', lastUpdate: '2023-10-26T14:30:00Z',
     messagesUsed: 1980, messagesLimit: 0, ownerId: 'agent-1', ownerName: 'Atendente Demo'
   },
-  // Gerar instâncias para os outros agentes dummy
+  // Dummy instances
   ...Array.from({ length: 18 }).map((_, i) => ({
       id: `inst-${i+3}`,
       name: `Instância ${i+3}`,
@@ -40,13 +40,13 @@ export const fetchInstances = async (userId: string, role: string): Promise<Inst
 
 export const createInstance = async (name: string, ownerId: string, ownerName: string): Promise<Instance> => {
   
-  // 1. Verificar Limite Global de Seats (Licença)
-  const licenseStatus = await financialService.getLicenseStatus();
-  if (licenseStatus.usage.usedInstances >= licenseStatus.totalSeats) {
-      throw new Error(`Limite global de instâncias atingido (${licenseStatus.totalSeats}). Expanda sua licença.`);
+  // 1. Check Global Seat/Instance Limit
+  const license = await financialService.getLicenseStatus();
+  if (license.usage.usedInstances >= license.totalSeats) {
+      throw new Error(`Limite global de instâncias atingido (${license.totalSeats}). Expanda sua licença.`);
   }
 
-  // 2. Verificar Paridade 1:1 (Usuário já tem instância?)
+  // 2. Check 1:1 User Limit
   const existingInstance = MOCK_INSTANCES.find(i => i.ownerId === ownerId);
   if (existingInstance) {
       throw new Error("Você já possui uma instância ativa (Limite 1 por usuário).");

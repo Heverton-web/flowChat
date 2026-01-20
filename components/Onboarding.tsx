@@ -1,9 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { 
-  CheckCircle, Smartphone, Users, Database, ArrowRight, 
-  ShieldCheck, Play, Send, Server, Power
-} from 'lucide-react';
+import { CheckCircle, Smartphone, Users, Database, ArrowRight, ShieldCheck, Play, Send, Server, Power } from 'lucide-react';
 import { ViewState, User, LicenseStatus } from '../types';
 import * as evolutionService from '../services/evolutionService';
 import * as teamService from '../services/teamService';
@@ -96,15 +93,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onNavigate, currentUser }) => {
   const completedStepsCount = steps.filter(s => s.completed).length;
   const completionPercentage = Math.round((completedStepsCount / totalSteps) * 100);
 
-  const StepCard = ({ 
-    stepNumber, 
-    title, 
-    description, 
-    icon: Icon, 
-    isCompleted, 
-    actionLabel, 
-    onAction 
-  }: any) => (
+  const StepCard = ({ stepNumber, title, description, icon: Icon, isCompleted, actionLabel, onAction }: any) => (
     <div className={`relative p-6 rounded-2xl border transition-all duration-300 flex flex-col md:flex-row gap-6 items-start md:items-center group ${isCompleted ? 'bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-800' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md'}`}>
       
       {stepNumber < totalSteps && (
@@ -112,9 +101,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onNavigate, currentUser }) => {
       )}
 
       <div className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center shrink-0 text-xl font-bold transition-colors ${
-        isCompleted 
-        ? 'bg-green-500 text-white shadow-lg shadow-green-500/30' 
-        : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+        isCompleted ? 'bg-green-500 text-white shadow-lg shadow-green-500/30' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
       }`}>
         {isCompleted ? <CheckCircle size={24} /> : stepNumber}
       </div>
@@ -131,9 +118,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onNavigate, currentUser }) => {
         <button 
           onClick={onAction}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${
-            isCompleted
-            ? 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600'
-            : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20'
+            isCompleted ? 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20'
           }`}
         >
           {isCompleted ? 'Revisar' : actionLabel}
@@ -151,7 +136,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ onNavigate, currentUser }) => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4">
-      
       {/* Enterprise Header */}
       {isManager && licenseStatus && (
           <div className="bg-slate-900 rounded-2xl p-8 text-white relative overflow-hidden shadow-2xl">
@@ -193,10 +177,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onNavigate, currentUser }) => {
           <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{completionPercentage}%</span>
         </div>
         <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-3 overflow-hidden">
-          <div 
-            className="bg-blue-600 h-full rounded-full transition-all duration-1000 ease-out" 
-            style={{ width: `${completionPercentage}%` }}
-          ></div>
+          <div className="bg-blue-600 h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${completionPercentage}%` }}></div>
         </div>
       </div>
 
@@ -221,11 +202,10 @@ const Onboarding: React.FC<OnboardingProps> = ({ onNavigate, currentUser }) => {
         <div>
           <h4 className="font-bold text-blue-800 dark:text-blue-200 mb-1">Ambiente Dedicado</h4>
           <p className="text-sm text-blue-700 dark:text-blue-300 leading-relaxed">
-            Sua infraestrutura é isolada e monitorada 24/7. Em caso de dúvidas técnicas, acesse o canal de suporte prioritário no menu de Configurações.
+            Sua infraestrutura é isolada e monitorada 24/7.
           </p>
         </div>
       </div>
-
     </div>
   );
 };

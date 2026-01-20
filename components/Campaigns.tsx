@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
@@ -28,7 +29,6 @@ const StepMediaPreview = ({ step }: { step: WorkflowStep }) => {
         setPreviewUrl(null);
     }, [step.file, step.mediaUrl]);
 
-    // If text or poll, this component shouldn't render (handled by parent), but safety check:
     if (!['image', 'video', 'audio', 'document'].includes(step.type)) return null;
 
     if (!previewUrl) return (
@@ -67,8 +67,6 @@ const StepMediaPreview = ({ step }: { step: WorkflowStep }) => {
 
     const renderModalContent = () => {
         if (!previewUrl) return null;
-        
-        // Constraints for modal content
         const mediaClass = "w-auto h-auto min-w-[200px] min-h-[200px] max-w-[600px] max-h-[600px] object-contain rounded-lg shadow-sm";
 
         switch (step.type) {
@@ -102,7 +100,6 @@ const StepMediaPreview = ({ step }: { step: WorkflowStep }) => {
         }
     };
 
-    // Unified Compact Card Render for ALL media types
     return (
         <>
             <div className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700 group hover:border-slate-300 dark:hover:border-slate-600 transition-colors w-full">
@@ -122,7 +119,6 @@ const StepMediaPreview = ({ step }: { step: WorkflowStep }) => {
                 </button>
             </div>
 
-            {/* Modal for Preview - Using Portal to avoid z-index/transform issues */}
             {showModal && createPortal(
                 <div className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowModal(false)}>
                     <div className="relative bg-white dark:bg-slate-800 p-2 rounded-2xl shadow-2xl max-w-4xl max-h-[90vh] flex flex-col w-auto" onClick={e => e.stopPropagation()}>
@@ -151,11 +147,6 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
-  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
-
-  // Pro Features State
-  const [hasProPlan, setHasProPlan] = useState(currentUser.hasProFeatures || false);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -175,8 +166,6 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
   const [contactSearchTerm, setContactSearchTerm] = useState('');
   const [filterTag, setFilterTag] = useState<string>('all');
   const [loadingContacts, setLoadingContacts] = useState(false);
-  
-  // CSV Preview State
   const [csvPreviewData, setCsvPreviewData] = useState<{name: string, phone: string}[]>([]);
 
   // Workflow State
@@ -190,18 +179,14 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
   const [stepMediaUrl, setStepMediaUrl] = useState('');
   const [stepDelay, setStepDelay] = useState<number>(1200);
   const [mediaMode, setMediaMode] = useState<'upload' | 'url'>('upload');
-  
-  // Poll Specific State
   const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
   const [pollSelectableCount, setPollSelectableCount] = useState(1);
-
   const [isProcessingFile, setIsProcessingFile] = useState(false);
 
   useEffect(() => {
     loadCampaigns();
   }, [currentUser]);
 
-  // Fetch contacts when 'list' mode is active
   useEffect(() => {
     if (formData.contactsMode === 'list' && availableContacts.length === 0) {
         loadContacts();
@@ -276,7 +261,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
         }
 
         if (preview.length === 0) {
-            alert("Não foi possível identificar contatos válidos no arquivo.\n\nCertifique-se que:\n1. O arquivo é .CSV\n2. As colunas são: NOME, TELEFONE\n3. Os telefones contêm apenas números (ex: 5511999999999)");
+            alert("Não foi possível identificar contatos válidos no arquivo.");
         }
 
         setCsvPreviewData(preview);
@@ -368,18 +353,11 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
     setPollSelectableCount(1);
   };
 
-  const handleDownloadReport = () => {
-      if (selectedCampaign) {
-          campaignService.downloadCampaignReport(selectedCampaign);
-      }
+  const handleDownloadReport = (campaign: Campaign) => {
+      campaignService.downloadCampaignReport(campaign);
   };
 
   const handleAddStepClick = (type: WorkflowStepType) => {
-      if (type !== 'text' && !hasProPlan) {
-          setShowUpgradeModal(true);
-          return;
-      }
-
       setSelectedStepType(type);
       setStepContent('');
       setStepFile(null);
@@ -458,10 +436,6 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
       }
   };
 
-  const getSafetyLevel = (min: number) => {
-      return { color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/30', icon: ShieldCheck, label: 'Proteção Padrão' };
-  };
-
   const allTags = Array.from(new Set(availableContacts.flatMap(c => c.tags || []))).sort();
 
   const filteredContacts = availableContacts.filter(c => {
@@ -470,9 +444,6 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
       const matchesTag = filterTag === 'all' || (c.tags && c.tags.includes(filterTag));
       return matchesSearch && matchesTag;
   });
-
-  const safety = getSafetyLevel(formData.minDelay);
-  const SafetyIcon = safety.icon;
 
   const insertVariable = (variable: string) => {
       setStepContent(prev => prev + variable);
@@ -492,7 +463,6 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
         }
       `}</style>
 
-      {/* ... (Existing Header and Grid logic) ... */}
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{t('campaigns_title')}</h2>
@@ -514,10 +484,8 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
             {campaigns.map(campaign => (
                 <div 
                     key={campaign.id} 
-                    onClick={() => campaign.status === 'completed' && setSelectedCampaign(campaign)}
-                    className={`bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col transition-all ${campaign.status === 'completed' ? 'cursor-pointer hover:shadow-md hover:border-blue-200 dark:hover:border-blue-700' : ''}`}
+                    className={`bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col transition-all`}
                 >
-                    {/* ... Existing Campaign Card Content ... */}
                     <div className="p-6 flex-1">
                         <div className="flex justify-between items-start mb-4">
                             <div className={`p-2 rounded-lg text-xs font-bold uppercase tracking-wide ${getStatusColor(campaign.status)}`}>
@@ -576,12 +544,16 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                                         {campaign.deliveryRate}%
                                     </span>
                                 </div>
-                                <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 mt-2">
+                                <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 mt-2 mb-4">
                                     <div className="bg-green-500 h-1.5 rounded-full" style={{width: `${campaign.deliveryRate}%`}}></div>
                                 </div>
-                                <div className="mt-2 text-xs text-center text-blue-600 dark:text-blue-400 font-medium">
-                                    Clique para ver relatório
-                                </div>
+                                <button 
+                                    onClick={() => handleDownloadReport(campaign)}
+                                    className="w-full bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 text-sm font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <Download size={16} />
+                                    Baixar Relatório
+                                </button>
                             </div>
                         )}
                     </div>
@@ -590,7 +562,6 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
         </div>
       )}
 
-      {/* Create Modal */}
       {isCreating && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-[95vw] max-h-[90vh] h-[90vh] shadow-2xl flex flex-col lg:flex-row overflow-hidden border border-slate-200 dark:border-slate-700 transition-colors">
@@ -646,7 +617,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                             </div>
                         </div>
 
-                        {/* Anti-Ban Settings & Audience Info - SAME AS BEFORE */}
+                        {/* Anti-Ban Settings */}
                         <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                              <div className="flex justify-between items-center">
                                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
@@ -685,6 +656,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                              </div>
                         </div>
 
+                        {/* Audience */}
                         <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('target_audience')}</h4>
                             
@@ -719,12 +691,10 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                                 ></textarea>
                             )}
 
-                            {/* CSV and List modes logic... */}
                             {formData.contactsMode === 'csv' && (
                                 <>
                                     {csvPreviewData.length > 0 ? (
                                         <div className="border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 overflow-hidden flex flex-col h-[300px] shadow-sm animate-in fade-in">
-                                            {/* ... */}
                                             <div className="p-3 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 flex justify-between items-center">
                                                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Pré-visualização ({csvPreviewData.length})</span>
                                                 <button 
@@ -860,12 +830,10 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
 
                     {/* Canvas */}
                     <div className="flex-1 overflow-y-auto p-10 bg-slate-50/50 dark:bg-slate-900/50 relative scroll-smooth">
-                        {/* Background Grid Pattern */}
                         <div className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05]" 
                              style={{backgroundImage: 'radial-gradient(#6366f1 1px, transparent 1px)', backgroundSize: '20px 20px'}}>
                         </div>
 
-                        {/* ... Existing Workflow Items Render ... */}
                         {workflowSteps.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-500 animate-in fade-in zoom-in-95 duration-500">
                                 <div className="w-24 h-24 bg-white dark:bg-slate-700 rounded-full flex items-center justify-center mb-6 shadow-sm border border-slate-100 dark:border-slate-600">
@@ -931,12 +899,10 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                                                                                 </li>
                                                                             ))}
                                                                         </ul>
-                                                                        <div className="mt-2 text-[10px] text-slate-400 uppercase font-bold">Max. Escolhas: {step.pollConfig?.selectableCount}</div>
                                                                     </div>
                                                                 ) : (
                                                                     <div className="flex flex-col gap-2">
                                                                         <StepMediaPreview step={step} />
-                                                                        
                                                                         {step.content && step.type !== 'audio' && (
                                                                              <div className="text-xs text-slate-500 italic px-2 flex items-start gap-1">
                                                                                 <span className="font-bold not-italic">Legenda:</span> 
@@ -978,7 +944,6 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                                                 </div>
                                             </div>
 
-                                            {/* Connector Line */}
                                             {!isLast && (
                                                 <div className="h-10 w-0.5 border-l-2 border-dashed border-indigo-300 dark:border-indigo-700 my-2 relative overflow-hidden opacity-50">
                                                     <div className="absolute inset-0 w-full h-full bg-indigo-400 animate-[dash-move_1s_linear_infinite]" style={{backgroundSize: '2px 10px', backgroundRepeat: 'repeat-y', backgroundImage: 'linear-gradient(to bottom, transparent 50%, #6366f1 50%)'}}></div>
@@ -1001,12 +966,10 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                             </div>
                         )}
 
-                        {/* Step Type Selection Modal (Internal) - REDESIGNED */}
+                        {/* Step Type Selection Modal (Internal) */}
                         {isStepModalOpen && (
                             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in transition-colors">
                                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                                    
-                                    {/* Modal Header */}
                                     <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
                                         <h4 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
                                             {selectedStepType ? (
@@ -1029,43 +992,29 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                                                 'Adicionar Passo'
                                             )}
                                         </h4>
-                                        <button 
-                                            onClick={() => {setIsStepModalOpen(false); resetStepForm();}} 
-                                            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-all"
-                                        >
+                                        <button onClick={() => {setIsStepModalOpen(false); resetStepForm();}} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-all">
                                             <X size={20}/>
                                         </button>
                                     </div>
 
-                                    {/* Modal Body - Scrollable */}
                                     <div className="p-6 overflow-y-auto flex-1">
                                         {!selectedStepType ? (
                                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                                 {[
-                                                    { id: 'text', label: t('step_text'), desc: 'Envie textos simples ou longos', icon: MessageSquare, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/30', border: 'hover:border-blue-500', isPro: false },
-                                                    { id: 'audio', label: t('step_audio'), desc: 'Envie arquivos de áudio PTT', icon: Mic, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/30', border: 'hover:border-purple-500', isPro: true },
-                                                    { id: 'image', label: t('step_image'), desc: 'Envie fotos promocionais', icon: ImageIcon, color: 'text-pink-600', bg: 'bg-pink-50 dark:bg-pink-900/30', border: 'hover:border-pink-500', isPro: true },
-                                                    { id: 'video', label: t('step_video'), desc: 'Envie vídeos explicativos', icon: Video, color: 'text-orange-600', bg: 'bg-orange-50 dark:bg-orange-900/30', border: 'hover:border-orange-500', isPro: true },
-                                                    { id: 'document', label: t('step_document'), desc: 'PDFs, Docs e Arquivos', icon: File, color: 'text-gray-600', bg: 'bg-gray-50 dark:bg-gray-800', border: 'hover:border-gray-500', isPro: true },
-                                                    { id: 'poll', label: t('step_poll'), desc: 'Enquetes Interativas', icon: ListChecks, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/30', border: 'hover:border-emerald-500', isPro: true },
+                                                    { id: 'text', label: t('step_text'), desc: 'Envie textos simples ou longos', icon: MessageSquare, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/30', border: 'hover:border-blue-500' },
+                                                    { id: 'audio', label: t('step_audio'), desc: 'Envie arquivos de áudio PTT', icon: Mic, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/30', border: 'hover:border-purple-500' },
+                                                    { id: 'image', label: t('step_image'), desc: 'Envie fotos promocionais', icon: ImageIcon, color: 'text-pink-600', bg: 'bg-pink-50 dark:bg-pink-900/30', border: 'hover:border-pink-500' },
+                                                    { id: 'video', label: t('step_video'), desc: 'Envie vídeos explicativos', icon: Video, color: 'text-orange-600', bg: 'bg-orange-50 dark:bg-orange-900/30', border: 'hover:border-orange-500' },
+                                                    { id: 'document', label: t('step_document'), desc: 'PDFs, Docs e Arquivos', icon: File, color: 'text-gray-600', bg: 'bg-gray-50 dark:bg-gray-800', border: 'hover:border-gray-500' },
+                                                    { id: 'poll', label: t('step_poll'), desc: 'Enquetes Interativas', icon: ListChecks, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/30', border: 'hover:border-emerald-500' },
                                                 ].map((type) => (
                                                     <button 
                                                         key={type.id}
                                                         onClick={() => handleAddStepClick(type.id as any)}
                                                         className={`flex flex-col items-start p-4 rounded-xl border border-slate-200 dark:border-slate-700 ${type.border} hover:shadow-md transition-all group text-left dark:hover:bg-slate-700 relative overflow-hidden`}
                                                     >
-                                                        {type.isPro && !hasProPlan && (
-                                                            <div className="absolute top-2 right-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-full z-10 border border-slate-200 dark:border-slate-600 shadow-sm">
-                                                                <Lock size={12} className="text-slate-400" />
-                                                            </div>
-                                                        )}
                                                         <div className={`p-3 rounded-lg ${type.bg} ${type.color} mb-3 group-hover:scale-110 transition-transform relative`}>
                                                             <type.icon size={24} />
-                                                            {type.isPro && (
-                                                                <div className="absolute -top-1 -right-1 bg-amber-400 text-white rounded-full p-0.5 border-2 border-white dark:border-slate-800">
-                                                                    <Crown size={8} fill="currentColor" />
-                                                                </div>
-                                                            )}
                                                         </div>
                                                         <span className="font-bold text-slate-800 dark:text-white block mb-1">{type.label}</span>
                                                         <span className="text-xs text-slate-500 dark:text-slate-400">{type.desc}</span>
@@ -1074,7 +1023,6 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                                             </div>
                                         ) : (
                                             <div className="space-y-6">
-                                                {/* Delay Input */}
                                                 <div className="bg-slate-50 dark:bg-slate-700/30 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-4">
                                                     <div className="p-2 bg-white dark:bg-slate-600 rounded-lg shadow-sm text-slate-500 dark:text-slate-300">
                                                         <Hourglass size={20} />
@@ -1096,16 +1044,15 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                                                     </div>
                                                 </div>
 
-                                                {/* Text Input */}
                                                 {selectedStepType === 'text' && (
                                                     <div className="space-y-2">
                                                         <div className="flex justify-between items-end">
                                                             <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Conteúdo da Mensagem</label>
                                                             <div className="flex gap-1">
-                                                                <button onClick={() => insertVariable('*')} className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-xs hover:bg-slate-200 font-bold" title="Negrito">B</button>
-                                                                <button onClick={() => insertVariable('_')} className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-xs hover:bg-slate-200 italic" title="Itálico">I</button>
-                                                                <button onClick={() => insertVariable('~')} className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-xs hover:bg-slate-200 line-through" title="Tachado">S</button>
-                                                                <button onClick={() => insertVariable(' ``` ')} className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-xs hover:bg-slate-200 font-mono" title="Monospace">Code</button>
+                                                                <button onClick={() => insertVariable('*')} className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-xs hover:bg-slate-200 font-bold">B</button>
+                                                                <button onClick={() => insertVariable('_')} className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-xs hover:bg-slate-200 italic">I</button>
+                                                                <button onClick={() => insertVariable('~')} className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-xs hover:bg-slate-200 line-through">S</button>
+                                                                <button onClick={() => insertVariable(' ``` ')} className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-xs hover:bg-slate-200 font-mono">Code</button>
                                                             </div>
                                                         </div>
                                                         <textarea 
@@ -1122,67 +1069,29 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                                                     </div>
                                                 )}
 
-                                                {/* Media Inputs (Image, Video, Audio, Document) */}
                                                 {['image', 'video', 'audio', 'document'].includes(selectedStepType) && (
                                                     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
-                                                        {/* Toggle */}
                                                         <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-lg w-fit">
-                                                            <button 
-                                                                onClick={() => setMediaMode('upload')}
-                                                                className={`px-4 py-1.5 text-sm rounded-md transition-all ${mediaMode === 'upload' ? 'bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-white font-bold' : 'text-slate-500 dark:text-slate-400'}`}
-                                                            >
-                                                                Upload Arquivo
-                                                            </button>
-                                                            <button 
-                                                                onClick={() => setMediaMode('url')}
-                                                                className={`px-4 py-1.5 text-sm rounded-md transition-all ${mediaMode === 'url' ? 'bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-white font-bold' : 'text-slate-500 dark:text-slate-400'}`}
-                                                            >
-                                                                Link URL
-                                                            </button>
+                                                            <button onClick={() => setMediaMode('upload')} className={`px-4 py-1.5 text-sm rounded-md transition-all ${mediaMode === 'upload' ? 'bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-white font-bold' : 'text-slate-500 dark:text-slate-400'}`}>Upload Arquivo</button>
+                                                            <button onClick={() => setMediaMode('url')} className={`px-4 py-1.5 text-sm rounded-md transition-all ${mediaMode === 'url' ? 'bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-white font-bold' : 'text-slate-500 dark:text-slate-400'}`}>Link URL</button>
                                                         </div>
 
-                                                        {/* Upload Area or URL Input */}
                                                         {mediaMode === 'upload' ? (
                                                             <div className="border-2 border-dashed border-indigo-200 dark:border-indigo-800 rounded-xl p-8 text-center hover:bg-indigo-50/50 dark:hover:bg-indigo-900/30 relative transition-colors bg-indigo-50/20 dark:bg-indigo-900/10 group cursor-pointer">
-                                                                <input 
-                                                                    type="file" 
-                                                                    accept={selectedStepType === 'image' ? "image/*" : selectedStepType === 'audio' ? "audio/*" : selectedStepType === 'video' ? "video/*" : ".pdf,.doc,.docx,.xls,.xlsx,.txt"}
-                                                                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
-                                                                    onChange={(e) => {
-                                                                        if (e.target.files?.[0]) {
-                                                                            const f = e.target.files[0];
-                                                                            if (f.size > 5 * 1024 * 1024) {
-                                                                                alert('O arquivo deve ter no máximo 5MB.');
-                                                                                return;
-                                                                            }
-                                                                            setStepFile(f);
-                                                                        }
-                                                                    }}
-                                                                />
+                                                                <input type="file" accept={selectedStepType === 'image' ? "image/*" : selectedStepType === 'audio' ? "audio/*" : selectedStepType === 'video' ? "video/*" : ".pdf,.doc,.docx,.xls,.xlsx,.txt"} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10" onChange={(e) => { if (e.target.files?.[0]) setStepFile(e.target.files[0]); }} />
                                                                 {stepFile ? (
                                                                     <div className="relative z-0">
-                                                                        {(selectedStepType === 'image' || selectedStepType === 'video') && (
-                                                                            <div className="mb-4 rounded-lg overflow-hidden max-h-[600px] mx-auto w-fit shadow-md border border-slate-200 dark:border-slate-700 bg-black/5">
-                                                                                {selectedStepType === 'image' && <img src={URL.createObjectURL(stepFile)} className="w-auto h-auto min-w-[200px] min-h-[200px] max-w-[600px] max-h-[600px] object-contain" />}
-                                                                                {selectedStepType === 'video' && <video src={URL.createObjectURL(stepFile)} className="w-auto h-auto min-w-[200px] min-h-[200px] max-w-[600px] max-h-[600px]" controls />}
-                                                                            </div>
-                                                                        )}
                                                                         <div className="text-indigo-600 dark:text-indigo-400 font-medium flex flex-col items-center gap-2">
-                                                                            <div className="w-12 h-12 bg-white dark:bg-slate-600 rounded-full flex items-center justify-center shadow-sm">
-                                                                                <CheckCircle size={24} className="text-green-500" />
-                                                                            </div>
+                                                                            <div className="w-12 h-12 bg-white dark:bg-slate-600 rounded-full flex items-center justify-center shadow-sm"><CheckCircle size={24} className="text-green-500" /></div>
                                                                             <span className="text-sm text-slate-800 dark:text-white font-bold truncate max-w-[200px]">{stepFile.name}</span>
-                                                                            <span className="text-xs text-slate-500 dark:text-slate-400">{(stepFile.size / 1024 / 1024).toFixed(2)} MB</span>
                                                                             <span className="text-xs text-indigo-500 dark:text-indigo-400 mt-1 font-bold uppercase tracking-wider">Clique para alterar</span>
                                                                         </div>
                                                                     </div>
                                                                 ) : (
                                                                     <div className="text-slate-500 dark:text-slate-400 py-4">
-                                                                        <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                                                                            <Upload size={32} />
-                                                                        </div>
+                                                                        <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform"><Upload size={32} /></div>
                                                                         <p className="text-lg font-bold text-slate-700 dark:text-slate-300">Faça upload do arquivo</p>
-                                                                        <p className="text-sm text-slate-400 mt-1">Max 5MB. Suporta {selectedStepType}.</p>
+                                                                        <p className="text-sm text-slate-400 mt-1">Suporta {selectedStepType}.</p>
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -1192,112 +1101,38 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                                                                     <label className="text-sm font-bold text-slate-700 dark:text-slate-300">URL do Arquivo</label>
                                                                     <div className="flex items-center gap-2 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 focus-within:ring-2 focus-within:ring-indigo-500">
                                                                         <LinkIcon size={18} className="text-slate-400" />
-                                                                        <input 
-                                                                            type="url"
-                                                                            className="w-full bg-transparent outline-none text-slate-700 dark:text-white text-sm"
-                                                                            placeholder={`https://exemplo.com/arquivo.${selectedStepType === 'image' ? 'jpg' : 'mp4'}`}
-                                                                            value={stepMediaUrl}
-                                                                            onChange={e => setStepMediaUrl(e.target.value)}
-                                                                        />
+                                                                        <input type="url" className="w-full bg-transparent outline-none text-slate-700 dark:text-white text-sm" placeholder="https://exemplo.com/arquivo" value={stepMediaUrl} onChange={e => setStepMediaUrl(e.target.value)} />
                                                                     </div>
                                                                 </div>
-                                                                
-                                                                {stepMediaUrl && (
-                                                                    <div className="rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2">
-                                                                        {selectedStepType === 'image' && <img src={stepMediaUrl} className="w-auto h-auto min-w-[200px] min-h-[200px] max-w-[600px] max-h-[600px] mx-auto object-contain" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}/>}
-                                                                        {selectedStepType === 'video' && <video src={stepMediaUrl} className="w-auto h-auto min-w-[200px] min-h-[200px] max-w-[600px] max-h-[600px] mx-auto" controls onError={(e) => (e.target as HTMLVideoElement).style.display = 'none'}/>}
-                                                                        {(selectedStepType === 'audio' || selectedStepType === 'document') && (
-                                                                            <div className="flex items-center gap-2 text-sm text-slate-500 p-2 justify-center">
-                                                                                <CheckCircle size={16} className="text-green-500"/> URL Válida (Preview indisponível)
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                )}
                                                             </div>
                                                         )}
 
-                                                        {/* Caption */}
                                                         {selectedStepType !== 'audio' && (
                                                             <div className="space-y-2 pt-2">
                                                                 <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Legenda (Opcional)</label>
-                                                                <input 
-                                                                    type="text"
-                                                                    className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                                                                    placeholder="Digite uma legenda para a mídia..."
-                                                                    value={stepContent}
-                                                                    onChange={e => setStepContent(e.target.value)}
-                                                                />
+                                                                <input type="text" className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Digite uma legenda para a mídia..." value={stepContent} onChange={e => setStepContent(e.target.value)} />
                                                             </div>
                                                         )}
                                                     </div>
                                                 )}
 
-                                                {/* Poll Input */}
                                                 {selectedStepType === 'poll' && (
                                                     <div className="space-y-4">
                                                         <div className="space-y-2">
                                                             <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Pergunta da Enquete</label>
-                                                            <input 
-                                                                type="text"
-                                                                className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                                                                placeholder="Ex: Qual o melhor horário para a reunião?"
-                                                                value={stepContent}
-                                                                onChange={e => setStepContent(e.target.value)}
-                                                            />
+                                                            <input type="text" className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Ex: Qual o melhor horário?" value={stepContent} onChange={e => setStepContent(e.target.value)} />
                                                         </div>
-
                                                         <div className="space-y-2">
                                                             <div className="flex justify-between items-center">
                                                                 <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Opções de Resposta</label>
-                                                                <button 
-                                                                    onClick={() => setPollOptions([...pollOptions, ''])}
-                                                                    className="text-xs text-indigo-600 font-bold hover:underline flex items-center gap-1"
-                                                                >
-                                                                    <Plus size={12}/> Adicionar Opção
-                                                                </button>
+                                                                <button onClick={() => setPollOptions([...pollOptions, ''])} className="text-xs text-indigo-600 font-bold hover:underline flex items-center gap-1"><Plus size={12}/> Adicionar Opção</button>
                                                             </div>
                                                             {pollOptions.map((opt, idx) => (
                                                                 <div key={idx} className="flex gap-2">
-                                                                    <input 
-                                                                        type="text"
-                                                                        className="flex-1 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                                                                        placeholder={`Opção ${idx + 1}`}
-                                                                        value={opt}
-                                                                        onChange={e => {
-                                                                            const newOpts = [...pollOptions];
-                                                                            newOpts[idx] = e.target.value;
-                                                                            setPollOptions(newOpts);
-                                                                        }}
-                                                                    />
-                                                                    {pollOptions.length > 2 && (
-                                                                        <button 
-                                                                            onClick={() => {
-                                                                                const newOpts = pollOptions.filter((_, i) => i !== idx);
-                                                                                setPollOptions(newOpts);
-                                                                            }}
-                                                                            className="text-slate-400 hover:text-red-500 p-2"
-                                                                        >
-                                                                            <Trash2 size={16}/>
-                                                                        </button>
-                                                                    )}
+                                                                    <input type="text" className="flex-1 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={`Opção ${idx + 1}`} value={opt} onChange={e => { const newOpts = [...pollOptions]; newOpts[idx] = e.target.value; setPollOptions(newOpts); }} />
+                                                                    {pollOptions.length > 2 && (<button onClick={() => { const newOpts = pollOptions.filter((_, i) => i !== idx); setPollOptions(newOpts); }} className="text-slate-400 hover:text-red-500 p-2"><Trash2 size={16}/></button>)}
                                                                 </div>
                                                             ))}
-                                                        </div>
-
-                                                        <div className="space-y-2">
-                                                            <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Quantidade de Escolhas (Selectable Count)</label>
-                                                            <div className="flex items-center gap-4">
-                                                                <input 
-                                                                    type="range" 
-                                                                    min="1" 
-                                                                    max={pollOptions.length} 
-                                                                    className="flex-1 accent-indigo-600"
-                                                                    value={pollSelectableCount}
-                                                                    onChange={e => setPollSelectableCount(Number(e.target.value))}
-                                                                />
-                                                                <span className="font-bold text-indigo-600 dark:text-indigo-400 w-8 text-center">{pollSelectableCount}</span>
-                                                            </div>
-                                                            <p className="text-xs text-slate-500">Quantas opções o usuário pode marcar.</p>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1305,167 +1140,30 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                                         )}
                                     </div>
 
-                                    {/* Modal Footer */}
                                     {selectedStepType && (
                                         <div className="p-6 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-end gap-3 shrink-0">
-                                            <button 
-                                                onClick={() => {setIsStepModalOpen(false); resetStepForm();}}
-                                                className="px-6 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                                            >
-                                                Cancelar
-                                            </button>
-                                            <button 
-                                                onClick={handleConfirmStep}
-                                                className="px-8 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 dark:shadow-none transition-transform hover:-translate-y-0.5"
-                                            >
-                                                Confirmar e Adicionar
-                                            </button>
+                                            <button onClick={() => {setIsStepModalOpen(false); resetStepForm();}} className="px-6 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Cancelar</button>
+                                            <button onClick={handleConfirmStep} className="px-8 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 dark:shadow-none transition-transform hover:-translate-y-0.5">Confirmar e Adicionar</button>
                                         </div>
                                     )}
                                 </div>
                             </div>
                         )}
-
-                        {/* PRO UPGRADE MODAL */}
-                        {showUpgradeModal && (
-                            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in">
-                                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-8 text-center relative overflow-hidden border-2 border-amber-400/50">
-                                    {/* Decoration */}
-                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-300 via-yellow-500 to-amber-300"></div>
-                                    
-                                    <button 
-                                        onClick={() => setShowUpgradeModal(false)}
-                                        className="absolute top-3 right-3 text-slate-400 hover:text-slate-600"
-                                    >
-                                        <X size={20}/>
-                                    </button>
-
-                                    <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-500/20">
-                                        <Crown size={32} fill="currentColor" />
-                                    </div>
-
-                                    <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">{t('pro_feature')}</h3>
-                                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
-                                        {t('upgrade_desc')}
-                                    </p>
-
-                                    <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl mb-6">
-                                        <span className="text-xs text-slate-500 uppercase font-bold tracking-wider">Apenas</span>
-                                        <div className="text-3xl font-bold text-amber-600 dark:text-amber-400 my-1">{t('upgrade_price')}</div>
-                                        <span className="text-xs text-slate-400">Adicional ao plano atual</span>
-                                    </div>
-
-                                    <button 
-                                        onClick={() => {
-                                            // Simulate Upgrade for UX flow
-                                            setHasProPlan(true); 
-                                            setShowUpgradeModal(false);
-                                            alert("Recursos PRO desbloqueados temporariamente para esta sessão!");
-                                        }}
-                                        className="w-full bg-gradient-to-r from-amber-500 to-yellow-600 text-white font-bold py-3 rounded-xl hover:shadow-lg hover:shadow-amber-500/30 transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <Zap size={18} fill="currentColor"/> {t('unlock_pro')}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
                     </div>
 
-                    {/* Footer Actions */}
                     <div className="p-6 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center bg-white dark:bg-slate-800 z-20 shrink-0 transition-colors">
                         <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
-                             <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-slate-300"></span>
-                                {workflowSteps.length} Passos configurados
-                             </div>
-                             <div className="hidden md:flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-blue-300"></span>
-                                {formData.contactsCount} Destinatários
-                             </div>
+                             <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-slate-300"></span> {workflowSteps.length} Passos</div>
+                             <div className="hidden md:flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-300"></span> {formData.contactsCount} Destinatários</div>
                         </div>
-
                         <div className="flex gap-3">
-                            <button 
-                                onClick={() => setIsCreating(false)}
-                                className="px-6 py-3 rounded-xl text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 font-bold transition-colors"
-                            >
-                                {t('cancel')}
-                            </button>
-                            <button 
-                                onClick={handleCreate}
-                                disabled={!formData.name || !formData.date || formData.contactsCount === 0 || workflowSteps.length === 0}
-                                className="px-8 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-indigo-200 dark:shadow-none transition-all hover:-translate-y-1"
-                            >
-                                <Send size={20} />
-                                {t('start_campaign')}
-                            </button>
+                            <button onClick={() => setIsCreating(false)} className="px-6 py-3 rounded-xl text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 font-bold transition-colors">{t('cancel')}</button>
+                            <button onClick={handleCreate} disabled={!formData.name || !formData.date || formData.contactsCount === 0 || workflowSteps.length === 0} className="px-8 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-indigo-200 dark:shadow-none transition-all hover:-translate-y-1"><Send size={20} /> {t('start_campaign')}</button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-      )}
-
-      {/* Report Modal (Read-Only) */}
-      {selectedCampaign && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg shadow-2xl animate-in zoom-in-95 transition-colors">
-                  <div className="p-6 bg-slate-900 text-white rounded-t-2xl flex justify-between items-start">
-                      <div>
-                          <h3 className="text-xl font-bold">{selectedCampaign.name}</h3>
-                          <div className="flex items-center gap-2 text-slate-300 text-sm mt-1">
-                              <CheckCircle size={14} className="text-green-400" />
-                              Relatório de Execução
-                          </div>
-                      </div>
-                      <button onClick={() => setSelectedCampaign(null)} className="text-slate-400 hover:text-white"><X /></button>
-                  </div>
-                  
-                  <div className="p-8 space-y-6">
-                      <div className="grid grid-cols-2 gap-6">
-                          <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-100 dark:border-slate-700">
-                              <div className="text-slate-500 dark:text-slate-400 text-xs uppercase font-bold mb-1 flex items-center gap-1"><Clock size={12}/> Data Execução</div>
-                              <div className="text-slate-800 dark:text-white font-medium">
-                                  {selectedCampaign.executedAt ? new Date(selectedCampaign.executedAt).toLocaleDateString() : '-'}
-                              </div>
-                              <div className="text-slate-500 dark:text-slate-400 text-xs">
-                                  {selectedCampaign.executedAt ? new Date(selectedCampaign.executedAt).toLocaleTimeString() : '-'}
-                              </div>
-                          </div>
-                          <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-100 dark:border-slate-700">
-                              <div className="text-slate-500 dark:text-slate-400 text-xs uppercase font-bold mb-1 flex items-center gap-1"><User size={12}/> Atendente</div>
-                              <div className="text-slate-800 dark:text-white font-medium">{selectedCampaign.agentName}</div>
-                          </div>
-                      </div>
-
-                      <div className="p-6 bg-blue-50 dark:bg-blue-900/30 rounded-xl border border-blue-100 dark:border-blue-800 text-center">
-                          <div className="text-blue-600 dark:text-blue-300 font-bold mb-2 flex items-center justify-center gap-2">
-                              <BarChart2 /> Taxa de Entrega
-                          </div>
-                          <div className="text-4xl font-bold text-slate-900 dark:text-white mb-1">{selectedCampaign.deliveryRate}%</div>
-                          <div className="text-sm text-slate-600 dark:text-slate-300">
-                              <strong>{(selectedCampaign.totalContacts * ((selectedCampaign.deliveryRate || 0)/100)).toFixed(0)}</strong> entregues de <strong>{selectedCampaign.totalContacts}</strong> contatos
-                          </div>
-                      </div>
-
-                      <div className="flex gap-3">
-                          <button 
-                            onClick={handleDownloadReport}
-                            className="flex-1 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-white py-3 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors flex items-center justify-center gap-2"
-                          >
-                              <Download size={18} />
-                              Download Relatório
-                          </button>
-                          <button 
-                            onClick={() => setSelectedCampaign(null)}
-                            className="flex-1 bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 py-3 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                          >
-                              Fechar
-                          </button>
-                      </div>
-                  </div>
-              </div>
-          </div>
       )}
     </div>
   );

@@ -8,7 +8,6 @@ export interface User {
   role: UserRole;
   avatar: string;
   email: string;
-  hasProFeatures?: boolean;
 }
 
 export interface AgentPermissions {
@@ -21,21 +20,21 @@ export interface AgentPlan {
   id: string;
   name: string;
   email: string;
-  extraContactPacks?: number; // Re-added for logic compatibility
   status: 'active' | 'pending_invite' | 'suspended';
   messagesUsed: number;
   permissions: AgentPermissions;
   tempPassword?: string;
+  extraContactPacks?: number;
 }
 
-// --- NOVOS TIPOS DE LICENCIAMENTO ENTERPRISE ---
+// --- ENTERPRISE LICENSE TYPES ---
 
 export type LicenseTier = 'STANDARD' | 'PROFESSIONAL' | 'ENTERPRISE';
 
 export interface LicenseLimits {
   maxSeats: number;      // 1 Seat = 1 User + 1 Instance
-  maxMessagesPerMonth?: number; // Cota global (opcional)
-  maxContacts?: number;  // Cota global (opcional)
+  maxMessagesPerMonth?: number; 
+  maxContacts?: number;  
 }
 
 export interface License {
@@ -43,9 +42,7 @@ export interface License {
   status: 'ACTIVE' | 'SUSPENDED' | 'TRIAL';
   renewalDate: string;
   limits: LicenseLimits;
-  // Add-ons (simulados)
-  addonSeats: number; 
-  
+  addonSeats: number; // Extra purchased seats
   features: {
     canUseApi: boolean;
     whiteLabel: boolean;
@@ -54,7 +51,7 @@ export interface License {
 }
 
 export interface LicenseUsage {
-  usedSeats: number; // calculated as count(Agents) + 1 (Manager)
+  usedSeats: number; // Count(Agents) + 1 (Manager)
   usedInstances: number;
   usedMessagesThisMonth: number;
   usedContacts: number;
@@ -63,8 +60,7 @@ export interface LicenseUsage {
 export interface LicenseStatus {
   license: License;
   usage: LicenseUsage;
-  // Helper calculado: Limite Total = Base + Addons
-  totalSeats: number; 
+  totalSeats: number; // Base + Addons
 }
 
 // ------------------------------------------------
@@ -157,7 +153,7 @@ export interface Transaction {
   amount: number;
   type: 'subscription' | 'addon_seat';
   status: 'completed' | 'pending' | 'failed';
-  paymentMethod: 'invoice' | 'credit_card' | 'pix';
+  paymentMethod: 'invoice' | 'credit_card' | 'pix'; 
   invoiceUrl?: string;
 }
 

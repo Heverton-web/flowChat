@@ -1,8 +1,6 @@
-
-
 import React, { useEffect, useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { ArrowUpRight, MessageSquare, Users, Smartphone, Zap, Clock, TrendingUp, AlertTriangle, PlusCircle, Crown, CheckCircle, BarChart3, Lock, CreditCard, Loader2 } from 'lucide-react';
+import { ArrowUpRight, MessageSquare, Users, Smartphone, Zap, Clock, User as UserIcon, Server } from 'lucide-react';
 import { AgentPlan, UserRole, User, ViewState, LicenseStatus, Contact } from '../types';
 import * as teamService from '../services/teamService';
 import * as contactService from '../services/contactService';
@@ -47,11 +45,7 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onNavigate }) => {
 
   const [agents, setAgents] = useState<AgentPlan[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // Dados de Licença e Uso
   const [licenseStatus, setLicenseStatus] = useState<LicenseStatus | null>(null);
-  
-  // Contatos
   const [contactCount, setContactCount] = useState(0);
 
   useEffect(() => {
@@ -60,24 +54,20 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onNavigate }) => {
 
   const loadData = async () => {
       setLoading(true);
-      
       const promises: Promise<any>[] = [
           contactService.getContacts(currentUserId, role),
           financialService.getLicenseStatus()
       ];
 
       if (role === 'manager') {
-          promises.push(teamService.getAgents());
+          promises.push(teamService.getAgents() as any);
       }
 
-      const results = await Promise.all(promises);
-      const contacts = results[0] as Contact[];
-      const licStatus = results[1] as LicenseStatus;
-      const agentsData = role === 'manager' ? results[2] as AgentPlan[] : [];
+      const [contacts, licStatus, agentsData] = await Promise.all(promises);
       
-      setContactCount(contacts.length);
-      setLicenseStatus(licStatus);
-      if (role === 'manager' && agentsData) setAgents(agentsData);
+      setContactCount((contacts as Contact[]).length);
+      setLicenseStatus(licStatus as LicenseStatus);
+      if (agentsData) setAgents(agentsData as AgentPlan[]);
       
       setLoading(false);
   };
@@ -90,30 +80,28 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onNavigate }) => {
             {role === 'manager' ? t('welcome_manager') : t('welcome_agent')}
           </h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
-            {role === 'manager' ? 'Acompanhe a ocupação da licença e desempenho.' : 'Acompanhe suas métricas de atendimento.'}
+            {role === 'manager' ? 'Visão geral da infraestrutura e uso da licença.' : 'Acompanhe seu desempenho individual.'}
           </p>
         </div>
-        <div className="flex gap-2">
-            <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 border border-blue-200 dark:border-blue-800">
-              <div className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-pulse"></div> 
-              {licenseStatus?.license.tier || 'Enterprise'}
-            </span>
-        </div>
+        {licenseStatus && (
+            <div className="flex gap-2">
+                <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 border border-blue-200 dark:border-blue-800">
+                  <div className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-pulse"></div> 
+                  {licenseStatus.license.tier}
+                </span>
+            </div>
+        )}
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        
-        {/* Card 1: Mensagens (Consumo Mensal) */}
         <StatCard 
             title={t('stats_messages')} 
             value={role === 'manager' ? licenseStatus?.usage.usedMessagesThisMonth.toLocaleString() : "1,240"} 
-            subtext="Neste ciclo" 
+            subtext="Envios Totais" 
             icon={MessageSquare} 
             color="bg-blue-600" 
         />
-        
-        {/* Card 2: Contatos (Base) */}
         <StatCard 
             title={t('stats_contacts')} 
             value={contactCount.toLocaleString()} 
@@ -122,13 +110,13 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onNavigate }) => {
             color="bg-indigo-600" 
         />
         
-        {/* Card 3: Seats / Instâncias (Condicional) */}
+        {/* Manager sees License Seats, Agent sees Personal Metrics */}
         {role === 'manager' ? (
            <StatCard 
                 title="Ocupação de Seats" 
                 value={`${licenseStatus?.usage.usedSeats || 0} / ${licenseStatus?.totalSeats || 0}`} 
                 subtext="Usuários Ativos" 
-                icon={Users} 
+                icon={Server} 
                 color="bg-emerald-500" 
             />
         ) : (
@@ -141,7 +129,6 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onNavigate }) => {
             />
         )}
         
-        {/* Card 4: Instâncias Conectadas / SLA */}
         {role === 'manager' ? (
             <StatCard 
                 title="Instâncias Online" 
@@ -156,7 +143,6 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onNavigate }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Chart */}
         <div className={`${role === 'manager' ? 'lg:col-span-2' : 'lg:col-span-3'} bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 transition-colors duration-300`}>
           <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-6">Volume de Mensagens (7 Dias)</h3>
           <div className="h-80">
@@ -171,21 +157,18 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onNavigate }) => {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.3} />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                <Tooltip 
-                    contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} 
-                />
+                <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
                 <Area type="monotone" dataKey="messages" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorMessages)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Team List - ONLY FOR MANAGER */}
+        {/* Manager Team Summary */}
         {role === 'manager' && (
           <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col h-full transition-colors duration-300">
               <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-slate-800 dark:text-white">Uso Recente</h3>
-                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full">Top 5</span>
+                  <h3 className="text-lg font-semibold text-slate-800 dark:text-white">Uso por Seat</h3>
               </div>
               
               <div className="space-y-6 overflow-y-auto flex-1 pr-2">
@@ -213,10 +196,7 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onNavigate }) => {
                   ))}
               </div>
               
-              <button 
-                onClick={() => onNavigate('team')}
-                className="w-full mt-6 py-3 border border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-colors flex items-center justify-center gap-2"
-              >
+              <button onClick={() => onNavigate('team')} className="w-full mt-6 py-3 border border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-colors flex items-center justify-center gap-2">
                   <Users size={16} />
                   Gerenciar Seats
               </button>

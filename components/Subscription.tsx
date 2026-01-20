@@ -1,10 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { 
-    CreditCard, CheckCircle, Zap, Package, AlertTriangle, Loader2, Calendar, 
-    BookUser, Crown, Info, Clock, AlertOctagon, Users, Smartphone, ShieldCheck, 
-    MessageSquare, Headphones, Server, HardDrive, Plus, ArrowRight
-} from 'lucide-react';
+import { Crown, Info, Users, Smartphone, Server, Plus, CreditCard, Loader2 } from 'lucide-react';
 import { LicenseStatus } from '../types';
 import * as financialService from '../services/financialService';
 
@@ -34,7 +30,7 @@ const Subscription: React.FC = () => {
   };
 
   const handleAddSeat = async () => {
-      if (confirm("Solicitar adição de +1 Seat (Usuário + Instância) à sua licença? A equipe comercial entrará em contato.")) {
+      if (confirm("Deseja solicitar +1 Seat (Usuário + Instância) para sua licença Enterprise?")) {
           setIsUpgrading(true);
           await financialService.requestAddonSeat(1);
           await loadLicense();
@@ -47,7 +43,6 @@ const Subscription: React.FC = () => {
 
   const { license, usage, totalSeats } = licenseStatus;
   const renewalDateObj = new Date(license.renewalDate);
-  const daysRemaining = Math.ceil((renewalDateObj.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
 
   const calculateProgress = (current: number, max: number) => {
       if (max === 0) return 100;
@@ -76,7 +71,6 @@ const Subscription: React.FC = () => {
 
       {/* Main License Card */}
       <div className="bg-slate-900 rounded-2xl p-8 shadow-xl relative overflow-hidden text-white">
-          {/* Background Pattern */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600 rounded-full blur-[120px] opacity-20 pointer-events-none transform translate-x-20 -translate-y-20"></div>
           
           <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -86,8 +80,7 @@ const Subscription: React.FC = () => {
                       <h3 className="text-3xl font-bold tracking-tight">Licença {license.tier}</h3>
                   </div>
                   <p className="text-slate-300 max-w-lg text-sm leading-relaxed">
-                      Infraestrutura dedicada com paridade 1:1 (Seats).
-                      <br/>
+                      Infraestrutura dedicada com paridade 1:1 (Seats).<br/>
                       Renovação automática agendada para: <strong>{renewalDateObj.toLocaleDateString()}</strong>.
                   </p>
               </div>
@@ -138,10 +131,6 @@ const Subscription: React.FC = () => {
                         style={{width: `${calculateProgress(usage.usedSeats, totalSeats)}%`}}
                       ></div>
                   </div>
-                  <p className="text-xs text-slate-400 mt-2 flex justify-between">
-                      <span>Base: {license.limits.maxSeats}</span>
-                      <span>Add-ons: +{license.addonSeats}</span>
-                  </p>
               </div>
 
               <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-700 flex gap-3">

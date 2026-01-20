@@ -2,8 +2,7 @@
 import { AgentPlan, AgentPermissions } from '../types';
 import * as financialService from './financialService';
 
-// Mock Agents Data 
-// Cenário: 1 Manager + 19 Agentes = 20 Usuários
+// Mock Agents (1 Manager + 19 Agents = 20 Used Seats)
 let MOCK_AGENTS: AgentPlan[] = [
   { 
     id: 'agent-1', name: 'Atendente Demo', email: 'agente@empresa.com', 
@@ -20,7 +19,7 @@ let MOCK_AGENTS: AgentPlan[] = [
     status: 'active', messagesUsed: 1200, 
     permissions: { canCreate: true, canEdit: true, canDelete: true },
   },
-  // Gerar mais 16 agentes dummy para totalizar 19 agentes (+1 manager = 20)
+  // Generate dummy agents to reach 19 total agents
   ...Array.from({ length: 16 }).map((_, i) => ({
       id: `agent-mock-${i+4}`,
       name: `Atendente ${i+4}`,
@@ -47,10 +46,10 @@ interface AddAgentPayload {
 }
 
 export const addAgent = async (agent: AddAgentPayload): Promise<AgentPlan> => {
-  // Validação de Licença (Seats)
-  const licenseStatus = await financialService.getLicenseStatus();
-  if (licenseStatus.usage.usedSeats >= licenseStatus.totalSeats) {
-      throw new Error(`Limite de Seats atingido (${licenseStatus.totalSeats}). Solicite expansão da licença.`);
+  // Check License Limits
+  const license = await financialService.getLicenseStatus();
+  if (license.usage.usedSeats >= license.totalSeats) {
+      throw new Error(`Limite de Seats atingido (${license.totalSeats}). Solicite expansão da licença.`);
   }
 
   return new Promise(resolve => {

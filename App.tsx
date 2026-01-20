@@ -101,7 +101,9 @@ const FlowChatApp: React.FC = () => {
           <NavItem view="campaigns" icon={Send} label={t('campaigns')} />
           <NavItem view="instances" icon={Smartphone} label={t('instances')} />
           <NavItem view="contacts" icon={Users} label={t('contacts')} />
-          <NavItem view="financial" icon={DollarSign} label={t('financial')} />
+          {currentUser.role === 'manager' && (
+            <NavItem view="financial" icon={DollarSign} label={t('financial')} />
+          )}
           
           {currentUser.role === 'manager' && (
               <>
@@ -216,7 +218,9 @@ const FlowChatApp: React.FC = () => {
                  <NavItem view="campaigns" icon={Send} label={t('campaigns')} />
                  <NavItem view="instances" icon={Smartphone} label={t('instances')} />
                  <NavItem view="contacts" icon={Users} label={t('contacts')} />
-                 <NavItem view="financial" icon={DollarSign} label={t('financial')} />
+                 {currentUser.role === 'manager' && (
+                    <NavItem view="financial" icon={DollarSign} label={t('financial')} />
+                 )}
                  
                  {currentUser.role === 'manager' && (
                      <>
@@ -258,7 +262,7 @@ const FlowChatApp: React.FC = () => {
           {activeView === 'instances' && <Instances currentUser={currentUser} />}
           {activeView === 'campaigns' && <Campaigns currentUser={currentUser} />}
           {activeView === 'contacts' && <Contacts currentUser={currentUser} />}
-          {activeView === 'financial' && <Financial currentUser={currentUser} />}
+          {activeView === 'financial' && currentUser.role === 'manager' && <Financial currentUser={currentUser} />}
           {activeView === 'subscription' && currentUser.role === 'manager' && <Subscription />}
           {activeView === 'team' && currentUser.role === 'manager' && <Team />}
           {activeView === 'settings' && currentUser.role === 'manager' && <Settings />}

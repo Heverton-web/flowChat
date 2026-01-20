@@ -11,15 +11,11 @@ const Team: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Add Agent Modal
   const [isAddingAgent, setIsAddingAgent] = useState(false);
   const [newAgentName, setNewAgentName] = useState('');
   const [newAgentEmail, setNewAgentEmail] = useState('');
   const [newAgentPassword, setNewAgentPassword] = useState('');
-
-  // Delete Agent Modal
   const [agentToDelete, setAgentToDelete] = useState<AgentPlan | null>(null);
-
   const [notification, setNotification] = useState<{msg: string, type: 'success' | 'error'} | null>(null);
 
   useEffect(() => {
@@ -40,7 +36,6 @@ const Team: React.FC = () => {
   const handleCreateAgent = async () => {
       if (!newAgentName || !newAgentEmail || !newAgentPassword) return;
       
-      // Validação de Limite de Licença
       if (licenseStatus) {
           if (licenseStatus.usage.usedSeats >= licenseStatus.totalSeats) {
               setNotification({ msg: `Limite de Seats atingido (${licenseStatus.totalSeats}). Solicite mais seats na aba Assinatura.`, type: 'error' });
@@ -95,13 +90,13 @@ const Team: React.FC = () => {
       <div className="flex justify-between items-center">
         <div>
             <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Gestão da Equipe</h2>
-            <p className="text-slate-500 dark:text-slate-400">Gerencie acessos dos seus usuários.</p>
+            <p className="text-slate-500 dark:text-slate-400">Gerencie acessos dos seus {licenseStatus?.usage.usedSeats || 0} usuários.</p>
         </div>
         
         {licenseStatus && (
             <div className="flex items-center gap-4">
                 <span className="text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600">
-                    Seats Ocupados: <strong>{licenseStatus.usage.usedSeats}</strong> / {licenseStatus.totalSeats}
+                    Seats: <strong>{licenseStatus.usage.usedSeats}</strong> / {licenseStatus.totalSeats}
                 </span>
                 
                 <button 
@@ -133,8 +128,6 @@ const Team: React.FC = () => {
               <div className="divide-y divide-slate-100 dark:divide-slate-700">
                   {filteredAgents.map(agent => (
                       <div key={agent.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors flex flex-col xl:flex-row xl:items-center gap-6">
-                          
-                          {/* Profile */}
                           <div className="flex items-center gap-4 min-w-[250px]">
                               <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold text-lg">
                                   {agent.name.charAt(0)}
@@ -148,10 +141,9 @@ const Team: React.FC = () => {
                           </div>
 
                           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                              {/* Permissions Only */}
                               <div className="col-span-3 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg border border-slate-100 dark:border-slate-600">
                                   <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 flex items-center gap-1">
-                                      <Shield size={12} /> Permissões Globais
+                                      <Shield size={12} /> Permissões
                                   </h4>
                                   <div className="flex justify-between gap-2 max-w-md">
                                       <button 
@@ -190,7 +182,6 @@ const Team: React.FC = () => {
           )}
       </div>
 
-      {/* Add Agent Modal */}
       {isAddingAgent && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
               <div className="bg-white dark:bg-slate-800 rounded-xl w-full max-w-md shadow-2xl animate-in zoom-in-95 p-6">
@@ -221,39 +212,6 @@ const Team: React.FC = () => {
                   </div>
               </div>
           </div>
-      )}
-
-      {/* Delete Agent Confirmation Modal */}
-      {agentToDelete && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-xl w-full max-w-sm shadow-2xl animate-in zoom-in-95 transition-colors">
-                <div className="p-6 text-center">
-                    <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Trash2 size={32} />
-                    </div>
-                    <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Remover Atendente?</h3>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
-                        Você está prestes a remover <strong>{agentToDelete.name}</strong> da equipe. 
-                        Isso liberará 1 Seat na sua licença.
-                    </p>
-                    
-                    <div className="flex gap-3">
-                        <button 
-                            onClick={() => setAgentToDelete(null)}
-                            className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                        >
-                            Cancelar
-                        </button>
-                        <button 
-                            onClick={confirmDeleteAgent}
-                            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
-                        >
-                            Sim, Remover
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
       )}
     </div>
   );
