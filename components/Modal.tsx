@@ -9,9 +9,10 @@ interface ModalProps {
   children: React.ReactNode;
   type?: 'default' | 'danger' | 'success' | 'info';
   footer?: React.ReactNode;
+  zIndex?: number;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, type = 'default', footer }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, type = 'default', footer, zIndex = 50 }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -19,8 +20,14 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, type = 
       setIsVisible(true);
       document.body.style.overflow = 'hidden';
     } else {
-      const timer = setTimeout(() => setIsVisible(false), 300);
-      document.body.style.overflow = 'unset';
+      const timer = setTimeout(() => {
+        setIsVisible(false);
+        // Only restore scrolling if no other modals are likely open (simplistic check)
+        // For nested modals, the parent should ideally manage this, but we'll reset here.
+        // If we wanted to be robust we'd check for other z-50 elements.
+        // For now, we accept that closing the top modal might re-enable scrolling.
+        document.body.style.overflow = 'unset';
+      }, 300);
       return () => clearTimeout(timer);
     }
   }, [isOpen]);
@@ -38,7 +45,8 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, type = 
 
   return (
     <div 
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}
+      className={`fixed inset-0 flex items-center justify-center p-4 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}
+      style={{ zIndex }}
       aria-modal="true"
       role="dialog"
     >

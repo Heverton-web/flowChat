@@ -3,6 +3,7 @@ import { Contact } from '../types';
 import * as teamService from './teamService';
 
 const STORAGE_KEY = 'flowchat_contacts';
+const STORAGE_TAGS_KEY = 'flowchat_tags';
 
 const MOCK_DEFAULTS: Contact[] = [
   { id: '1', name: 'Carlos Cliente', phone: '5511999998888', email: 'carlos@email.com', tags: ['Vip', 'Outubro/23'], campaignHistory: [], notes: 'Cliente prefere contato pela manhã.', createdAt: '2023-10-01T10:00:00Z', ownerId: 'manager-1' },
@@ -19,6 +20,80 @@ const loadData = (): Contact[] => {
 const saveData = (data: Contact[]) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 };
+
+// --- TAGS MANAGEMENT START ---
+
+const loadTags = (): string[] => {
+    const stored = localStorage.getItem(STORAGE_TAGS_KEY);
+    if (stored) return JSON.parse(stored);
+    
+    // Initial Seed from contacts if empty
+    const contacts = loadData();
+    const unique = Array.from(new Set(contacts.flatMap(c => c.tags)));
+    localStorage.setItem(STORAGE_TAGS_KEY, JSON.stringify(unique));
+    return unique;
+};
+
+const saveTagsData = (tags: string[]) => {
+    localStorage.setItem(STORAGE_TAGS_KEY, JSON.stringify(tags));
+};
+
+export const getTags = async (): Promise<string[]> => {
+    return new Promise(resolve => setTimeout(() => resolve(loadTags()), 300));
+};
+
+export const createTag = async (tagName: string): Promise<string[]> => {
+    return new Promise((resolve, reject) => {
+        const tags = loadTags();
+        if (tags.includes(tagName)) {
+            reject(new Error('Tag já existe.'));
+            return;
+        }
+        const newTags = [...tags, tagName];
+        saveTagsData(newTags);
+        setTimeout(() => resolve(newTags), 400);
+    });
+};
+
+export const updateTag = async (oldName: string, newName: string): Promise<string[]> => {
+    return new Promise((resolve) => {
+        // 1. Update List
+        const tags = loadTags();
+        const newTags = tags.map(t => t === oldName ? newName : t);
+        saveTagsData(newTags);
+
+        // 2. Update All Contacts
+        const contacts = loadData();
+        const updatedContacts = contacts.map(c => ({
+            ...c,
+            tags: c.tags.map(t => t === oldName ? newName : t)
+        }));
+        saveData(updatedContacts);
+
+        setTimeout(() => resolve(newTags), 500);
+    });
+};
+
+export const deleteTag = async (tagName: string): Promise<string[]> => {
+    return new Promise((resolve) => {
+         // 1. Remove from List
+        const tags = loadTags();
+        const newTags = tags.filter(t => t !== tagName);
+        saveTagsData(newTags);
+
+        // 2. Remove from All Contacts
+        const contacts = loadData();
+        const updatedContacts = contacts.map(c => ({
+            ...c,
+            tags: (c.tags || []).filter(t => t !== tagName)
+        }));
+        saveData(updatedContacts);
+
+        setTimeout(() => resolve(newTags), 500);
+    });
+};
+
+// --- TAGS MANAGEMENT END ---
 
 const BASE_CONTACT_LIMIT = 500;
 const CONTACT_PACK_SIZE = 500;
@@ -77,6 +152,14 @@ export const saveContact = async (
       };
       
       saveData([newContact, ...contacts]);
+      
+      // Sync tags if new ones introduced
+      const currentTags = loadTags();
+      const newTagsFromContact = contact.tags.filter(t => !currentTags.includes(t));
+      if (newTagsFromContact.length > 0) {
+          saveTagsData([...currentTags, ...newTagsFromContact]);
+      }
+
       resolve(newContact);
     }, 600);
   });
@@ -90,6 +173,16 @@ export const updateContact = async (id: string, updates: Partial<Contact>): Prom
         c.id === id ? { ...c, ...updates, phone: updates.phone ? formatPhoneForEvolution(updates.phone) : c.phone } : c
       );
       saveData(updatedContacts);
+
+      // Sync tags if new ones introduced
+      if (updates.tags) {
+        const currentTags = loadTags();
+        const newTagsFromContact = updates.tags.filter(t => !currentTags.includes(t));
+        if (newTagsFromContact.length > 0) {
+            saveTagsData([...currentTags, ...newTagsFromContact]);
+        }
+      }
+
       resolve(updatedContacts.find(c => c.id === id)!);
     }, 400);
   });
@@ -165,6 +258,14 @@ export const bulkImportContacts = async (
         ownerId: ownerId
       }));
 
+      // Sync tags from import
+      const currentTags = loadTags();
+      const allNewTags = toAdd.flatMap(c => c.tags);
+      const uniqueNewTags = Array.from(new Set(allNewTags)).filter(t => !currentTags.includes(t));
+      if (uniqueNewTags.length > 0) {
+          saveTagsData([...currentTags, ...uniqueNewTags]);
+      }
+
       saveData([...toAdd, ...contacts]);
       resolve(toAdd.length);
     }, 1000);
@@ -173,7 +274,7 @@ export const bulkImportContacts = async (
 
 export const downloadCSVTemplate = () => {
     const csvContent = "Nome,Telefone,Email,Tags\nMaria Silva,5511999998888,maria@email.com,Lead;Vip\nJoao Souza,11988887777,,Outubro";
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
@@ -196,7 +297,7 @@ export const exportContactsToCSV = (contacts: Contact[]) => {
         csvRows.push(row.join(','));
     });
     const csvContent = "\uFEFF" + csvRows.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);

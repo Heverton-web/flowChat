@@ -14,6 +14,10 @@ export interface AgentPermissions {
   canCreate: boolean;
   canEdit: boolean;
   canDelete: boolean;
+  // Tag Permissions
+  canCreateTags: boolean;
+  canEditTags: boolean;
+  canDeleteTags: boolean;
 }
 
 export interface AgentPlan {

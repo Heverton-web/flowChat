@@ -96,7 +96,7 @@ export const downloadCampaignReport = (campaign: Campaign) => {
         csvContent += `${baseDate.toLocaleString()},${randomPhone},FALHA,Número inválido ou bloqueado\n`;
     }
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);

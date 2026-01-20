@@ -1,18 +1,31 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  DollarSign, CreditCard, Calendar, Download, Search, TrendingUp, 
-  Package, QrCode, Smartphone, CheckCircle, Loader2, ArrowRight, Shield, FileText, BookUser, AlertTriangle, Info, Crown
+  DollarSign, CreditCard, Calendar, Download, Search, TrendingUp, TrendingDown,
+  Package, QrCode, Smartphone, CheckCircle, Loader2, ArrowRight, Shield, FileText, BookUser, AlertTriangle, Info, Crown, BarChart2
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Transaction, User } from '../types';
 import * as financialService from '../services/financialService';
+import { useApp } from '../contexts/AppContext';
 
 interface FinancialProps {
   currentUser: User;
 }
 
+// Mock data for the chart since backend history might be limited
+const CHART_DATA = [
+  { month: 'Jun', amount: 4100 },
+  { month: 'Jul', amount: 4250 },
+  { month: 'Ago', amount: 4150 },
+  { month: 'Set', amount: 4400 },
+  { month: 'Out', amount: 4350 },
+  { month: 'Nov', amount: 4500 },
+];
+
 const Financial: React.FC<FinancialProps> = ({ currentUser }) => {
+  const { theme } = useApp();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'history' | 'purchase'>('history');
@@ -83,6 +96,31 @@ const Financial: React.FC<FinancialProps> = ({ currentUser }) => {
       return new Date(dateStr).toLocaleDateString('pt-BR', {
           day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
       });
+  };
+
+  const exportToCSV = () => {
+      const headers = ['ID', 'Data', 'Descrição', 'Usuário', 'Método', 'Valor', 'Status'];
+      const csvRows = [headers.join(',')];
+
+      transactions.forEach(t => {
+          const row = [
+              t.id,
+              new Date(t.date).toLocaleDateString(),
+              `"${t.description}"`,
+              t.userName,
+              t.paymentMethod,
+              t.amount.toFixed(2),
+              t.status
+          ];
+          csvRows.push(row.join(','));
+      });
+
+      const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `extrato_financeiro_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
   };
 
   const generateReceipt = (transaction: Transaction) => {
@@ -178,6 +216,16 @@ const Financial: React.FC<FinancialProps> = ({ currentUser }) => {
   const currentPrice = getPrice();
   const totalPrice = productType === 'premium' ? PRICE_PREMIUM : currentPrice * packQuantity;
 
+  // Chart Styles
+  const chartColor = "#3b82f6";
+  const tooltipStyle = {
+      backgroundColor: theme === 'dark' ? '#1e293b' : '#fff',
+      borderColor: theme === 'dark' ? '#334155' : '#e2e8f0',
+      color: theme === 'dark' ? '#f1f5f9' : '#1e293b',
+      borderRadius: '8px',
+      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -188,41 +236,77 @@ const Financial: React.FC<FinancialProps> = ({ currentUser }) => {
             </h2>
             <p className="text-slate-500 dark:text-slate-400">
                 {currentUser.role === 'manager' 
-                    ? 'Histórico de pagamentos e custos da equipe.' 
+                    ? 'Gestão de custos, faturas e histórico de pagamentos.' 
                     : 'Gerencie seus pacotes e recursos premium.'}
             </p>
         </div>
         
-        {currentUser.role === 'agent' && activeTab === 'history' && (
-            <button 
-                onClick={() => setActiveTab('purchase')}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm font-medium transition-all"
-            >
-                <Package size={18} />
-                Comprar / Assinar
-            </button>
-        )}
+        <div className="flex gap-2">
+            {activeTab === 'history' && (
+                <button 
+                    onClick={exportToCSV}
+                    disabled={transactions.length === 0}
+                    className="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-all shadow-sm"
+                >
+                    <Download size={18} /> Exportar Extrato
+                </button>
+            )}
+            
+            {currentUser.role === 'agent' && activeTab === 'history' && (
+                <button 
+                    onClick={() => setActiveTab('purchase')}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm font-medium transition-all"
+                >
+                    <Package size={18} />
+                    Nova Compra
+                </button>
+            )}
+        </div>
       </div>
 
       {/* Stats Cards (Manager Only) */}
       {currentUser.role === 'manager' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm transition-colors">
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm transition-colors relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                      <DollarSign size={64} />
+                  </div>
                   <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Custo Total (Mês)</p>
-                  <h3 className="text-2xl font-bold text-slate-800 dark:text-white mt-1">R$ 2.450,00</h3>
-                  <div className="mt-2 text-xs text-green-600 dark:text-green-400 font-medium bg-green-50 dark:bg-green-900/30 inline-block px-2 py-1 rounded">
-                      Fatura em aberto
+                  <h3 className="text-3xl font-bold text-slate-800 dark:text-white mt-1">R$ 4.500,00</h3>
+                  <div className="flex items-center gap-2 mt-2">
+                      <span className="text-xs text-green-600 dark:text-green-400 font-bold bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <TrendingUp size={12}/> +3.4%
+                      </span>
+                      <span className="text-xs text-slate-400">vs mês anterior</span>
                   </div>
               </div>
-              <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm transition-colors">
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Pacotes Extras (Equipe)</p>
-                  <h3 className="text-2xl font-bold text-slate-800 dark:text-white mt-1">R$ 450,90</h3>
-                  <p className="text-xs text-slate-400 mt-1">45 pacotes comprados</p>
+              
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm transition-colors relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                      <Package size={64} />
+                  </div>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Extras Contratados</p>
+                  <h3 className="text-3xl font-bold text-slate-800 dark:text-white mt-1">R$ 450,90</h3>
+                  <div className="flex items-center gap-2 mt-2">
+                      <span className="text-xs text-blue-600 dark:text-blue-400 font-bold bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          45 Pacotes
+                      </span>
+                      <span className="text-xs text-slate-400">ativos na equipe</span>
+                  </div>
               </div>
-              <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm transition-colors">
+
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm transition-colors relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                      <Calendar size={64} />
+                  </div>
                   <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Próxima Fatura</p>
-                  <h3 className="text-2xl font-bold text-slate-800 dark:text-white mt-1">01/12/2023</h3>
-                  <p className="text-xs text-slate-400 mt-1">Cartão final 4242</p>
+                  <h3 className="text-3xl font-bold text-slate-800 dark:text-white mt-1">01/12/2023</h3>
+                  <div className="flex items-center gap-2 mt-2">
+                      <span className="text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full flex items-center gap-1 border border-slate-200 dark:border-slate-600">
+                          <CreditCard size={10}/> Final 4242
+                      </span>
+                      <span className="text-xs text-green-500 font-medium">Agendado</span>
+                  </div>
               </div>
           </div>
       )}
@@ -247,76 +331,119 @@ const Financial: React.FC<FinancialProps> = ({ currentUser }) => {
 
       {/* --- CONTENT: HISTORY --- */}
       {activeTab === 'history' && (
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors">
-              <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-700/30">
-                  <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm">Transações Realizadas</h3>
-                  {currentUser.role === 'manager' && (
-                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                        <input 
-                            type="text" 
-                            placeholder="Filtrar..." 
-                            className="pl-9 pr-4 py-1.5 text-xs border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-md outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                     </div>
-                  )}
-              </div>
+          <div className="space-y-6">
+              
+              {/* Financial Chart (Manager Only) */}
+              {currentUser.role === 'manager' && (
+                  <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                      <div className="flex justify-between items-center mb-6">
+                          <div>
+                              <h3 className="text-lg font-bold text-slate-800 dark:text-white">Evolução de Custos</h3>
+                              <p className="text-sm text-slate-500 dark:text-slate-400">Histórico de gastos dos últimos 6 meses</p>
+                          </div>
+                          <div className="bg-slate-100 dark:bg-slate-700 p-1 rounded-lg flex text-xs font-medium">
+                              <button className="px-3 py-1 bg-white dark:bg-slate-600 rounded shadow-sm text-slate-800 dark:text-white">Semestral</button>
+                              <button className="px-3 py-1 text-slate-500 dark:text-slate-400 hover:text-slate-700">Anual</button>
+                          </div>
+                      </div>
+                      <div className="h-64 w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                              <AreaChart data={CHART_DATA}>
+                                  <defs>
+                                      <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
+                                          <stop offset="5%" stopColor={chartColor} stopOpacity={0.2}/>
+                                          <stop offset="95%" stopColor={chartColor} stopOpacity={0}/>
+                                      </linearGradient>
+                                  </defs>
+                                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme === 'dark' ? '#334155' : '#e2e8f0'} />
+                                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 12}} dy={10} />
+                                  <YAxis axisLine={false} tickLine={false} tick={{fill: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 12}} tickFormatter={(value) => `R$${value/1000}k`} />
+                                  <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [`R$ ${value.toFixed(2)}`, 'Custo']} />
+                                  <Area type="monotone" dataKey="amount" stroke={chartColor} strokeWidth={3} fillOpacity={1} fill="url(#colorCost)" />
+                              </AreaChart>
+                          </ResponsiveContainer>
+                      </div>
+                  </div>
+              )}
 
-              <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                      <thead className="bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-100 dark:border-slate-700">
-                          <tr>
-                              <th className="px-6 py-4">Data</th>
-                              <th className="px-6 py-4">Descrição</th>
-                              <th className="px-6 py-4">Responsável</th>
-                              <th className="px-6 py-4">Método</th>
-                              <th className="px-6 py-4">Valor</th>
-                              <th className="px-6 py-4">Status</th>
-                              <th className="px-6 py-4 text-right">Recibo</th>
-                          </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
-                          {loading ? (
-                              <tr><td colSpan={7} className="p-8 text-center"><Loader2 className="animate-spin mx-auto text-blue-600"/></td></tr>
-                          ) : transactions.length === 0 ? (
-                              <tr><td colSpan={7} className="p-8 text-center text-slate-500 dark:text-slate-400">Nenhuma transação encontrada.</td></tr>
-                          ) : transactions.map((t) => (
-                              <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                                  <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{formatDate(t.date)}</td>
-                                  <td className="px-6 py-4 font-medium text-slate-800 dark:text-white">{t.description}</td>
-                                  <td className="px-6 py-4">
-                                      <div className="flex items-center gap-2">
-                                          <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-[10px] font-bold text-slate-600 dark:text-slate-300">
-                                              {t.userName.charAt(0)}
-                                          </div>
-                                          <span className="text-slate-600 dark:text-slate-300">{t.userName}</span>
-                                      </div>
-                                  </td>
-                                  <td className="px-6 py-4">
-                                      <span className="flex items-center gap-1 text-slate-600 dark:text-slate-300 capitalize">
-                                          {t.paymentMethod === 'pix' ? <QrCode size={14}/> : <CreditCard size={14}/>}
-                                          {t.paymentMethod.replace('_', ' ')}
-                                      </span>
-                                  </td>
-                                  <td className="px-6 py-4 font-bold text-slate-800 dark:text-white">R$ {t.amount.toFixed(2).replace('.', ',')}</td>
-                                  <td className="px-6 py-4">
-                                      <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded-full text-xs font-bold uppercase">
-                                          {t.status === 'completed' ? 'Pago' : t.status}
-                                      </span>
-                                  </td>
-                                  <td className="px-6 py-4 text-right">
-                                      <button 
-                                        onClick={() => generateReceipt(t)}
-                                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 p-2 rounded transition-colors"
-                                        title="Baixar Recibo"
-                                      >
-                                          <FileText size={16} />
-                                      </button>
-                                  </td>
+              {/* Transactions Table */}
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors">
+                  <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-700/30">
+                      <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-2">
+                          <FileText size={16}/> Extrato de Transações
+                      </h3>
+                      {currentUser.role === 'manager' && (
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                            <input 
+                                type="text" 
+                                placeholder="Filtrar lançamentos..." 
+                                className="pl-9 pr-4 py-1.5 text-xs border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-md outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                        </div>
+                      )}
+                  </div>
+
+                  <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm">
+                          <thead className="bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-100 dark:border-slate-700">
+                              <tr>
+                                  <th className="px-6 py-4">Data</th>
+                                  <th className="px-6 py-4">Descrição</th>
+                                  <th className="px-6 py-4">Responsável</th>
+                                  <th className="px-6 py-4">Método</th>
+                                  <th className="px-6 py-4">Valor</th>
+                                  <th className="px-6 py-4">Status</th>
+                                  <th className="px-6 py-4 text-right">Recibo</th>
                               </tr>
-                          ))}
-                      </tbody>
-                  </table>
+                          </thead>
+                          <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
+                              {loading ? (
+                                  <tr><td colSpan={7} className="p-8 text-center"><Loader2 className="animate-spin mx-auto text-blue-600"/></td></tr>
+                              ) : transactions.length === 0 ? (
+                                  <tr><td colSpan={7} className="p-8 text-center text-slate-500 dark:text-slate-400">Nenhuma transação encontrada.</td></tr>
+                              ) : transactions.map((t) => (
+                                  <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group">
+                                      <td className="px-6 py-4 text-slate-600 dark:text-slate-300 whitespace-nowrap">{formatDate(t.date)}</td>
+                                      <td className="px-6 py-4 font-medium text-slate-800 dark:text-white">{t.description}</td>
+                                      <td className="px-6 py-4">
+                                          <div className="flex items-center gap-2">
+                                              <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
+                                                  {t.userName.charAt(0)}
+                                              </div>
+                                              <span className="text-slate-600 dark:text-slate-300 whitespace-nowrap text-xs">{t.userName}</span>
+                                          </div>
+                                      </td>
+                                      <td className="px-6 py-4">
+                                          <span className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300 capitalize text-xs">
+                                              {t.paymentMethod === 'pix' ? <QrCode size={14} className="text-green-500"/> : <CreditCard size={14} className="text-blue-500"/>}
+                                              {t.paymentMethod.replace('_', ' ')}
+                                          </span>
+                                      </td>
+                                      <td className="px-6 py-4 font-bold text-slate-800 dark:text-white whitespace-nowrap">R$ {t.amount.toFixed(2).replace('.', ',')}</td>
+                                      <td className="px-6 py-4">
+                                          <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                              t.status === 'completed' 
+                                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' 
+                                              : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+                                          }`}>
+                                              {t.status === 'completed' ? 'Pago' : t.status}
+                                          </span>
+                                      </td>
+                                      <td className="px-6 py-4 text-right">
+                                          <button 
+                                            onClick={() => generateReceipt(t)}
+                                            className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 p-2 rounded transition-colors opacity-0 group-hover:opacity-100"
+                                            title="Baixar Recibo PDF"
+                                          >
+                                              <FileText size={16} />
+                                          </button>
+                                      </td>
+                                  </tr>
+                              ))}
+                          </tbody>
+                      </table>
+                  </div>
               </div>
           </div>
       )}

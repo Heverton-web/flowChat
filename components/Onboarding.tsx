@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { CheckCircle, Smartphone, Users, Database, ArrowRight, ShieldCheck, Play, Send, Server, Power } from 'lucide-react';
+import { CheckCircle, Smartphone, Users, Database, ArrowRight, ShieldCheck, Play, Send, Server, Power, Circle } from 'lucide-react';
 import { ViewState, User, LicenseStatus } from '../types';
 import * as evolutionService from '../services/evolutionService';
 import * as teamService from '../services/teamService';
@@ -60,7 +60,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onNavigate, currentUser }) => {
           icon: Smartphone, 
           completed: progress.hasInstance, 
           action: 'instances', 
-          actionLabel: 'Conectar Instância' 
+          actionLabel: 'Conectar Agora' 
       },
       { 
           id: 2, 
@@ -69,7 +69,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onNavigate, currentUser }) => {
           icon: Users, 
           completed: progress.hasTeam, 
           action: 'team', 
-          actionLabel: 'Gerenciar Equipe' 
+          actionLabel: 'Adicionar Usuários' 
       },
       { 
           id: 3, 
@@ -78,7 +78,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onNavigate, currentUser }) => {
           icon: Database, 
           completed: progress.hasContacts, 
           action: 'contacts', 
-          actionLabel: 'Importar CSV' 
+          actionLabel: 'Importar Contatos' 
       }
   ];
 
@@ -93,119 +93,133 @@ const Onboarding: React.FC<OnboardingProps> = ({ onNavigate, currentUser }) => {
   const completedStepsCount = steps.filter(s => s.completed).length;
   const completionPercentage = Math.round((completedStepsCount / totalSteps) * 100);
 
-  const StepCard = ({ stepNumber, title, description, icon: Icon, isCompleted, actionLabel, onAction }: any) => (
-    <div className={`relative p-6 rounded-2xl border transition-all duration-300 flex flex-col md:flex-row gap-6 items-start md:items-center group ${isCompleted ? 'bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-800' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md'}`}>
-      
-      {stepNumber < totalSteps && (
-        <div className="absolute left-[2.25rem] top-[4.5rem] bottom-[-2.5rem] w-0.5 bg-slate-200 dark:bg-slate-700 hidden md:block z-0" />
-      )}
-
-      <div className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center shrink-0 text-xl font-bold transition-colors ${
-        isCompleted ? 'bg-green-500 text-white shadow-lg shadow-green-500/30' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
-      }`}>
-        {isCompleted ? <CheckCircle size={24} /> : stepNumber}
-      </div>
-
-      <div className="flex-1">
-        <h3 className={`text-lg font-bold mb-1 flex items-center gap-2 ${isCompleted ? 'text-green-800 dark:text-green-400' : 'text-slate-800 dark:text-white'}`}>
-          {title}
-          {isCompleted && <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full uppercase tracking-wide">{t('completed')}</span>}
-        </h3>
-        <p className="text-slate-500 dark:text-slate-400 text-sm mb-4 leading-relaxed max-w-2xl">
-          {description}
-        </p>
-        
-        <button 
-          onClick={onAction}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${
-            isCompleted ? 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20'
-          }`}
-        >
-          {isCompleted ? 'Revisar' : actionLabel}
-          {!isCompleted && <ArrowRight size={16} />}
-        </button>
-      </div>
-
-      <div className={`p-4 rounded-xl hidden md:block ${isCompleted ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-slate-50 dark:bg-slate-700/50 text-slate-400 dark:text-slate-500'}`}>
-        <Icon size={32} strokeWidth={1.5} />
-      </div>
-    </div>
-  );
-
   if (loading) return <div className="flex justify-center items-center h-full"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4">
-      {/* Enterprise Header */}
-      {isManager && licenseStatus && (
-          <div className="bg-slate-900 rounded-2xl p-8 text-white relative overflow-hidden shadow-2xl">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600 rounded-full blur-[100px] opacity-20 pointer-events-none"></div>
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 pb-24">
+      
+      {/* Header Section */}
+      <div>
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">{t('onboarding_title')}</h2>
+          <p className="text-slate-500 dark:text-slate-400 mb-6">{t('onboarding_subtitle')}</p>
+          
+          {/* Progress Bar Card */}
+          <div className="bg-slate-900 dark:bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/2"></div>
               
-              <div className="flex items-center gap-3 mb-6 relative z-10">
-                  <div className="p-3 bg-white/10 rounded-xl backdrop-blur-md">
-                      <Server size={32} className="text-blue-400" />
+              <div className="relative z-10">
+                  <div className="flex justify-between items-end mb-3">
+                      <span className="text-sm font-bold text-slate-200">Progresso da Configuração</span>
+                      <span className="text-sm font-bold text-blue-400">{completionPercentage}%</span>
                   </div>
-                  <div>
-                      <h2 className="text-2xl font-bold">Bem-vindo à sua Instância Enterprise</h2>
-                      <p className="text-slate-400">Licença Ativa: {licenseStatus.license.tier}</p>
-                  </div>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 relative z-10">
-                  <div className="bg-white/5 rounded-lg p-4 backdrop-blur-sm border border-white/10">
-                      <p className="text-xs text-slate-400 uppercase font-bold mb-1">Seats Contratados</p>
-                      <p className="text-2xl font-bold text-white">{licenseStatus.totalSeats}</p>
-                  </div>
-                  <div className="bg-white/5 rounded-lg p-4 backdrop-blur-sm border border-white/10">
-                      <p className="text-xs text-slate-400 uppercase font-bold mb-1">Conexões WhatsApp</p>
-                      <p className="text-2xl font-bold text-white">{licenseStatus.totalSeats}</p>
-                  </div>
-                  <div className="bg-white/5 rounded-lg p-4 backdrop-blur-sm border border-white/10">
-                      <p className="text-xs text-slate-400 uppercase font-bold mb-1">Status</p>
-                      <div className="flex items-center gap-2 text-green-400 font-bold">
-                          <Power size={16} /> Ativo
-                      </div>
+                  <div className="w-full bg-slate-700/50 rounded-full h-3 overflow-hidden backdrop-blur-sm border border-slate-600">
+                      <div className="bg-blue-500 h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(59,130,246,0.5)]" style={{ width: `${completionPercentage}%` }}></div>
                   </div>
               </div>
           </div>
-      )}
-
-      {/* Progress Bar */}
-      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 mb-8">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Progresso da Configuração</span>
-          <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{completionPercentage}%</span>
-        </div>
-        <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-3 overflow-hidden">
-          <div className="bg-blue-600 h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${completionPercentage}%` }}></div>
-        </div>
       </div>
 
-      {/* Steps Container */}
-      <div className="space-y-6 relative">
-        {steps.map((step) => (
-            <StepCard 
-              key={step.id}
-              stepNumber={step.id}
-              title={step.title}
-              description={step.desc}
-              icon={step.icon}
-              isCompleted={step.completed}
-              actionLabel={step.actionLabel}
-              onAction={() => onNavigate(step.action as any)}
-            />
-        ))}
+      {/* Timeline Steps */}
+      <div className="relative space-y-6 pl-4">
+        {/* Timeline Vertical Line */}
+        <div className="absolute left-[2.4rem] top-8 bottom-12 w-0.5 bg-slate-200 dark:bg-slate-700 z-0"></div>
+
+        {steps.map((step, index) => {
+            const StepIcon = step.icon;
+            return (
+                <div key={step.id} className="relative z-10 group">
+                    <div className={`
+                        flex flex-col md:flex-row items-start md:items-center gap-6 p-6 rounded-2xl border transition-all duration-300
+                        ${step.completed 
+                            ? 'bg-slate-900/5 dark:bg-slate-800 border-green-500/30 dark:border-green-500/30 shadow-[0_0_15px_rgba(16,185,129,0.05)]' 
+                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-500/50 dark:hover:border-blue-500/50 shadow-sm'
+                        }
+                    `}>
+                        {/* Status Icon (Left Timeline Node) */}
+                        <div className="absolute left-[-1.1rem] md:static md:left-auto">
+                            <div className={`
+                                w-12 h-12 rounded-full flex items-center justify-center border-4 transition-all duration-500
+                                ${step.completed 
+                                    ? 'bg-green-500 border-white dark:border-slate-900 text-white shadow-lg shadow-green-500/30' 
+                                    : 'bg-slate-100 dark:bg-slate-700 border-white dark:border-slate-900 text-slate-400 dark:text-slate-500'
+                                }
+                            `}>
+                                {step.completed ? <CheckCircle size={20} fill="currentColor" className="text-white" /> : <span className="font-bold">{step.id}</span>}
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 ml-8 md:ml-0">
+                            <div className="flex items-center gap-3 mb-1">
+                                <h3 className={`text-lg font-bold ${step.completed ? 'text-green-700 dark:text-green-400' : 'text-slate-800 dark:text-white'}`}>
+                                    {step.title}
+                                </h3>
+                                {step.completed && (
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800">
+                                        Concluído
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm max-w-xl">
+                                {step.desc}
+                            </p>
+                        </div>
+
+                        {/* Right Action Area */}
+                        <div className="flex items-center gap-4 w-full md:w-auto mt-4 md:mt-0 pl-8 md:pl-0">
+                            {/* Decorative Icon */}
+                            <div className={`p-3 rounded-xl hidden lg:block transition-colors ${step.completed ? 'bg-green-50 dark:bg-green-900/10 text-green-600 dark:text-green-500' : 'bg-slate-100 dark:bg-slate-700/50 text-slate-400 dark:text-slate-500'}`}>
+                                <StepIcon size={24} strokeWidth={1.5} />
+                            </div>
+
+                            {/* Button */}
+                            <button 
+                                onClick={() => onNavigate(step.action as any)}
+                                className={`
+                                    w-full md:w-auto px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2
+                                    ${step.completed 
+                                        ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600' 
+                                        : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 hover:-translate-y-0.5'
+                                    }
+                                `}
+                            >
+                                {step.completed ? 'Revisar' : step.actionLabel}
+                                {!step.completed && <ArrowRight size={16} />}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        })}
       </div>
 
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-6 flex gap-4 items-start mt-8">
-        <ShieldCheck className="text-blue-600 dark:text-blue-400 shrink-0" size={24} />
-        <div>
-          <h4 className="font-bold text-blue-800 dark:text-blue-200 mb-1">Ambiente Dedicado</h4>
-          <p className="text-sm text-blue-700 dark:text-blue-300 leading-relaxed">
-            Sua infraestrutura é isolada e monitorada 24/7.
-          </p>
+      {/* Security Footer */}
+      <div className="mt-12 bg-indigo-900/20 border border-indigo-500/20 rounded-xl p-6 flex flex-col md:flex-row gap-6 items-center justify-between backdrop-blur-sm">
+        <div className="flex items-center gap-4">
+            <div className="p-3 bg-indigo-500/20 rounded-full text-indigo-400">
+                <ShieldCheck size={28} />
+            </div>
+            <div>
+                <h4 className="font-bold text-indigo-900 dark:text-indigo-100 mb-1">Ambiente Dedicado Enterprise</h4>
+                <p className="text-sm text-indigo-800 dark:text-indigo-300">
+                    Sua infraestrutura é isolada e monitorada 24/7 para garantir máxima performance.
+                </p>
+            </div>
         </div>
+        {licenseStatus && (
+            <div className="flex gap-8 text-indigo-900 dark:text-indigo-200 text-sm font-mono border-l border-indigo-500/20 pl-8">
+                <div>
+                    <span className="block text-xs opacity-60 uppercase">Licença</span>
+                    <span className="font-bold">{licenseStatus.license.tier}</span>
+                </div>
+                <div>
+                    <span className="block text-xs opacity-60 uppercase">Seats</span>
+                    <span className="font-bold">{licenseStatus.totalSeats}</span>
+                </div>
+            </div>
+        )}
       </div>
+
     </div>
   );
 };

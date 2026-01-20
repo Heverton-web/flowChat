@@ -9,12 +9,18 @@ const MOCK_DEFAULTS: AgentPlan[] = [
   { 
     id: 'agent-1', name: 'Atendente Demo', email: 'agente@empresa.com', 
     status: 'active', messagesUsed: 850, 
-    permissions: { canCreate: true, canEdit: true, canDelete: true }
+    permissions: { 
+        canCreate: true, canEdit: true, canDelete: true,
+        canCreateTags: true, canEditTags: true, canDeleteTags: true 
+    }
   },
   { 
     id: 'agent-2', name: 'Roberto Vendas', email: 'roberto@empresa.com', 
     status: 'active', messagesUsed: 2800, 
-    permissions: { canCreate: true, canEdit: true, canDelete: false } 
+    permissions: { 
+        canCreate: true, canEdit: true, canDelete: false,
+        canCreateTags: true, canEditTags: false, canDeleteTags: false
+    } 
   }
 ];
 
@@ -59,7 +65,10 @@ export const addAgent = async (agent: AddAgentPayload): Promise<AgentPlan> => {
       email: agent.email,
       status: 'active', 
       messagesUsed: 0,
-      permissions: agent.permissions || { canCreate: true, canEdit: true, canDelete: false },
+      permissions: agent.permissions || { 
+          canCreate: true, canEdit: true, canDelete: false,
+          canCreateTags: true, canEditTags: true, canDeleteTags: false
+      },
       tempPassword: agent.password 
     };
     saveData([...agents, newAgent]);
