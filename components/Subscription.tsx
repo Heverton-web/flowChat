@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Crown, Check, Users, Smartphone, Server, Plus, CreditCard, Loader2, Zap, Shield, Globe, MessageSquare } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { Crown, Check, X as XIcon, HelpCircle, Shield, Zap, Star, Layout, Users, Smartphone, ArrowRight, Loader2, CreditCard } from 'lucide-react';
 import { LicenseStatus } from '../types';
 import * as financialService from '../services/financialService';
 import { useApp } from '../contexts/AppContext';
@@ -11,8 +10,10 @@ const Subscription: React.FC = () => {
   const { showToast } = useApp();
   const [licenseStatus, setLicenseStatus] = useState<LicenseStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isUpgrading, setIsUpgrading] = useState(false);
-  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     loadLicense();
@@ -30,289 +31,250 @@ const Subscription: React.FC = () => {
     }
   };
 
-  const confirmAddSeat = async () => {
-      setIsUpgrading(true);
-      await financialService.requestAddonSeat(1);
-      await loadLicense();
-      setIsUpgrading(false);
-      setConfirmModalOpen(false);
-      showToast('Solicitação enviada com sucesso!', 'success');
+  const handleSelectPlan = (planName: string) => {
+      setSelectedPlan(planName);
+      setUpgradeModalOpen(true);
   };
 
-  if (loading || !licenseStatus) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-blue-600" size={32} /></div>;
+  const confirmUpgrade = async () => {
+      setProcessing(true);
+      // Simulate API call
+      await new Promise(r => setTimeout(r, 2000));
+      setProcessing(false);
+      setUpgradeModalOpen(false);
+      showToast(`Plano ${selectedPlan} contratado com sucesso!`, 'success');
+      loadLicense();
+  };
 
-  const { license, usage, totalSeats } = licenseStatus;
-  const renewalDateObj = new Date(license.renewalDate);
+  if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-blue-600" size={32} /></div>;
 
-  // Data for Radial Charts
-  const seatsData = [
-      { name: 'Used', value: usage.usedSeats, color: '#3b82f6' }, // Blue
-      { name: 'Free', value: totalSeats - usage.usedSeats, color: '#e2e8f0' }
-  ];
-  
-  const instanceData = [
-      { name: 'Used', value: usage.usedInstances, color: '#10b981' }, // Emerald
-      { name: 'Free', value: totalSeats - usage.usedInstances, color: '#e2e8f0' }
-  ];
+  const currentTier = licenseStatus?.license.tier || 'STANDARD';
 
-  const features = [
-      { name: 'Acesso à Evolution API v2', included: true },
-      { name: 'Múltiplas Instâncias (WhatsApp)', included: true },
-      { name: 'Envios Ilimitados', included: true },
-      { name: 'White Label (Marca Própria)', included: license.features.whiteLabel },
-      { name: 'Suporte Prioritário 24/7', included: license.features.prioritySupport },
-      { name: 'Gestor de Conta Dedicado', included: license.tier === 'ENTERPRISE' },
+  // Pricing Data
+  const plans = [
+      {
+          id: 'STANDARD',
+          name: 'Standard',
+          price: billingCycle === 'monthly' ? 297 : 237,
+          description: 'Essencial para pequenas operações.',
+          features: [
+              { name: '1 Usuário (Seat)', included: true },
+              { name: '1 Conexão WhatsApp', included: true },
+              { name: 'Envios Ilimitados', included: true },
+              { name: 'Gestão de Contatos', included: true },
+              { name: 'Dashboard Básico', included: true },
+              { name: 'API de Integração', included: false },
+              { name: 'White Label', included: false },
+          ],
+          highlight: false,
+          color: 'blue'
+      },
+      {
+          id: 'PROFESSIONAL',
+          name: 'Professional',
+          price: billingCycle === 'monthly' ? 497 : 397,
+          description: 'Para times em crescimento que precisam de escala.',
+          features: [
+              { name: '5 Usuários (Seats)', included: true },
+              { name: '5 Conexões WhatsApp', included: true },
+              { name: 'Envios Ilimitados', included: true },
+              { name: 'Gestão de Contatos', included: true },
+              { name: 'Dashboard Avançado', included: true },
+              { name: 'API de Integração', included: true },
+              { name: 'White Label', included: false },
+          ],
+          highlight: true,
+          color: 'indigo'
+      },
+      {
+          id: 'ENTERPRISE',
+          name: 'Enterprise',
+          price: billingCycle === 'monthly' ? 997 : 797,
+          description: 'Potência máxima e controle total da marca.',
+          features: [
+              { name: '15 Usuários (Seats)', included: true },
+              { name: '15 Conexões WhatsApp', included: true },
+              { name: 'Envios Ilimitados', included: true },
+              { name: 'Gestor de Conta Dedicado', included: true },
+              { name: 'Dashboard Customizável', included: true },
+              { name: 'API de Integração', included: true },
+              { name: 'White Label Completo', included: true },
+          ],
+          highlight: false,
+          color: 'slate' // Dark
+      }
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-12 animate-in fade-in duration-500 pb-20">
       
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                <Crown className="text-amber-500" size={24} fill="currentColor" />
-                Assinatura & Plano
-            </h2>
-            <p className="text-slate-500 dark:text-slate-400">Gerencie sua licença, limites e método de pagamento.</p>
-        </div>
-        <div className="flex gap-2">
-            <button className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium px-4 py-2">
-                Ver faturas anteriores
-            </button>
-        </div>
+      {/* Header & Current Status */}
+      <div className="text-center space-y-4 max-w-2xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+              Escolha o plano ideal para <span className="text-blue-600">escalar</span> sua operação
+          </h2>
+          <p className="text-slate-500 dark:text-slate-400 text-lg">
+              Desbloqueie todo o potencial do FlowChat com recursos exclusivos.
+          </p>
+          
+          {/* Current Plan Banner */}
+          <div className="inline-flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-4 py-2 rounded-full border border-blue-100 dark:border-blue-800 text-sm font-medium mt-4">
+              <Crown size={16} fill="currentColor" />
+              <span>Seu plano atual: <strong>{currentTier}</strong></span>
+          </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Plan Details Card */}
-          <div className="lg:col-span-2 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-8 text-white shadow-xl relative overflow-hidden flex flex-col justify-between min-h-[300px]">
-              {/* Background Decor */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-[80px] pointer-events-none"></div>
+      {/* Toggle Monthly/Yearly */}
+      <div className="flex justify-center">
+          <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl flex items-center relative">
+              <button 
+                  onClick={() => setBillingCycle('monthly')}
+                  className={`px-6 py-2 rounded-lg text-sm font-bold transition-all relative z-10 ${billingCycle === 'monthly' ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
+              >
+                  Mensal
+              </button>
+              <button 
+                  onClick={() => setBillingCycle('yearly')}
+                  className={`px-6 py-2 rounded-lg text-sm font-bold transition-all relative z-10 ${billingCycle === 'yearly' ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
+              >
+                  Anual
+              </button>
               
-              <div className="relative z-10 flex justify-between items-start">
-                  <div>
-                      <span className="bg-amber-500/20 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3 inline-block">
-                          {license.status}
-                      </span>
-                      <h3 className="text-3xl font-bold mb-1">Plano {license.tier}</h3>
-                      <p className="text-slate-400 text-sm">Renovação automática em {renewalDateObj.toLocaleDateString()}</p>
-                  </div>
-                  <div className="text-right hidden sm:block">
-                      <p className="text-sm text-slate-400">Valor Mensal</p>
-                      <p className="text-3xl font-bold text-white">R$ 4.500<span className="text-lg text-slate-400 font-normal">,00</span></p>
-                  </div>
+              {/* Discount Badge */}
+              <div className="absolute -right-24 top-1/2 -translate-y-1/2 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 text-[10px] font-bold px-2 py-1 rounded-full border border-green-200 dark:border-green-700 animate-pulse">
+                  Economize 20%
               </div>
+          </div>
+      </div>
 
-              <div className="relative z-10 mt-8">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {features.map((feature, idx) => (
-                          <div key={idx} className="flex items-center gap-3">
-                              <div className={`p-1 rounded-full ${feature.included ? 'bg-green-500/20 text-green-400' : 'bg-slate-700 text-slate-500'}`}>
-                                  <Check size={14} />
+      {/* Pricing Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto px-4 items-center">
+          {plans.map((plan) => (
+              <div 
+                key={plan.id}
+                className={`
+                    relative rounded-3xl p-8 border transition-all duration-300 flex flex-col h-full
+                    ${plan.highlight 
+                        ? 'bg-white dark:bg-slate-800 border-indigo-500 shadow-2xl scale-105 z-10 ring-4 ring-indigo-500/10' 
+                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-lg hover:border-slate-300 dark:hover:border-slate-600'
+                    }
+                `}
+              >
+                  {plan.highlight && (
+                      <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wide shadow-lg">
+                          Mais Popular
+                      </div>
+                  )}
+
+                  <div className="mb-6">
+                      <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">{plan.name}</h3>
+                      <p className="text-slate-500 dark:text-slate-400 text-sm h-10">{plan.description}</p>
+                  </div>
+
+                  <div className="mb-6 flex items-end gap-1">
+                      <span className="text-4xl font-black text-slate-900 dark:text-white">R$ {plan.price}</span>
+                      <span className="text-slate-400 mb-1 font-medium">/mês</span>
+                  </div>
+
+                  <button 
+                    onClick={() => handleSelectPlan(plan.name)}
+                    className={`
+                        w-full py-3 rounded-xl font-bold mb-8 transition-all flex items-center justify-center gap-2
+                        ${plan.highlight
+                            ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-600/20'
+                            : 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-white'
+                        }
+                    `}
+                  >
+                      {currentTier === plan.id ? 'Seu Plano Atual' : 'Começar Agora'}
+                      {currentTier !== plan.id && <ArrowRight size={18} />}
+                  </button>
+
+                  <div className="space-y-4 flex-1">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Recursos Inclusos:</p>
+                      {plan.features.map((feature, idx) => (
+                          <div key={idx} className="flex items-start gap-3">
+                              <div className={`mt-0.5 p-0.5 rounded-full ${feature.included ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'}`}>
+                                  {feature.included ? <Check size={12} strokeWidth={3} /> : <XIcon size={12} strokeWidth={3} />}
                               </div>
-                              <span className={`text-sm ${feature.included ? 'text-slate-200' : 'text-slate-500 line-through'}`}>
+                              <span className={`text-sm ${feature.included ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400 line-through'}`}>
                                   {feature.name}
                               </span>
                           </div>
                       ))}
                   </div>
               </div>
-          </div>
+          ))}
+      </div>
 
-          {/* Payment Method Card */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 flex flex-col shadow-sm">
-              <h4 className="font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
-                  <CreditCard size={18} className="text-blue-600"/> Método de Pagamento
-              </h4>
-              
-              <div className="flex-1 flex flex-col items-center justify-center mb-6">
-                  {/* Credit Card Visual */}
-                  <div className="w-full aspect-[1.586/1] rounded-xl bg-gradient-to-tr from-slate-700 to-slate-900 p-6 flex flex-col justify-between text-white shadow-lg relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-colors"></div>
-                      <div className="flex justify-between items-start">
-                          <div className="w-10 h-6 rounded bg-white/20 backdrop-blur-sm"></div> {/* Chip */}
-                          <span className="font-mono font-bold text-lg italic opacity-80">VISA</span>
+      {/* FAQ & Trust Section */}
+      <div className="max-w-4xl mx-auto pt-10 border-t border-slate-200 dark:border-slate-800">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div>
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                      <HelpCircle size={20} className="text-blue-500"/> Perguntas Frequentes
+                  </h3>
+                  <div className="space-y-4">
+                      <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                          <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm mb-1">Posso cancelar a qualquer momento?</h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Sim, não há fidelidade no plano mensal. No plano anual, o reembolso é proporcional em até 7 dias.</p>
                       </div>
-                      <div className="font-mono text-lg tracking-widest mt-4">
-                          •••• •••• •••• 4242
-                      </div>
-                      <div className="flex justify-between items-end text-xs opacity-70">
-                          <div>
-                              <p className="uppercase text-[8px]">Titular</p>
-                              <p className="font-bold tracking-wide">GESTOR ADMIN</p>
-                          </div>
-                          <div>
-                              <p className="uppercase text-[8px]">Validade</p>
-                              <p className="font-bold">12/28</p>
-                          </div>
+                      <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                          <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm mb-1">Emitem Nota Fiscal?</h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Sim, a nota fiscal é emitida automaticamente e enviada para o seu email após a confirmação do pagamento.</p>
                       </div>
                   </div>
               </div>
-
-              <button className="w-full py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                  Alterar Cartão
-              </button>
+              
+              <div>
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                      <Shield size={20} className="text-green-500"/> Garantia & Segurança
+                  </h3>
+                  <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm text-center">
+                      <div className="flex justify-center gap-4 mb-4 text-slate-400">
+                          <Shield size={32} />
+                          <Layout size={32} />
+                          <Zap size={32} />
+                      </div>
+                      <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+                          Processamos pagamentos via Stripe com criptografia de ponta a ponta. Seus dados nunca são compartilhados.
+                      </p>
+                      <button className="text-xs text-blue-600 hover:underline font-bold">Ler Termos de Uso</button>
+                  </div>
+              </div>
           </div>
       </div>
 
-      <h3 className="text-lg font-bold text-slate-800 dark:text-white pt-4">Consumo de Recursos</h3>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          
-          {/* Seats Usage */}
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
-              <div className="flex justify-between items-start mb-2">
-                  <div>
-                      <h4 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                          <Users size={18} className="text-blue-500"/> Seats (Usuários)
-                      </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Acesso ao painel administrativo</p>
-                  </div>
-                  <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-bold px-2 py-1 rounded">
-                      {usage.usedSeats} / {totalSeats}
-                  </div>
-              </div>
-              
-              <div className="flex items-center justify-center py-6 relative">
-                  <div className="w-32 h-32 relative">
-                      <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                              <Pie
-                                  data={seatsData}
-                                  cx="50%"
-                                  cy="50%"
-                                  innerRadius={40}
-                                  outerRadius={55}
-                                  dataKey="value"
-                                  stroke="none"
-                                  startAngle={90}
-                                  endAngle={-270}
-                              >
-                                  {seatsData.map((entry, index) => (
-                                      <Cell key={`cell-${index}`} fill={entry.color} />
-                                  ))}
-                              </Pie>
-                          </PieChart>
-                      </ResponsiveContainer>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <span className="text-xl font-bold text-slate-800 dark:text-white">{Math.round((usage.usedSeats / totalSeats) * 100)}%</span>
-                      </div>
-                  </div>
-              </div>
-
-              <button 
-                onClick={() => setConfirmModalOpen(true)}
-                className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 transition-all mt-auto"
-              >
-                  <Plus size={18}/> Adicionar Seat
-              </button>
-              <p className="text-center text-xs text-slate-400 mt-2">+ R$ 150,00 / mês por usuário</p>
-          </div>
-
-          {/* Instances Usage */}
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
-              <div className="flex justify-between items-start mb-2">
-                  <div>
-                      <h4 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                          <Smartphone size={18} className="text-emerald-500"/> Instâncias
-                      </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Conexões WhatsApp ativas</p>
-                  </div>
-                  <div className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold px-2 py-1 rounded">
-                      {usage.usedInstances} / {totalSeats}
-                  </div>
-              </div>
-              
-              <div className="flex items-center justify-center py-6 relative">
-                  <div className="w-32 h-32 relative">
-                      <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                              <Pie
-                                  data={instanceData}
-                                  cx="50%"
-                                  cy="50%"
-                                  innerRadius={40}
-                                  outerRadius={55}
-                                  dataKey="value"
-                                  stroke="none"
-                                  startAngle={90}
-                                  endAngle={-270}
-                              >
-                                  {instanceData.map((entry, index) => (
-                                      <Cell key={`cell-${index}`} fill={entry.color} />
-                                  ))}
-                              </Pie>
-                          </PieChart>
-                      </ResponsiveContainer>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <span className="text-xl font-bold text-slate-800 dark:text-white">{Math.round((usage.usedInstances / totalSeats) * 100)}%</span>
-                      </div>
-                  </div>
-              </div>
-
-              <div className="mt-auto bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400 text-center">
-                  Cada Seat adicionado libera automaticamente +1 Instância de WhatsApp.
-              </div>
-          </div>
-
-          {/* Messages Volume */}
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
-              <div className="flex justify-between items-start mb-2">
-                  <div>
-                      <h4 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                          <MessageSquare size={18} className="text-indigo-500"/> Volume de Envios
-                      </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Ciclo mensal atual</p>
-                  </div>
-                  <div className="bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-xs font-bold px-2 py-1 rounded">
-                      Ilimitado
-                  </div>
-              </div>
-              
-              <div className="flex-1 flex flex-col justify-center items-center py-6 text-center">
-                  <div className="mb-4 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-full text-indigo-600 dark:text-indigo-400">
-                      <Zap size={32} fill="currentColor" />
-                  </div>
-                  <h5 className="text-2xl font-bold text-slate-800 dark:text-white">{usage.usedMessagesThisMonth.toLocaleString()}</h5>
-                  <p className="text-sm text-slate-500">mensagens enviadas</p>
-              </div>
-
-              <div className="mt-auto flex items-center gap-2 text-xs text-green-600 dark:text-green-400 justify-center bg-green-50 dark:bg-green-900/10 p-2 rounded-lg">
-                  <Shield size={12} />
-                  <span>Sua cota é ilimitada no plano Enterprise</span>
-              </div>
-          </div>
-
-      </div>
-
-      {/* Confirmation Modal */}
+      {/* Checkout Modal */}
       <Modal
-        isOpen={confirmModalOpen}
-        onClose={() => setConfirmModalOpen(false)}
-        title="Expandir Licença Enterprise"
-        type="info"
+        isOpen={upgradeModalOpen}
+        onClose={() => setUpgradeModalOpen(false)}
+        title={`Contratar Plano ${selectedPlan}`}
         footer={
             <>
-                <button onClick={() => setConfirmModalOpen(false)} className="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium rounded-lg">Cancelar</button>
-                <button onClick={confirmAddSeat} disabled={isUpgrading} className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg flex items-center gap-2 hover:bg-blue-700">
-                    {isUpgrading && <Loader2 className="animate-spin" size={16}/>} Confirmar Contratação
+                <button onClick={() => setUpgradeModalOpen(false)} className="px-4 py-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">Cancelar</button>
+                <button onClick={confirmUpgrade} disabled={processing} className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg flex items-center gap-2 hover:bg-blue-700">
+                    {processing && <Loader2 className="animate-spin" size={16}/>} Confirmar Assinatura
                 </button>
             </>
         }
       >
-          <div className="text-slate-600 dark:text-slate-300 space-y-4">
-              <p>Você está prestes a adicionar <strong>+1 Seat</strong> à sua licença.</p>
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
-                  <ul className="space-y-2 text-sm">
-                      <li className="flex items-center gap-2"><Check size={14} className="text-blue-600"/> +1 Acesso para Usuário/Atendente</li>
-                      <li className="flex items-center gap-2"><Check size={14} className="text-blue-600"/> +1 Conexão de WhatsApp (Instância)</li>
-                      <li className="flex items-center gap-2"><Check size={14} className="text-blue-600"/> Suporte e Manutenção inclusos</li>
-                  </ul>
+          <div className="space-y-4">
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl flex items-center gap-4 border border-blue-100 dark:border-blue-800">
+                  <div className="p-3 bg-white dark:bg-slate-700 rounded-full shadow-sm text-blue-600">
+                      <CreditCard size={24} />
+                  </div>
+                  <div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Resumo do Pedido</p>
+                      <h4 className="text-lg font-bold text-slate-800 dark:text-white">Plano {selectedPlan} ({billingCycle === 'monthly' ? 'Mensal' : 'Anual'})</h4>
+                  </div>
               </div>
-              <p className="text-sm font-medium">Valor adicional: <span className="text-slate-900 dark:text-white font-bold">R$ 150,00 / mês</span></p>
-              <p className="text-xs text-slate-500">O valor será cobrado proporcionalmente na próxima fatura.</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                  Você será redirecionado para o ambiente seguro de pagamento. O acesso aos novos recursos é liberado imediatamente após a confirmação.
+              </p>
           </div>
       </Modal>
+
     </div>
   );
 };
