@@ -1,7 +1,9 @@
 
 import { Campaign } from '../types';
 
-let MOCK_CAMPAIGNS: Campaign[] = [
+const STORAGE_KEY = 'flowchat_campaigns';
+
+const MOCK_DEFAULTS: Campaign[] = [
   {
     id: '1',
     name: 'Promoção Black Friday',
@@ -15,20 +17,31 @@ let MOCK_CAMPAIGNS: Campaign[] = [
     executedAt: '2023-11-24T09:00:00Z',
     workflow: [
         { id: 'w1', type: 'text', content: 'Olá! Aproveite nossas ofertas.', delay: 1200, order: 1 },
-        { id: 'w2', type: 'image', content: 'Banner Oficial', delay: 2000, order: 2 }
     ],
     minDelay: 20,
     maxDelay: 60
   }
 ];
 
+const loadData = (): Campaign[] => {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) return JSON.parse(stored);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_DEFAULTS));
+  return MOCK_DEFAULTS;
+};
+
+const saveData = (data: Campaign[]) => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+};
+
 export const getCampaigns = async (userId: string, role: string): Promise<Campaign[]> => {
   return new Promise((resolve) => {
     setTimeout(() => {
+        const campaigns = loadData();
         if (role === 'manager') {
-            resolve([...MOCK_CAMPAIGNS]); 
+            resolve(campaigns); 
         } else {
-            resolve(MOCK_CAMPAIGNS.filter(c => c.ownerId === userId));
+            resolve(campaigns.filter(c => c.ownerId === userId));
         }
     }, 500);
   });
@@ -46,16 +59,20 @@ export const createCampaign = async (
         deliveryRate: 0
       };
       
-      MOCK_CAMPAIGNS = [newCampaign, ...MOCK_CAMPAIGNS];
+      const campaigns = loadData();
+      saveData([newCampaign, ...campaigns]);
       
+      // Simulate Processing -> Completed in background (mocking simpler here)
       setTimeout(() => {
-          const index = MOCK_CAMPAIGNS.findIndex(c => c.id === newCampaign.id);
+          const currentCampaigns = loadData();
+          const index = currentCampaigns.findIndex(c => c.id === newCampaign.id);
           if (index !== -1) {
-              MOCK_CAMPAIGNS[index].status = 'completed';
-              MOCK_CAMPAIGNS[index].deliveryRate = Number((Math.random() * (100 - 85) + 85).toFixed(1));
-              MOCK_CAMPAIGNS[index].executedAt = new Date().toISOString();
+              currentCampaigns[index].status = 'completed';
+              currentCampaigns[index].deliveryRate = Number((Math.random() * (100 - 85) + 85).toFixed(1));
+              currentCampaigns[index].executedAt = new Date().toISOString();
+              saveData(currentCampaigns);
           }
-      }, 5000);
+      }, 8000);
 
       resolve(newCampaign);
     }, 800);
@@ -84,7 +101,6 @@ export const downloadCampaignReport = (campaign: Campaign) => {
     const link = document.createElement('a');
     link.setAttribute('href', url);
     link.setAttribute('download', `relatorio_campanha_${campaign.id}.csv`);
-    link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

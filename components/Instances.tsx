@@ -1,29 +1,38 @@
 
 import React, { useState, useEffect } from 'react';
-import { Plus, RefreshCw, Trash2, QrCode, Battery, Smartphone, BarChart3, Lock, AlertTriangle, X, Loader2 } from 'lucide-react';
+import { Plus, RefreshCw, Trash2, QrCode, Smartphone, X, Loader2, CheckCircle } from 'lucide-react';
 import { Instance, User, LicenseStatus } from '../types';
 import * as evolutionService from '../services/evolutionService';
 import * as financialService from '../services/financialService';
 import { useApp } from '../contexts/AppContext';
+import Modal from './Modal';
 
 interface InstancesProps {
   currentUser: User;
 }
 
 const Instances: React.FC<InstancesProps> = ({ currentUser }) => {
-  const { t } = useApp();
+  const { t, showToast } = useApp();
   const [instances, setInstances] = useState<Instance[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Creation States
   const [isCreating, setIsCreating] = useState(false);
+  const [isSubmittingCreate, setIsSubmittingCreate] = useState(false);
   const [newInstanceName, setNewInstanceName] = useState('');
+  
+  // Connection Wizard States
+  const [connectionModalOpen, setConnectionModalOpen] = useState(false);
+  const [connectionStep, setConnectionStep] = useState<'loading' | 'qr' | 'scanning' | 'success'>('loading');
   const [qrCodeData, setQrCodeData] = useState<string | null>(null);
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [licenseStatus, setLicenseStatus] = useState<LicenseStatus | null>(null);
   
+  // Deletion States
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [instanceToDelete, setInstanceToDelete] = useState<Instance | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [licenseStatus, setLicenseStatus] = useState<LicenseStatus | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -36,6 +45,7 @@ const Instances: React.FC<InstancesProps> = ({ currentUser }) => {
       setLicenseStatus(licStatus);
     } catch (error) {
       console.error("Failed to load instances", error);
+      showToast('Erro ao carregar instâncias', 'error');
     } finally {
       setLoading(false);
     }
@@ -47,29 +57,24 @@ const Instances: React.FC<InstancesProps> = ({ currentUser }) => {
 
   const handleCreate = async () => {
     if (!newInstanceName.trim()) return;
-    setError(null);
-
-    // Validação de Limite de Licença
-    if (licenseStatus) {
-        if (licenseStatus.usage.usedInstances >= licenseStatus.totalSeats) {
-            setError(`Limite de instâncias atingido (${licenseStatus.totalSeats}). Solicite mais Seats ao gestor.`);
-            return;
-        }
-    }
+    setIsSubmittingCreate(true);
 
     try {
       await evolutionService.createInstance(newInstanceName, currentUser.id, currentUser.name);
       setNewInstanceName('');
       setIsCreating(false);
+      showToast('Instância criada! Conecte seu WhatsApp agora.', 'success');
       loadData();
     } catch (e: any) {
-      setError(e.message || t('error_create_limit'));
+      showToast(e.message || t('error_create_limit'), 'error');
+    } finally {
+      setIsSubmittingCreate(false);
     }
   };
 
   const requestDelete = (instance: Instance) => {
     if (instance.ownerId !== currentUser.id && currentUser.role !== 'manager') {
-        alert('Ação não permitida.');
+        showToast('Ação não permitida.', 'error');
         return;
     }
     setInstanceToDelete(instance);
@@ -83,24 +88,55 @@ const Instances: React.FC<InstancesProps> = ({ currentUser }) => {
         await evolutionService.deleteInstance(instanceToDelete.id, instanceToDelete.name);
         setIsDeleteModalOpen(false);
         setInstanceToDelete(null);
+        showToast('Instância excluída com sucesso.', 'success');
         loadData();
     } catch (error) {
-        alert('Erro ao excluir instância');
+        showToast('Erro ao excluir instância', 'error');
     } finally {
         setIsDeleting(false);
     }
   };
 
-  const handleShowQR = async (instance: Instance) => {
+  const startConnectionFlow = async (instance: Instance) => {
     const isOwner = instance.ownerId === currentUser.id;
     if (!isOwner) {
-      alert('Apenas o dono da instância pode visualizar o QR Code.');
+      showToast('Apenas o dono da instância pode visualizar o QR Code.', 'error');
       return;
     }
+    
     setSelectedInstanceId(instance.id);
+    setConnectionModalOpen(true);
+    setConnectionStep('loading');
     setQrCodeData(null);
-    const qr = await evolutionService.getInstanceQRCode(instance.id);
-    setQrCodeData(qr);
+
+    // Step 1: Request Session (Mock)
+    try {
+        const qr = await evolutionService.getInstanceQRCode(instance.id);
+        setQrCodeData(qr);
+        setConnectionStep('qr');
+        
+        // Start Mock Scanner Simulation after 2s of displaying QR
+        setTimeout(() => {
+            if (connectionModalOpen) { 
+                setConnectionStep('scanning');
+                // Simulate "Reading..." for 5s then Success
+                setTimeout(async () => {
+                    await evolutionService.connectInstance(instance.id);
+                    setConnectionStep('success');
+                    showToast('Dispositivo pareado com sucesso!', 'success');
+                    // Close automatically after 2s
+                    setTimeout(() => {
+                        setConnectionModalOpen(false);
+                        loadData();
+                    }, 2000);
+                }, 5000);
+            }
+        }, 4000);
+
+    } catch (e) {
+        setConnectionModalOpen(false);
+        showToast('Erro ao gerar QR Code', 'error');
+    }
   };
 
   const userHasInstance = instances.some(i => i.ownerId === currentUser.id);
@@ -142,19 +178,24 @@ const Instances: React.FC<InstancesProps> = ({ currentUser }) => {
       {isCreating && (
         <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-blue-100 dark:border-slate-700 shadow-lg animate-in fade-in slide-in-from-top-4 transition-colors">
           <h3 className="text-lg font-semibold mb-4 text-slate-800 dark:text-white">{t('new_instance')}</h3>
-          {error && <div className="mb-4 text-red-600 text-sm bg-red-50 p-2 rounded">{error}</div>}
           <div className="flex gap-4">
             <input 
               type="text" 
               value={newInstanceName}
               onChange={(e) => setNewInstanceName(e.target.value)}
               placeholder={t('instance_name_placeholder')}
+              disabled={isSubmittingCreate}
               className="flex-1 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition-colors"
             />
-            <button onClick={handleCreate} className="bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-700">
+            <button 
+                onClick={handleCreate} 
+                disabled={isSubmittingCreate || !newInstanceName}
+                className="bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
+            >
+              {isSubmittingCreate && <Loader2 className="animate-spin" size={16} />}
               {t('create')}
             </button>
-            <button onClick={() => { setIsCreating(false); setError(null); }} className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-6 py-2 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-600">
+            <button onClick={() => setIsCreating(false)} className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-6 py-2 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-600">
               {t('cancel')}
             </button>
           </div>
@@ -178,16 +219,16 @@ const Instances: React.FC<InstancesProps> = ({ currentUser }) => {
               <div key={instance.id} className={`bg-white dark:bg-slate-800 rounded-xl border shadow-sm overflow-hidden flex flex-col transition-all ${isOwner ? 'border-blue-200 dark:border-blue-900 ring-1 ring-blue-100 dark:ring-blue-900/30' : 'border-slate-200 dark:border-slate-700 opacity-90'}`}>
                 <div className="p-6 flex-1">
                   <div className="flex justify-between items-start mb-4">
-                    <div className={`p-3 rounded-full ${instance.status === 'connected' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'}`}>
+                    <div className={`p-3 rounded-full ${instance.status === 'connected' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'}`}>
                         <Smartphone size={24} />
                     </div>
                     
                     <div className="flex gap-2">
                         {isOwner && instance.status !== 'connected' ? (
                             <button 
-                                onClick={() => handleShowQR(instance)}
-                                className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title={t('scan_qr')}>
-                                <QrCode size={18} />
+                                onClick={() => startConnectionFlow(instance)}
+                                className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors flex items-center gap-2" title={t('scan_qr')}>
+                                <QrCode size={18} /> <span className="text-xs font-bold uppercase hidden md:inline">Conectar</span>
                             </button>
                         ) : null}
                         
@@ -218,10 +259,9 @@ const Instances: React.FC<InstancesProps> = ({ currentUser }) => {
                         <span className="text-slate-500 dark:text-slate-400">{t('status')}</span>
                         <span className={`font-medium ${
                             instance.status === 'connected' ? 'text-green-600 dark:text-green-400' : 
-                            instance.status === 'connecting' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'
+                            'text-amber-600 dark:text-amber-400'
                         }`}>
-                            {instance.status === 'connected' ? t('connected') : 
-                             instance.status === 'connecting' ? t('connecting') : t('disconnected')}
+                            {instance.status === 'connected' ? t('connected') : t('disconnected')}
                         </span>
                     </div>
                     {instance.phone && (
@@ -238,39 +278,68 @@ const Instances: React.FC<InstancesProps> = ({ currentUser }) => {
       </div>
 
       {/* Delete Modal */}
-      {isDeleteModalOpen && instanceToDelete && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-xl max-w-sm w-full shadow-2xl animate-in zoom-in-95 transition-colors">
-                <div className="p-6 text-center">
-                    <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <AlertTriangle size={32} />
-                    </div>
-                    <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Excluir Instância?</h3>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
-                        Você está prestes a excluir a instância <strong>{instanceToDelete.name}</strong>. 
-                        Isso desconectará o WhatsApp e é uma ação irreversível.
-                    </p>
-                    <div className="flex gap-3">
-                        <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg">Cancelar</button>
-                        <button onClick={confirmDelete} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Sim, Excluir</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-      )}
+      <Modal 
+        isOpen={isDeleteModalOpen} 
+        onClose={() => setIsDeleteModalOpen(false)} 
+        title="Excluir Instância?" 
+        type="danger"
+        footer={
+            <>
+                <button onClick={() => setIsDeleteModalOpen(false)} className="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg">Cancelar</button>
+                <button onClick={confirmDelete} disabled={isDeleting} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2">
+                    {isDeleting && <Loader2 className="animate-spin" size={16}/>} Sim, Excluir
+                </button>
+            </>
+        }
+      >
+        <p>Você está prestes a excluir a instância <strong>{instanceToDelete?.name}</strong>. Isso desconectará o WhatsApp e é uma ação irreversível.</p>
+      </Modal>
 
-      {/* QR Code Modal */}
-      {selectedInstanceId && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-2xl max-w-md w-full text-center relative transition-colors">
-            <button onClick={() => setSelectedInstanceId(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><X size={24}/></button>
+      {/* Connection Wizard Modal */}
+      {connectionModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-2xl max-w-md w-full text-center relative transition-colors animate-in zoom-in-95">
+            <button onClick={() => setConnectionModalOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><X size={24}/></button>
+            
             <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">{t('connect_whatsapp')}</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">{t('scan_instruction')}</p>
-            <div className="bg-slate-100 p-4 rounded-xl inline-block mb-4">
-                {qrCodeData ? (
-                    <img src={qrCodeData} alt="QR Code" className="w-64 h-64 object-contain mix-blend-multiply" />
-                ) : (
-                    <div className="w-64 h-64 flex items-center justify-center"><RefreshCw className="animate-spin text-blue-600" size={32} /></div>
+            
+            <div className="h-64 flex flex-col items-center justify-center mb-4">
+                {connectionStep === 'loading' && (
+                    <div className="text-center space-y-4">
+                        <Loader2 className="animate-spin text-blue-600 mx-auto" size={48} />
+                        <p className="text-slate-500 font-medium">Solicitando sessão ao WhatsApp...</p>
+                    </div>
+                )}
+
+                {connectionStep === 'qr' && qrCodeData && (
+                    <div className="animate-in fade-in space-y-4">
+                        <p className="text-slate-500 dark:text-slate-400 text-sm">{t('scan_instruction')}</p>
+                        <div className="bg-white p-2 rounded-xl shadow-inner border border-slate-200 inline-block">
+                            <img src={qrCodeData} alt="QR Code" className="w-56 h-56 object-contain" />
+                        </div>
+                    </div>
+                )}
+
+                {connectionStep === 'scanning' && (
+                    <div className="text-center space-y-4 animate-in fade-in">
+                        <div className="relative w-20 h-20 mx-auto">
+                            <Smartphone className="w-full h-full text-slate-300" />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <Loader2 className="animate-spin text-green-500" size={32} />
+                            </div>
+                        </div>
+                        <p className="text-slate-600 dark:text-slate-300 font-bold">Lendo QR Code...</p>
+                        <p className="text-slate-400 text-sm">Mantenha o celular conectado.</p>
+                    </div>
+                )}
+
+                {connectionStep === 'success' && (
+                    <div className="text-center space-y-4 animate-in zoom-in">
+                        <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto text-green-600 dark:text-green-400">
+                            <CheckCircle size={40} />
+                        </div>
+                        <p className="text-green-600 dark:text-green-400 font-bold text-lg">Conectado com Sucesso!</p>
+                    </div>
                 )}
             </div>
           </div>

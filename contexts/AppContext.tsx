@@ -1,8 +1,16 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { CheckCircle, AlertCircle, X, Info } from 'lucide-react';
 import { Language, translations } from '../translations';
 
 type Theme = 'light' | 'dark';
+type ToastType = 'success' | 'error' | 'info';
+
+interface Toast {
+  id: string;
+  message: string;
+  type: ToastType;
+}
 
 interface AppContextType {
   theme: Theme;
@@ -10,6 +18,7 @@ interface AppContextType {
   toggleTheme: () => void;
   setLanguage: (lang: Language) => void;
   t: (key: keyof typeof translations['pt-BR']) => string;
+  showToast: (message: string, type?: ToastType) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -31,6 +40,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     return 'pt-BR';
   });
+
+  // Toast State
+  const [toasts, setToasts] = useState<Toast[]>([]);
 
   // Apply Theme Side Effects
   useEffect(() => {
@@ -61,9 +73,46 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return translations[language][key] || key;
   };
 
+  // Toast Function
+  const showToast = (message: string, type: ToastType = 'info') => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
+
   return (
-    <AppContext.Provider value={{ theme, language, toggleTheme, setLanguage, t }}>
+    <AppContext.Provider value={{ theme, language, toggleTheme, setLanguage, t, showToast }}>
       {children}
+      
+      {/* Toast Container */}
+      <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
+        {toasts.map(toast => (
+          <div 
+            key={toast.id}
+            className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border animate-in slide-in-from-right-full transition-all max-w-sm ${
+              toast.type === 'success' ? 'bg-white dark:bg-slate-800 border-green-500 text-green-700 dark:text-green-400' :
+              toast.type === 'error' ? 'bg-white dark:bg-slate-800 border-red-500 text-red-700 dark:text-red-400' :
+              'bg-white dark:bg-slate-800 border-blue-500 text-blue-700 dark:text-blue-400'
+            }`}
+          >
+            {toast.type === 'success' && <CheckCircle size={20} className="shrink-0" />}
+            {toast.type === 'error' && <AlertCircle size={20} className="shrink-0" />}
+            {toast.type === 'info' && <Info size={20} className="shrink-0" />}
+            
+            <p className="text-sm font-medium text-slate-800 dark:text-white">{toast.message}</p>
+            
+            <button onClick={() => removeToast(toast.id)} className="ml-auto text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+              <X size={16} />
+            </button>
+          </div>
+        ))}
+      </div>
     </AppContext.Provider>
   );
 };
