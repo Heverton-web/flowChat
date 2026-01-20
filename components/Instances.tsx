@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { Plus, RefreshCw, Trash2, QrCode, Battery, Smartphone, BarChart3, Lock, AlertTriangle, X, Loader2 } from 'lucide-react';
-import { Instance, User } from '../types';
+import { Instance, User, LicenseStatus } from '../types';
 import * as evolutionService from '../services/evolutionService';
+import * as financialService from '../services/financialService';
 import { useApp } from '../contexts/AppContext';
 
 interface InstancesProps {
@@ -18,17 +19,24 @@ const Instances: React.FC<InstancesProps> = ({ currentUser }) => {
   const [qrCodeData, setQrCodeData] = useState<string | null>(null);
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // License Status
+  const [licenseStatus, setLicenseStatus] = useState<LicenseStatus | null>(null);
 
   // Delete Modal States
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [instanceToDelete, setInstanceToDelete] = useState<Instance | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const loadInstances = async () => {
+  const loadData = async () => {
     setLoading(true);
     try {
-      const data = await evolutionService.fetchInstances(currentUser.id, currentUser.role);
+      const [data, licStatus] = await Promise.all([
+          evolutionService.fetchInstances(currentUser.id, currentUser.role),
+          financialService.getLicenseStatus()
+      ]);
       setInstances(data);
+      setLicenseStatus(licStatus);
     } catch (error) {
       console.error("Failed to load instances", error);
     } finally {
@@ -37,31 +45,38 @@ const Instances: React.FC<InstancesProps> = ({ currentUser }) => {
   };
 
   useEffect(() => {
-    loadInstances();
+    loadData();
   }, [currentUser]);
 
   const handleCreate = async () => {
     if (!newInstanceName.trim()) return;
     setError(null);
+
+    // Validação de Limite de Licença
+    if (licenseStatus) {
+        if (licenseStatus.usage.usedInstances >= licenseStatus.totalLimits.maxInstances) {
+            setError(`Limite de instâncias atingido (${licenseStatus.totalLimits.maxInstances}). Contrate mais Seats para expandir.`);
+            return;
+        }
+    }
+
     try {
       await evolutionService.createInstance(newInstanceName, currentUser.id, currentUser.name);
       setNewInstanceName('');
       setIsCreating(false);
-      loadInstances();
+      loadData();
     } catch (e: any) {
       console.error(e);
-      setError(t('error_create_limit'));
+      setError(e.message || t('error_create_limit'));
     }
   };
 
   // Open the Modal
   const requestDelete = (instance: Instance) => {
-    // Security Check: Only the owner can request deletion
-    if (instance.ownerId !== currentUser.id) {
-        alert('Ação não permitida. Apenas o dono desta instância pode excluí-la.');
+    if (instance.ownerId !== currentUser.id && currentUser.role !== 'manager') {
+        alert('Ação não permitida.');
         return;
     }
-
     setInstanceToDelete(instance);
     setIsDeleteModalOpen(true);
   };
@@ -75,7 +90,7 @@ const Instances: React.FC<InstancesProps> = ({ currentUser }) => {
         await evolutionService.deleteInstance(instanceToDelete.id, instanceToDelete.name);
         setIsDeleteModalOpen(false);
         setInstanceToDelete(null);
-        loadInstances();
+        loadData();
     } catch (error) {
         alert('Erro ao excluir instância');
     } finally {
@@ -84,15 +99,11 @@ const Instances: React.FC<InstancesProps> = ({ currentUser }) => {
   };
 
   const handleShowQR = async (instance: Instance) => {
-    // Permission Check: STRICTLY Owner can view own QR Code
-    // Manager cannot view Agent's QR Code anymore
     const isOwner = instance.ownerId === currentUser.id;
-
     if (!isOwner) {
       alert('Apenas o dono da instância pode visualizar o QR Code.');
       return;
     }
-
     setSelectedInstanceId(instance.id);
     setQrCodeData(null);
     const qr = await evolutionService.getInstanceQRCode(instance.id);
@@ -119,18 +130,30 @@ const Instances: React.FC<InstancesProps> = ({ currentUser }) => {
             </p>
         </div>
         
-        {!userHasInstance && (
-            <button 
-              onClick={() => setIsCreating(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all shadow-md shadow-blue-600/20"
-            >
-              <Plus size={18} />
-              {t('new_instance')}
-            </button>
+        {licenseStatus && (
+            <div className="flex items-center gap-4">
+                {currentUser.role === 'manager' && (
+                    <span className="text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 hidden md:inline-block">
+                        Uso: <strong>{licenseStatus.usage.usedInstances}</strong> / {licenseStatus.totalLimits.maxInstances}
+                    </span>
+                )}
+
+                {/* Agent: Only allow create if they don't have one. Manager: Allow if global limit ok */}
+                {(!userHasInstance || currentUser.role === 'manager') && (
+                    <button 
+                        onClick={() => setIsCreating(true)}
+                        disabled={licenseStatus.usage.usedInstances >= licenseStatus.totalLimits.maxInstances && currentUser.role === 'manager'}
+                        className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all shadow-md shadow-blue-600/20"
+                    >
+                    <Plus size={18} />
+                    {t('new_instance')}
+                    </button>
+                )}
+            </div>
         )}
       </div>
 
-      {userHasInstance && !loading && (
+      {userHasInstance && !loading && currentUser.role === 'agent' && (
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 flex items-start gap-3">
               <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-full text-blue-600 dark:text-blue-400 shrink-0">
                   <AlertTriangle size={18} />
@@ -176,7 +199,6 @@ const Instances: React.FC<InstancesProps> = ({ currentUser }) => {
             </div>
         ) : instances.map(instance => {
             const isOwner = instance.ownerId === currentUser.id;
-            // QR Code Visibility: STRICTLY OWNER ONLY
             const canViewQR = isOwner;
             
             return (
@@ -188,7 +210,6 @@ const Instances: React.FC<InstancesProps> = ({ currentUser }) => {
                     </div>
                     
                     <div className="flex gap-2">
-                        {/* QR Code Action - Visible ONLY to Owner */}
                         {canViewQR && instance.status !== 'connected' ? (
                             <button 
                                 onClick={() => handleShowQR(instance)}
@@ -196,14 +217,12 @@ const Instances: React.FC<InstancesProps> = ({ currentUser }) => {
                                 <QrCode size={18} />
                             </button>
                         ) : !isOwner && instance.status !== 'connected' ? (
-                            // Placeholder for Manager seeing disconnected agent instance (Locked)
                             <div className="p-2 text-slate-300 dark:text-slate-600 cursor-not-allowed" title="Apenas o dono pode conectar">
                                 <QrCode size={18} />
                             </div>
                         ) : null}
                         
-                        {/* Delete Action - STRICTLY OWNER ONLY */}
-                        {isOwner ? (
+                        {isOwner || currentUser.role === 'manager' ? (
                             <button 
                                 onClick={() => requestDelete(instance)}
                                 className="p-2 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 rounded-lg transition-colors" title={t('delete')}>

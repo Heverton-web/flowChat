@@ -20,8 +20,8 @@ export interface AgentPlan {
   id: string;
   name: string;
   email: string;
-  extraPacks: number; // Internal quota units allocated by admin
-  extraContactPacks: number; // Internal quota units allocated by admin
+  extraPacks: number; // Unidades de cota interna alocadas pelo admin
+  extraContactPacks: number; // Unidades de cota interna alocadas pelo admin
   status: 'active' | 'pending_invite' | 'suspended';
   messagesUsed: number;
   permissions: AgentPermissions;
@@ -29,38 +29,63 @@ export interface AgentPlan {
   personalPremiumExpiry?: string;
 }
 
-// Kept for backward compatibility with Team.tsx and Dashboard.tsx
-// In the Enterprise model, this reflects the total resource pool available for distribution
-export interface GlobalSubscription {
-  planType: 'enterprise'; // Fixed to enterprise
-  status: 'active';
-  renewalDate: string;
-  totalMessagePacksPurchased: number; // Legacy name, now represents "Total Message Quota Units"
-  totalContactPacksPurchased: number; // Legacy name, now represents "Total Contact Quota Units"
-  hasPremiumFeatures: boolean;
+// --- NOVOS TIPOS DE LICENCIAMENTO ENTERPRISE ---
+
+export type LicenseTier = 'STANDARD' | 'PROFESSIONAL' | 'ENTERPRISE';
+
+export interface LicenseLimits {
+  maxUsers: number;      // Seats contratados (Usuários)
+  maxInstances: number;  // Slots de WhatsApp (Geralmente 1:1 com Users)
+  maxMessagesPerMonth?: number; // Cota global (opcional)
+  maxContacts?: number;  // Cota global (opcional)
 }
 
-// NEW: Enterprise License Structure
-export type LicenseType = 'standard' | 'enterprise';
-
 export interface License {
-  type: LicenseType;
-  maxUsers: number;
-  maxInstances: number;
-  status: 'active' | 'blocked' | 'trial';
-  modules: string[]; // e.g. ['crm', 'kanban', 'api_access']
+  tier: LicenseTier;
+  status: 'ACTIVE' | 'SUSPENDED' | 'TRIAL';
   renewalDate: string;
   
-  // Real-time usage data
-  activeUsers: number;
-  activeInstances: number;
-  
+  // Limites Base do Plano
+  baseLimits: LicenseLimits;
+
+  // Add-ons Contratados (Expansão de Infra)
+  addonSeats: number;      // 1 Seat = +1 User E +1 Instance
+  addonMessagePacks: number; // Pacotes extras globais
+  addonContactPacks: number; // Pacotes extras globais
+
   features: {
     canUseApi: boolean;
     whiteLabel: boolean;
     prioritySupport: boolean;
   };
 }
+
+export interface LicenseUsage {
+  usedUsers: number;
+  usedInstances: number;
+  usedMessagesThisMonth: number; // Uso agregado
+  usedContacts: number; // Uso agregado
+}
+
+export interface LicenseStatus {
+  license: License;
+  usage: LicenseUsage;
+  // Helper calculado: Limite Total = Base + Addons
+  totalLimits: LicenseLimits; 
+}
+
+// Interface legada mantida apenas para compatibilidade se algum componente antigo ainda importar, 
+// mas o ideal é migrar tudo para LicenseStatus.
+export interface GlobalSubscription {
+  planType: 'enterprise'; 
+  status: 'active';
+  renewalDate: string;
+  totalMessagePacksPurchased: number;
+  totalContactPacksPurchased: number;
+  hasPremiumFeatures: boolean;
+}
+
+// ------------------------------------------------
 
 export interface Instance {
   id: string;
@@ -148,9 +173,9 @@ export interface Transaction {
   date: string;
   description: string;
   amount: number;
-  type: 'subscription' | 'extra_pack' | 'upgrade_pro';
+  type: 'subscription' | 'extra_pack' | 'upgrade_pro' | 'addon_seat';
   status: 'completed' | 'pending' | 'failed';
-  paymentMethod: 'credit_card' | 'pix';
+  paymentMethod: 'credit_card' | 'pix' | 'invoice';
   invoiceUrl?: string;
 }
 

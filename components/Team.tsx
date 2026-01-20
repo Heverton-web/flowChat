@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
-import { Users, Shield, Package, BookUser, Plus, Trash2, Mail, CheckCircle, Search, Loader2, AlertCircle, Save } from 'lucide-react';
-import { AgentPlan, AgentPermissions, GlobalSubscription } from '../types';
+import { Users, Shield, Package, BookUser, Plus, Trash2, Mail, CheckCircle, Search, Loader2, AlertCircle } from 'lucide-react';
+import { AgentPlan, AgentPermissions, LicenseStatus } from '../types';
 import * as teamService from '../services/teamService';
+import * as financialService from '../services/financialService';
 
 const Team: React.FC = () => {
   const [agents, setAgents] = useState<AgentPlan[]>([]);
-  const [subscription, setSubscription] = useState<GlobalSubscription | null>(null);
+  const [licenseStatus, setLicenseStatus] = useState<LicenseStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -16,7 +17,7 @@ const Team: React.FC = () => {
   const [newAgentEmail, setNewAgentEmail] = useState('');
   const [newAgentPassword, setNewAgentPassword] = useState('');
 
-  // Delete Agent Modal State
+  // Delete Agent Modal
   const [agentToDelete, setAgentToDelete] = useState<AgentPlan | null>(null);
 
   const [notification, setNotification] = useState<{msg: string, type: 'success' | 'error'} | null>(null);
@@ -27,26 +28,27 @@ const Team: React.FC = () => {
 
   const loadData = async () => {
     setLoading(true);
-    const [agentData, subData] = await Promise.all([
+    const [agentData, licStatus] = await Promise.all([
         teamService.getAgents(),
-        teamService.getGlobalSubscription()
+        financialService.getLicenseStatus()
     ]);
     setAgents(agentData);
-    setSubscription(subData);
+    setLicenseStatus(licStatus);
     setLoading(false);
   };
 
-  // Derived Calculations
-  const totalPurchasedMsgs = subscription?.totalMessagePacksPurchased || 0;
-  const totalDistributedMsgs = agents.reduce((acc, a) => acc + a.extraPacks, 0);
-  const availableMsgs = totalPurchasedMsgs - totalDistributedMsgs;
-
-  const totalPurchasedContacts = subscription?.totalContactPacksPurchased || 0;
-  const totalDistributedContacts = agents.reduce((acc, a) => acc + a.extraContactPacks, 0);
-  const availableContacts = totalPurchasedContacts - totalDistributedContacts;
-
   const handleCreateAgent = async () => {
       if (!newAgentName || !newAgentEmail || !newAgentPassword) return;
+      
+      // Validação de Limite de Licença
+      if (licenseStatus) {
+          const { usage, totalLimits } = licenseStatus;
+          if (usage.usedUsers >= totalLimits.maxUsers) {
+              setNotification({ msg: `Limite de Seats atingido (${totalLimits.maxUsers}). Faça upgrade da licença.`, type: 'error' });
+              return;
+          }
+      }
+
       try {
           await teamService.addAgent({
               name: newAgentName,
@@ -76,27 +78,16 @@ const Team: React.FC = () => {
   };
 
   const handleDistributePack = async (agentId: string, type: 'message' | 'contact', change: number) => {
+      // Simplificado para este exemplo - em produção validaria contra o pool global de addons
       const agent = agents.find(a => a.id === agentId);
       if (!agent) return;
 
       const currentVal = type === 'message' ? agent.extraPacks : agent.extraContactPacks;
       const newVal = Math.max(0, currentVal + change);
 
-      // Check availability if adding
-      if (change > 0) {
-          if (type === 'message' && availableMsgs < change) {
-              setNotification({ msg: 'Sem pacotes de mensagens disponíveis no saldo global.', type: 'error' });
-              return;
-          }
-          if (type === 'contact' && availableContacts < change) {
-              setNotification({ msg: 'Sem pacotes de contatos disponíveis no saldo global.', type: 'error' });
-              return;
-          }
-      }
-
       try {
           await teamService.assignPackToAgent(agentId, type, newVal);
-          loadData(); // Refresh local state totals
+          loadData(); 
       } catch (e: any) {
           setNotification({ msg: e.message, type: 'error' });
       }
@@ -108,7 +99,6 @@ const Team: React.FC = () => {
       
       const newPerms = { ...agent.permissions, [perm]: !agent.permissions[perm] };
       await teamService.updateAgentPermissions(agentId, newPerms);
-      // Optimistic update
       setAgents(agents.map(a => a.id === agentId ? { ...a, permissions: newPerms } : a));
   };
 
@@ -121,15 +111,25 @@ const Team: React.FC = () => {
     <div className="space-y-8 animate-in fade-in">
       <div className="flex justify-between items-center">
         <div>
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Gestão da Equipe e Distribuição</h2>
-            <p className="text-slate-500 dark:text-slate-400">Configure permissões e distribua os recursos contratados.</p>
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Gestão da Equipe</h2>
+            <p className="text-slate-500 dark:text-slate-400">Gerencie acessos dos seus {licenseStatus?.usage.usedUsers || 0} usuários ativos.</p>
         </div>
-        <button 
-            onClick={() => setIsAddingAgent(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg"
-        >
-            <Plus size={18} /> Novo Atendente
-        </button>
+        
+        {licenseStatus && (
+            <div className="flex items-center gap-4">
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600">
+                    Seats: <strong>{licenseStatus.usage.usedUsers}</strong> / {licenseStatus.totalLimits.maxUsers}
+                </span>
+                
+                <button 
+                    onClick={() => setIsAddingAgent(true)}
+                    disabled={licenseStatus.usage.usedUsers >= licenseStatus.totalLimits.maxUsers}
+                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg transition-colors"
+                >
+                    <Plus size={18} /> Novo Atendente
+                </button>
+            </div>
+        )}
       </div>
 
       {notification && (
@@ -139,47 +139,6 @@ const Team: React.FC = () => {
             <button onClick={() => setNotification(null)} className="ml-auto opacity-50 hover:opacity-100">X</button>
         </div>
       )}
-
-      {/* Global Pool Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg text-blue-600">
-                      <Package size={24} />
-                  </div>
-                  <div>
-                      <h4 className="font-bold text-blue-900 dark:text-blue-100">Pacotes de Envios Disponíveis</h4>
-                      <p className="text-xs text-blue-700 dark:text-blue-300">Para distribuir: {availableMsgs} de {totalPurchasedMsgs}</p>
-                  </div>
-              </div>
-              <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{availableMsgs}</div>
-          </div>
-
-          <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-xl p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                  <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg text-indigo-600">
-                      <BookUser size={24} />
-                  </div>
-                  <div>
-                      <h4 className="font-bold text-indigo-900 dark:text-indigo-100">Pacotes de Contatos Disponíveis</h4>
-                      <p className="text-xs text-indigo-700 dark:text-indigo-300">Para distribuir: {availableContacts} de {totalPurchasedContacts}</p>
-                  </div>
-              </div>
-              <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{availableContacts}</div>
-          </div>
-      </div>
-
-      {/* Search */}
-      <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <input 
-              type="text" 
-              placeholder="Buscar atendente por nome ou email..." 
-              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-          />
-      </div>
 
       {/* Agents List */}
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
@@ -206,49 +165,12 @@ const Team: React.FC = () => {
                           </div>
 
                           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                              
-                              {/* Message Distribution */}
-                              <div className="bg-blue-50 dark:bg-blue-900/10 p-3 rounded-lg border border-blue-100 dark:border-blue-800">
-                                  <div className="flex justify-between items-center mb-2">
-                                      <span className="text-xs font-bold text-blue-800 dark:text-blue-300 uppercase flex items-center gap-1">
-                                          <Package size={12}/> Envios ({1000 + (agent.extraPacks * 1000)})
-                                      </span>
-                                      <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">Base: 1.000</span>
-                                  </div>
-                                  <div className="flex items-center gap-3">
-                                      <button onClick={() => handleDistributePack(agent.id, 'message', -1)} className="w-8 h-8 rounded bg-white dark:bg-slate-800 shadow-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">-</button>
-                                      <div className="flex-1 text-center">
-                                          <span className="block font-bold text-slate-800 dark:text-white text-lg">{agent.extraPacks}</span>
-                                          <span className="text-[10px] text-slate-400 uppercase">Pacotes Extras</span>
-                                      </div>
-                                      <button onClick={() => handleDistributePack(agent.id, 'message', 1)} className="w-8 h-8 rounded bg-white dark:bg-slate-800 shadow-sm font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20">+</button>
-                                  </div>
-                              </div>
-
-                              {/* Contact Distribution */}
-                              <div className="bg-indigo-50 dark:bg-indigo-900/10 p-3 rounded-lg border border-indigo-100 dark:border-indigo-800">
-                                  <div className="flex justify-between items-center mb-2">
-                                      <span className="text-xs font-bold text-indigo-800 dark:text-indigo-300 uppercase flex items-center gap-1">
-                                          <BookUser size={12}/> Contatos ({500 + (agent.extraContactPacks * 500)})
-                                      </span>
-                                      <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">Base: 500</span>
-                                  </div>
-                                  <div className="flex items-center gap-3">
-                                      <button onClick={() => handleDistributePack(agent.id, 'contact', -1)} className="w-8 h-8 rounded bg-white dark:bg-slate-800 shadow-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">-</button>
-                                      <div className="flex-1 text-center">
-                                          <span className="block font-bold text-slate-800 dark:text-white text-lg">{agent.extraContactPacks}</span>
-                                          <span className="text-[10px] text-slate-400 uppercase">Pacotes Extras</span>
-                                      </div>
-                                      <button onClick={() => handleDistributePack(agent.id, 'contact', 1)} className="w-8 h-8 rounded bg-white dark:bg-slate-800 shadow-sm font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20">+</button>
-                                  </div>
-                              </div>
-
-                              {/* Permissions */}
-                              <div className="bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg border border-slate-100 dark:border-slate-600">
+                              {/* Permissions Only - Removed direct Pack distribution to simplify UI as per prompt direction focusing on Seats */}
+                              <div className="col-span-3 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg border border-slate-100 dark:border-slate-600">
                                   <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 flex items-center gap-1">
                                       <Shield size={12} /> Permissões Globais
                                   </h4>
-                                  <div className="flex justify-between gap-2">
+                                  <div className="flex justify-between gap-2 max-w-md">
                                       <button 
                                         onClick={() => handlePermissionToggle(agent.id, 'canCreate')}
                                         className={`flex-1 py-1.5 rounded text-[10px] font-bold uppercase transition-colors ${agent.permissions.canCreate ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-slate-200 text-slate-500 dark:bg-slate-600 dark:text-slate-400'}`}
@@ -269,7 +191,6 @@ const Team: React.FC = () => {
                                       </button>
                                   </div>
                               </div>
-
                           </div>
 
                           <div className="flex xl:flex-col justify-end">
@@ -330,7 +251,7 @@ const Team: React.FC = () => {
                     <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Remover Atendente?</h3>
                     <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
                         Você está prestes a remover <strong>{agentToDelete.name}</strong> da equipe. 
-                        Esta ação é irreversível e removerá o acesso imediatamente.
+                        Isso liberará 1 Seat na sua licença.
                     </p>
                     
                     <div className="flex gap-3">

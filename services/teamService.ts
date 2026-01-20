@@ -1,49 +1,45 @@
 
 import { AgentPlan, AgentPermissions, GlobalSubscription } from '../types';
 
-// Mock Agents Data
+// Mock Agents Data (19 agents + 1 manager hardcoded in License Status will make 20 total)
 let MOCK_AGENTS: AgentPlan[] = [
   { 
-    id: 'agent-1', 
-    name: 'Atendente Demo', 
-    email: 'agente@empresa.com', 
-    extraPacks: 0, 
-    extraContactPacks: 0,
-    status: 'active',
-    messagesUsed: 850, 
+    id: 'agent-1', name: 'Atendente Demo', email: 'agente@empresa.com', 
+    extraPacks: 0, extraContactPacks: 0, status: 'active', messagesUsed: 850, 
     permissions: { canCreate: true, canEdit: true, canDelete: true }
   },
   { 
-    id: 'agent-2', 
-    name: 'Roberto Vendas', 
-    email: 'roberto@empresa.com', 
-    extraPacks: 2, 
-    extraContactPacks: 1, 
-    status: 'active',
-    messagesUsed: 2800, 
+    id: 'agent-2', name: 'Roberto Vendas', email: 'roberto@empresa.com', 
+    extraPacks: 2, extraContactPacks: 1, status: 'active', messagesUsed: 2800, 
     permissions: { canCreate: true, canEdit: true, canDelete: false } 
   },
   { 
-    id: 'agent-3', 
-    name: 'Carla Suporte', 
-    email: 'carla@empresa.com', 
-    extraPacks: 5, 
-    extraContactPacks: 0,
-    status: 'active',
-    messagesUsed: 1200, 
+    id: 'agent-3', name: 'Carla Suporte', email: 'carla@empresa.com', 
+    extraPacks: 5, extraContactPacks: 0, status: 'active', messagesUsed: 1200, 
     permissions: { canCreate: true, canEdit: true, canDelete: true },
-    personalPremiumExpiry: new Date(new Date().setDate(new Date().getDate() + 15)).toISOString() // Mock: Bought 15 days ago, 15 left
-  }
+    personalPremiumExpiry: new Date(new Date().setDate(new Date().getDate() + 15)).toISOString() 
+  },
+  // Generates dummy agents to reach near 20 users for the demo
+  ...Array.from({ length: 16 }).map((_, i) => ({
+      id: `agent-mock-${i+4}`,
+      name: `Atendente ${i+4}`,
+      email: `user${i+4}@empresa.com`,
+      extraPacks: 0,
+      extraContactPacks: 0,
+      status: 'active' as const,
+      messagesUsed: Math.floor(Math.random() * 1000),
+      permissions: { canCreate: false, canEdit: true, canDelete: false }
+  }))
 ];
 
-// Mock Global Subscription State
+// Mock Global Subscription State (Legacy, kept for compatibility if needed by old components)
 let MOCK_SUBSCRIPTION: GlobalSubscription = {
     planType: 'enterprise',
     status: 'active',
-    renewalDate: new Date(new Date().setDate(new Date().getDate() + 25)).toISOString(), // 25 days left
-    totalMessagePacksPurchased: 10, // Total bought by manager
-    totalContactPacksPurchased: 5,  // Total bought by manager
-    hasPremiumFeatures: false // Default false to test agent upgrade
+    renewalDate: new Date(new Date().setDate(new Date().getDate() + 25)).toISOString(), 
+    totalMessagePacksPurchased: 100, 
+    totalContactPacksPurchased: 50,  
+    hasPremiumFeatures: true 
 };
 
 export const getAgents = async (): Promise<AgentPlan[]> => {
@@ -100,15 +96,16 @@ interface AddAgentPayload {
     permissions?: AgentPermissions;
 }
 
-// Creating agent now just adds them to the list, pack distribution happens later
+// Creating agent now just adds them to the list
+// Note: Verification of limits happens in the UI component calling this, or can be added here if we import financialService
 export const addAgent = async (agent: AddAgentPayload): Promise<AgentPlan> => {
   return new Promise(resolve => {
     const newAgent: AgentPlan = { 
       id: Math.random().toString(36).substr(2, 9), 
       name: agent.name,
       email: agent.email,
-      extraPacks: 0, // Starts with 0 distributed packs
-      extraContactPacks: 0, // Starts with 0 distributed packs
+      extraPacks: 0, 
+      extraContactPacks: 0, 
       status: 'active', 
       messagesUsed: 0,
       permissions: agent.permissions || { canCreate: true, canEdit: true, canDelete: false },
@@ -126,26 +123,8 @@ export const removeAgent = async (id: string): Promise<void> => {
   });
 };
 
-// Called by Team Component (Distributing available capacity)
 export const assignPackToAgent = async (agentId: string, type: 'message' | 'contact', newValue: number): Promise<void> => {
   return new Promise((resolve, reject) => {
-      // Calculate totals to ensure we don't assign more than we have
-      const totalAssignedMsgs = MOCK_AGENTS.reduce((acc, a) => acc + (a.id === agentId ? newValue : a.extraPacks), 0);
-      const totalAssignedContacts = MOCK_AGENTS.reduce((acc, a) => acc + (a.id === agentId ? newValue : a.extraContactPacks), 0);
-
-      // Validation logic is handled in UI usually, but good to have here
-      if (type === 'message' && newValue > MOCK_AGENTS.find(a => a.id === agentId)!.extraPacks) {
-          // If increasing, check global limit
-          const currentTotal = MOCK_AGENTS.reduce((acc, a) => acc + a.extraPacks, 0);
-          const diff = newValue - MOCK_AGENTS.find(a => a.id === agentId)!.extraPacks;
-          if (currentTotal + diff > MOCK_SUBSCRIPTION.totalMessagePacksPurchased) {
-              reject(new Error("Saldo de pacotes globais insuficiente. Adquira mais na aba Assinatura."));
-              return;
-          }
-      }
-      
-      // ... similar logic for contacts ...
-
       MOCK_AGENTS = MOCK_AGENTS.map(a => {
           if (a.id === agentId) {
               return type === 'message' 
@@ -158,7 +137,6 @@ export const assignPackToAgent = async (agentId: string, type: 'message' | 'cont
   });
 };
 
-// Legacy support wrappers if needed
 export const updateAgentPacks = async (id: string, newPacks: number): Promise<void> => {
     return assignPackToAgent(id, 'message', newPacks);
 }

@@ -4,7 +4,7 @@ import {
   CheckCircle, Smartphone, Users, Database, ArrowRight, 
   ShieldCheck, Play, Send, Server, Power
 } from 'lucide-react';
-import { ViewState, User, License } from '../types';
+import { ViewState, User, LicenseStatus } from '../types';
 import * as evolutionService from '../services/evolutionService';
 import * as teamService from '../services/teamService';
 import * as contactService from '../services/contactService';
@@ -19,7 +19,7 @@ interface OnboardingProps {
 const Onboarding: React.FC<OnboardingProps> = ({ onNavigate, currentUser }) => {
   const { t } = useApp();
   const [loading, setLoading] = useState(true);
-  const [license, setLicense] = useState<License | null>(null);
+  const [licenseStatus, setLicenseStatus] = useState<LicenseStatus | null>(null);
   const [progress, setProgress] = useState({
     hasInstance: false,
     hasTeam: false,
@@ -41,7 +41,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onNavigate, currentUser }) => {
         financialService.getLicenseStatus()
       ]);
 
-      setLicense(licData);
+      setLicenseStatus(licData);
       setProgress({
         hasInstance: instances.length > 0 && instances.some(i => i.status === 'connected'),
         hasTeam: (agents as any[]).length >= 2, // At least manager + 1 agent
@@ -157,7 +157,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onNavigate, currentUser }) => {
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4">
       
       {/* Enterprise Header */}
-      {isManager && license && (
+      {isManager && licenseStatus && (
           <div className="bg-slate-900 rounded-2xl p-8 text-white relative overflow-hidden shadow-2xl">
               <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600 rounded-full blur-[100px] opacity-20 pointer-events-none"></div>
               
@@ -167,18 +167,18 @@ const Onboarding: React.FC<OnboardingProps> = ({ onNavigate, currentUser }) => {
                   </div>
                   <div>
                       <h2 className="text-2xl font-bold">Bem-vindo à sua Instância Enterprise</h2>
-                      <p className="text-slate-400">Licença Ativa: {license.type.toUpperCase()}</p>
+                      <p className="text-slate-400">Licença Ativa: {licenseStatus.license.tier}</p>
                   </div>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 relative z-10">
                   <div className="bg-white/5 rounded-lg p-4 backdrop-blur-sm border border-white/10">
                       <p className="text-xs text-slate-400 uppercase font-bold mb-1">Seats Contratados</p>
-                      <p className="text-2xl font-bold text-white">{license.maxUsers}</p>
+                      <p className="text-2xl font-bold text-white">{licenseStatus.totalLimits.maxUsers}</p>
                   </div>
                   <div className="bg-white/5 rounded-lg p-4 backdrop-blur-sm border border-white/10">
                       <p className="text-xs text-slate-400 uppercase font-bold mb-1">Conexões WhatsApp</p>
-                      <p className="text-2xl font-bold text-white">{license.maxInstances}</p>
+                      <p className="text-2xl font-bold text-white">{licenseStatus.totalLimits.maxInstances}</p>
                   </div>
                   <div className="bg-white/5 rounded-lg p-4 backdrop-blur-sm border border-white/10">
                       <p className="text-xs text-slate-400 uppercase font-bold mb-1">Status</p>
