@@ -1,46 +1,35 @@
 
-import { AgentPlan, AgentPermissions, GlobalSubscription } from '../types';
+import { AgentPlan, AgentPermissions } from '../types';
+import * as financialService from './financialService';
 
-// Mock Agents Data (19 agents + 1 manager hardcoded in License Status will make 20 total)
+// Mock Agents Data 
+// Cenário: 1 Manager + 19 Agentes = 20 Usuários
 let MOCK_AGENTS: AgentPlan[] = [
   { 
     id: 'agent-1', name: 'Atendente Demo', email: 'agente@empresa.com', 
-    extraPacks: 0, extraContactPacks: 0, status: 'active', messagesUsed: 850, 
+    status: 'active', messagesUsed: 850, 
     permissions: { canCreate: true, canEdit: true, canDelete: true }
   },
   { 
     id: 'agent-2', name: 'Roberto Vendas', email: 'roberto@empresa.com', 
-    extraPacks: 2, extraContactPacks: 1, status: 'active', messagesUsed: 2800, 
+    status: 'active', messagesUsed: 2800, 
     permissions: { canCreate: true, canEdit: true, canDelete: false } 
   },
   { 
     id: 'agent-3', name: 'Carla Suporte', email: 'carla@empresa.com', 
-    extraPacks: 5, extraContactPacks: 0, status: 'active', messagesUsed: 1200, 
+    status: 'active', messagesUsed: 1200, 
     permissions: { canCreate: true, canEdit: true, canDelete: true },
-    personalPremiumExpiry: new Date(new Date().setDate(new Date().getDate() + 15)).toISOString() 
   },
-  // Generates dummy agents to reach near 20 users for the demo
+  // Gerar mais 16 agentes dummy para totalizar 19 agentes (+1 manager = 20)
   ...Array.from({ length: 16 }).map((_, i) => ({
       id: `agent-mock-${i+4}`,
       name: `Atendente ${i+4}`,
       email: `user${i+4}@empresa.com`,
-      extraPacks: 0,
-      extraContactPacks: 0,
       status: 'active' as const,
       messagesUsed: Math.floor(Math.random() * 1000),
       permissions: { canCreate: false, canEdit: true, canDelete: false }
   }))
 ];
-
-// Mock Global Subscription State (Legacy, kept for compatibility if needed by old components)
-let MOCK_SUBSCRIPTION: GlobalSubscription = {
-    planType: 'enterprise',
-    status: 'active',
-    renewalDate: new Date(new Date().setDate(new Date().getDate() + 25)).toISOString(), 
-    totalMessagePacksPurchased: 100, 
-    totalContactPacksPurchased: 50,  
-    hasPremiumFeatures: true 
-};
 
 export const getAgents = async (): Promise<AgentPlan[]> => {
   return new Promise(resolve => setTimeout(() => resolve([...MOCK_AGENTS]), 500));
@@ -50,45 +39,6 @@ export const getAgentById = async (id: string): Promise<AgentPlan | undefined> =
     return new Promise(resolve => setTimeout(() => resolve(MOCK_AGENTS.find(a => a.id === id)), 300));
 }
 
-export const getGlobalSubscription = async (): Promise<GlobalSubscription> => {
-    return new Promise(resolve => setTimeout(() => resolve({...MOCK_SUBSCRIPTION}), 400));
-}
-
-// Called by Subscription Component (Buying more capacity)
-export const purchaseGlobalPacks = async (type: 'message' | 'contact', quantity: number): Promise<GlobalSubscription> => {
-    return new Promise(resolve => {
-        if (type === 'message') {
-            MOCK_SUBSCRIPTION.totalMessagePacksPurchased += quantity;
-        } else {
-            MOCK_SUBSCRIPTION.totalContactPacksPurchased += quantity;
-        }
-        setTimeout(() => resolve({...MOCK_SUBSCRIPTION}), 800);
-    });
-};
-
-export const togglePremiumFeatures = async (active: boolean): Promise<GlobalSubscription> => {
-    return new Promise(resolve => {
-        MOCK_SUBSCRIPTION.hasPremiumFeatures = active;
-        setTimeout(() => resolve({...MOCK_SUBSCRIPTION}), 500);
-    });
-};
-
-// Simulation for Agent buying Premium themselves
-export const activateAgentPremium = async (agentId: string): Promise<AgentPlan | undefined> => {
-    return new Promise(resolve => {
-        const agentIndex = MOCK_AGENTS.findIndex(a => a.id === agentId);
-        if (agentIndex > -1) {
-            // Set expiry to 30 days from now
-            const expiry = new Date();
-            expiry.setDate(expiry.getDate() + 30);
-            MOCK_AGENTS[agentIndex].personalPremiumExpiry = expiry.toISOString();
-            setTimeout(() => resolve(MOCK_AGENTS[agentIndex]), 800);
-        } else {
-            resolve(undefined);
-        }
-    });
-};
-
 interface AddAgentPayload {
     name: string;
     email: string;
@@ -96,16 +46,18 @@ interface AddAgentPayload {
     permissions?: AgentPermissions;
 }
 
-// Creating agent now just adds them to the list
-// Note: Verification of limits happens in the UI component calling this, or can be added here if we import financialService
 export const addAgent = async (agent: AddAgentPayload): Promise<AgentPlan> => {
+  // Validação de Licença (Seats)
+  const licenseStatus = await financialService.getLicenseStatus();
+  if (licenseStatus.usage.usedSeats >= licenseStatus.totalSeats) {
+      throw new Error(`Limite de Seats atingido (${licenseStatus.totalSeats}). Solicite expansão da licença.`);
+  }
+
   return new Promise(resolve => {
     const newAgent: AgentPlan = { 
       id: Math.random().toString(36).substr(2, 9), 
       name: agent.name,
       email: agent.email,
-      extraPacks: 0, 
-      extraContactPacks: 0, 
       status: 'active', 
       messagesUsed: 0,
       permissions: agent.permissions || { canCreate: true, canEdit: true, canDelete: false },
@@ -122,27 +74,6 @@ export const removeAgent = async (id: string): Promise<void> => {
     setTimeout(resolve, 500);
   });
 };
-
-export const assignPackToAgent = async (agentId: string, type: 'message' | 'contact', newValue: number): Promise<void> => {
-  return new Promise((resolve, reject) => {
-      MOCK_AGENTS = MOCK_AGENTS.map(a => {
-          if (a.id === agentId) {
-              return type === 'message' 
-                  ? { ...a, extraPacks: newValue }
-                  : { ...a, extraContactPacks: newValue };
-          }
-          return a;
-      });
-      setTimeout(resolve, 300);
-  });
-};
-
-export const updateAgentPacks = async (id: string, newPacks: number): Promise<void> => {
-    return assignPackToAgent(id, 'message', newPacks);
-}
-export const updateAgentContactPacks = async (id: string, newPacks: number): Promise<void> => {
-    return assignPackToAgent(id, 'contact', newPacks);
-}
 
 export const updateAgentPermissions = async (id: string, permissions: AgentPermissions): Promise<void> => {
     return new Promise(resolve => {

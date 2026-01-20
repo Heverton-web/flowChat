@@ -1,27 +1,27 @@
 
 import { Instance } from '../types';
+import * as financialService from './financialService';
 
-// This service mocks the Evolution API behavior
-// Generates instances for the mock agents created in teamService
+// Mock Instances - Paridade 1:1 com os Agentes criados em teamService
 const MOCK_INSTANCES: Instance[] = [
   { 
     id: '1', name: 'Suporte Geral', status: 'connected', phone: '5511999999999', 
     lastUpdate: '2023-10-27T10:00:00Z', battery: 85, messagesUsed: 850, 
-    messagesLimit: 1000, ownerId: 'manager-1', ownerName: 'Gestor Admin'
+    messagesLimit: 0, ownerId: 'manager-1', ownerName: 'Gestor Admin'
   },
   { 
     id: '2', name: 'Vendas Júnior', status: 'disconnected', lastUpdate: '2023-10-26T14:30:00Z',
-    messagesUsed: 1980, messagesLimit: 3000, ownerId: 'agent-1', ownerName: 'Atendente Demo'
+    messagesUsed: 1980, messagesLimit: 0, ownerId: 'agent-1', ownerName: 'Atendente Demo'
   },
-  // Generate dummy instances for the other 18 agents
+  // Gerar instâncias para os outros agentes dummy
   ...Array.from({ length: 18 }).map((_, i) => ({
       id: `inst-${i+3}`,
       name: `Instância ${i+3}`,
       status: (Math.random() > 0.2 ? 'connected' : 'disconnected') as 'connected' | 'disconnected',
       lastUpdate: new Date().toISOString(),
       messagesUsed: Math.floor(Math.random() * 5000),
-      messagesLimit: 5000,
-      ownerId: i === 0 ? 'agent-2' : i === 1 ? 'agent-3' : `agent-mock-${i+2}`, // Mapping loosely
+      messagesLimit: 0,
+      ownerId: i === 0 ? 'agent-2' : i === 1 ? 'agent-3' : `agent-mock-${i+2}`,
       ownerName: `Atendente ${i+3}`
   }))
 ];
@@ -30,33 +30,37 @@ export const fetchInstances = async (userId: string, role: string): Promise<Inst
   return new Promise((resolve) => {
     setTimeout(() => {
         if (role === 'manager') {
-            resolve([...MOCK_INSTANCES]); // Manager sees ALL instances
+            resolve([...MOCK_INSTANCES]); 
         } else {
-            resolve(MOCK_INSTANCES.filter(i => i.ownerId === userId)); // Agent sees ONLY theirs
+            resolve(MOCK_INSTANCES.filter(i => i.ownerId === userId)); 
         }
     }, 800);
   });
 };
 
 export const createInstance = async (name: string, ownerId: string, ownerName: string): Promise<Instance> => {
-  return new Promise((resolve, reject) => {
+  
+  // 1. Verificar Limite Global de Seats (Licença)
+  const licenseStatus = await financialService.getLicenseStatus();
+  if (licenseStatus.usage.usedInstances >= licenseStatus.totalSeats) {
+      throw new Error(`Limite global de instâncias atingido (${licenseStatus.totalSeats}). Expanda sua licença.`);
+  }
+
+  // 2. Verificar Paridade 1:1 (Usuário já tem instância?)
+  const existingInstance = MOCK_INSTANCES.find(i => i.ownerId === ownerId);
+  if (existingInstance) {
+      throw new Error("Você já possui uma instância ativa (Limite 1 por usuário).");
+  }
+
+  return new Promise((resolve) => {
     setTimeout(() => {
-      // Check if user already has an instance (Parity 1:1 Rule)
-      const existingInstance = MOCK_INSTANCES.find(i => i.ownerId === ownerId);
-      if (existingInstance) {
-          reject(new Error("Você já possui uma instância ativa (Limite 1 por usuário)."));
-          return;
-      }
-
-      // NOTE: Global limit check should happen here or be passed down, currently handled in UI component via financialService check.
-
       const newInstance: Instance = {
         id: Math.random().toString(36).substr(2, 9),
         name,
         status: 'disconnected',
         lastUpdate: new Date().toISOString(),
         messagesUsed: 0,
-        messagesLimit: 1000, // Default base limit for new instance
+        messagesLimit: 0,
         ownerId,
         ownerName
       };
@@ -67,14 +71,6 @@ export const createInstance = async (name: string, ownerId: string, ownerName: s
 };
 
 export const deleteInstance = async (id: string, name: string): Promise<void> => {
-  const N8N_WEBHOOK_URL = 'https://seu-n8n.com/webhook/delete-instance';
-
-  try {
-    console.log(`[Mock] Webhook sent to N8N to delete instance: ${name} (${id})`);
-  } catch (error) {
-    console.error("Error triggering N8N webhook", error);
-  }
-
   return new Promise((resolve) => {
     setTimeout(() => {
       const index = MOCK_INSTANCES.findIndex(i => i.id === id);

@@ -33,7 +33,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ onNavigate, currentUser }) => {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Parallel fetch of License and System Status
       const [instances, contacts, agents, licData] = await Promise.all([
         evolutionService.fetchInstances(currentUser.id, currentUser.role),
         contactService.getContacts(currentUser.id, currentUser.role),
@@ -44,7 +43,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onNavigate, currentUser }) => {
       setLicenseStatus(licData);
       setProgress({
         hasInstance: instances.length > 0 && instances.some(i => i.status === 'connected'),
-        hasTeam: (agents as any[]).length >= 2, // At least manager + 1 agent
+        hasTeam: (agents as any[]).length >= 2, 
         hasContacts: contacts.length > 0
       });
     } catch (e) {
@@ -56,13 +55,11 @@ const Onboarding: React.FC<OnboardingProps> = ({ onNavigate, currentUser }) => {
 
   const isManager = currentUser.role === 'manager';
   
-  // Manager Steps: Connect Instance -> Invite Team -> Import Contacts
-  // Removed "Plan Configuration" step
   const managerSteps = [
       { 
           id: 1, 
           title: 'Conectar WhatsApp', 
-          desc: 'Sua licença permite até 30 conexões simultâneas. Conecte o primeiro número agora.', 
+          desc: 'Sua licença permite múltiplas conexões. Conecte o primeiro número agora.', 
           icon: Smartphone, 
           completed: progress.hasInstance, 
           action: 'instances', 
@@ -71,7 +68,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onNavigate, currentUser }) => {
       { 
           id: 2, 
           title: 'Configurar Equipe', 
-          desc: 'Cadastre os 20 atendentes previstos na licença e defina seus acessos.', 
+          desc: 'Cadastre os atendentes e distribua os Seats contratados.', 
           icon: Users, 
           completed: progress.hasTeam, 
           action: 'team', 
@@ -88,7 +85,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ onNavigate, currentUser }) => {
       }
   ];
 
-  // Agent Steps: Unchanged logic but better UI
   const agentSteps = [
       { id: 1, title: 'Sua Instância', desc: 'Conecte seu WhatsApp corporativo para começar.', icon: Smartphone, completed: progress.hasInstance, action: 'instances', actionLabel: 'Conectar' },
       { id: 2, title: 'Meus Contatos', desc: 'Importe sua carteira de clientes.', icon: Database, completed: progress.hasContacts, action: 'contacts', actionLabel: 'Importar' },
@@ -174,11 +170,11 @@ const Onboarding: React.FC<OnboardingProps> = ({ onNavigate, currentUser }) => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 relative z-10">
                   <div className="bg-white/5 rounded-lg p-4 backdrop-blur-sm border border-white/10">
                       <p className="text-xs text-slate-400 uppercase font-bold mb-1">Seats Contratados</p>
-                      <p className="text-2xl font-bold text-white">{licenseStatus.totalLimits.maxUsers}</p>
+                      <p className="text-2xl font-bold text-white">{licenseStatus.totalSeats}</p>
                   </div>
                   <div className="bg-white/5 rounded-lg p-4 backdrop-blur-sm border border-white/10">
                       <p className="text-xs text-slate-400 uppercase font-bold mb-1">Conexões WhatsApp</p>
-                      <p className="text-2xl font-bold text-white">{licenseStatus.totalLimits.maxInstances}</p>
+                      <p className="text-2xl font-bold text-white">{licenseStatus.totalSeats}</p>
                   </div>
                   <div className="bg-white/5 rounded-lg p-4 backdrop-blur-sm border border-white/10">
                       <p className="text-xs text-slate-400 uppercase font-bold mb-1">Status</p>

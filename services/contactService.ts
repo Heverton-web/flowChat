@@ -1,4 +1,5 @@
 
+
 import { Contact } from '../types';
 import * as teamService from './teamService';
 
@@ -88,7 +89,7 @@ export const saveContact = async (
     try {
         const agent = await teamService.getAgentById(ownerId);
         if (agent) {
-            limit = BASE_CONTACT_LIMIT + (agent.extraContactPacks * CONTACT_PACK_SIZE);
+            limit = BASE_CONTACT_LIMIT + ((agent.extraContactPacks || 0) * CONTACT_PACK_SIZE);
         }
     } catch (e) {
         console.error("Failed to fetch agent limits", e);
@@ -148,7 +149,7 @@ export const assignContact = async (contactId: string, newOwnerId: string): Prom
     try {
         const agent = await teamService.getAgentById(newOwnerId);
         if (agent) {
-            limit = BASE_CONTACT_LIMIT + (agent.extraContactPacks * CONTACT_PACK_SIZE);
+            limit = BASE_CONTACT_LIMIT + ((agent.extraContactPacks || 0) * CONTACT_PACK_SIZE);
         }
     } catch (e) {
         console.error("Failed to fetch agent limits", e);
@@ -182,7 +183,7 @@ export const bulkImportContacts = async (
     try {
         const agent = await teamService.getAgentById(ownerId);
         if (agent) {
-            limit = BASE_CONTACT_LIMIT + (agent.extraContactPacks * CONTACT_PACK_SIZE);
+            limit = BASE_CONTACT_LIMIT + ((agent.extraContactPacks || 0) * CONTACT_PACK_SIZE);
         }
     } catch (e) {
         console.error("Failed to fetch agent limits", e);

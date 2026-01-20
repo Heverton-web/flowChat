@@ -54,8 +54,8 @@ const Instances: React.FC<InstancesProps> = ({ currentUser }) => {
 
     // Validação de Limite de Licença
     if (licenseStatus) {
-        if (licenseStatus.usage.usedInstances >= licenseStatus.totalLimits.maxInstances) {
-            setError(`Limite de instâncias atingido (${licenseStatus.totalLimits.maxInstances}). Contrate mais Seats para expandir.`);
+        if (licenseStatus.usage.usedInstances >= licenseStatus.totalSeats) {
+            setError(`Limite de instâncias atingido (${licenseStatus.totalSeats}). Solicite mais Seats ao gestor.`);
             return;
         }
     }
@@ -111,6 +111,7 @@ const Instances: React.FC<InstancesProps> = ({ currentUser }) => {
   };
 
   const getUsagePercentage = (used: number, limit: number) => {
+    if (limit === 0) return 0;
     return Math.min(100, (used / limit) * 100);
   };
 
@@ -134,7 +135,7 @@ const Instances: React.FC<InstancesProps> = ({ currentUser }) => {
             <div className="flex items-center gap-4">
                 {currentUser.role === 'manager' && (
                     <span className="text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 hidden md:inline-block">
-                        Uso: <strong>{licenseStatus.usage.usedInstances}</strong> / {licenseStatus.totalLimits.maxInstances}
+                        Conexões: <strong>{licenseStatus.usage.usedInstances}</strong> / {licenseStatus.totalSeats}
                     </span>
                 )}
 
@@ -142,7 +143,7 @@ const Instances: React.FC<InstancesProps> = ({ currentUser }) => {
                 {(!userHasInstance || currentUser.role === 'manager') && (
                     <button 
                         onClick={() => setIsCreating(true)}
-                        disabled={licenseStatus.usage.usedInstances >= licenseStatus.totalLimits.maxInstances && currentUser.role === 'manager'}
+                        disabled={licenseStatus.usage.usedInstances >= licenseStatus.totalSeats && currentUser.role === 'manager'}
                         className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all shadow-md shadow-blue-600/20"
                     >
                     <Plus size={18} />
@@ -284,16 +285,13 @@ const Instances: React.FC<InstancesProps> = ({ currentUser }) => {
                           <span className={`${
                               getUsagePercentage(instance.messagesUsed, instance.messagesLimit) > 90 ? 'text-red-600 dark:text-red-400 font-bold' : 'text-slate-600 dark:text-slate-300'
                           }`}>
-                              {instance.messagesUsed.toLocaleString()} / {instance.messagesLimit.toLocaleString()}
+                              {instance.messagesUsed.toLocaleString()} / Ilimitado
                           </span>
                       </div>
                       <div className="w-full bg-slate-200 dark:bg-slate-600 rounded-full h-2 overflow-hidden">
                           <div 
-                            className={`h-full rounded-full transition-all duration-500 ${
-                                getUsagePercentage(instance.messagesUsed, instance.messagesLimit) > 90 ? 'bg-red-500' : 
-                                getUsagePercentage(instance.messagesUsed, instance.messagesLimit) > 70 ? 'bg-amber-500' : 'bg-blue-500'
-                            }`}
-                            style={{ width: `${getUsagePercentage(instance.messagesUsed, instance.messagesLimit)}%` }}
+                            className={`h-full rounded-full transition-all duration-500 bg-blue-500`}
+                            style={{ width: `5%` }}
                           ></div>
                       </div>
                   </div>

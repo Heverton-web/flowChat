@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Users, Shield, Package, BookUser, Plus, Trash2, Mail, CheckCircle, Search, Loader2, AlertCircle } from 'lucide-react';
+import { Users, Shield, Plus, Trash2, Mail, CheckCircle, Search, Loader2, AlertCircle } from 'lucide-react';
 import { AgentPlan, AgentPermissions, LicenseStatus } from '../types';
 import * as teamService from '../services/teamService';
 import * as financialService from '../services/financialService';
@@ -42,9 +42,8 @@ const Team: React.FC = () => {
       
       // Validação de Limite de Licença
       if (licenseStatus) {
-          const { usage, totalLimits } = licenseStatus;
-          if (usage.usedUsers >= totalLimits.maxUsers) {
-              setNotification({ msg: `Limite de Seats atingido (${totalLimits.maxUsers}). Faça upgrade da licença.`, type: 'error' });
+          if (licenseStatus.usage.usedSeats >= licenseStatus.totalSeats) {
+              setNotification({ msg: `Limite de Seats atingido (${licenseStatus.totalSeats}). Solicite mais seats na aba Assinatura.`, type: 'error' });
               return;
           }
       }
@@ -55,12 +54,12 @@ const Team: React.FC = () => {
               email: newAgentEmail,
               password: newAgentPassword
           });
-          setNotification({ msg: 'Atendente criado! Configure os pacotes abaixo.', type: 'success' });
+          setNotification({ msg: 'Atendente criado com sucesso!', type: 'success' });
           setIsAddingAgent(false);
           setNewAgentName(''); setNewAgentEmail(''); setNewAgentPassword('');
           loadData();
-      } catch (e) {
-          setNotification({ msg: 'Erro ao criar atendente', type: 'error' });
+      } catch (e: any) {
+          setNotification({ msg: e.message || 'Erro ao criar atendente', type: 'error' });
       }
   };
 
@@ -74,22 +73,6 @@ const Team: React.FC = () => {
           setNotification({ msg: 'Erro ao remover atendente.', type: 'error' });
       } finally {
           setAgentToDelete(null);
-      }
-  };
-
-  const handleDistributePack = async (agentId: string, type: 'message' | 'contact', change: number) => {
-      // Simplificado para este exemplo - em produção validaria contra o pool global de addons
-      const agent = agents.find(a => a.id === agentId);
-      if (!agent) return;
-
-      const currentVal = type === 'message' ? agent.extraPacks : agent.extraContactPacks;
-      const newVal = Math.max(0, currentVal + change);
-
-      try {
-          await teamService.assignPackToAgent(agentId, type, newVal);
-          loadData(); 
-      } catch (e: any) {
-          setNotification({ msg: e.message, type: 'error' });
       }
   };
 
@@ -112,18 +95,18 @@ const Team: React.FC = () => {
       <div className="flex justify-between items-center">
         <div>
             <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Gestão da Equipe</h2>
-            <p className="text-slate-500 dark:text-slate-400">Gerencie acessos dos seus {licenseStatus?.usage.usedUsers || 0} usuários ativos.</p>
+            <p className="text-slate-500 dark:text-slate-400">Gerencie acessos dos seus usuários.</p>
         </div>
         
         {licenseStatus && (
             <div className="flex items-center gap-4">
                 <span className="text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600">
-                    Seats: <strong>{licenseStatus.usage.usedUsers}</strong> / {licenseStatus.totalLimits.maxUsers}
+                    Seats Ocupados: <strong>{licenseStatus.usage.usedSeats}</strong> / {licenseStatus.totalSeats}
                 </span>
                 
                 <button 
                     onClick={() => setIsAddingAgent(true)}
-                    disabled={licenseStatus.usage.usedUsers >= licenseStatus.totalLimits.maxUsers}
+                    disabled={licenseStatus.usage.usedSeats >= licenseStatus.totalSeats}
                     className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg transition-colors"
                 >
                     <Plus size={18} /> Novo Atendente
@@ -165,7 +148,7 @@ const Team: React.FC = () => {
                           </div>
 
                           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                              {/* Permissions Only - Removed direct Pack distribution to simplify UI as per prompt direction focusing on Seats */}
+                              {/* Permissions Only */}
                               <div className="col-span-3 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg border border-slate-100 dark:border-slate-600">
                                   <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2 flex items-center gap-1">
                                       <Shield size={12} /> Permissões Globais
