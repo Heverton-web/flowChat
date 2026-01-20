@@ -205,11 +205,53 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
       const reader = new FileReader();
       reader.onload = async (e) => {
           const text = e.target?.result as string;
-          const lines = text.split('\n');
-          const parsedContacts = lines.slice(1).filter(l => l.trim()).map(line => {
-              const [name, phone, email, tagsStr] = line.split(',');
-              return { name: name?.trim(), phone: phone?.trim(), email: email?.trim(), tags: tagsStr ? tagsStr.split(';').map(t => t.trim()) : [] };
-          }).filter(c => c.name && c.phone);
+          
+          // 1. Split lines handling different OS line breaks
+          const lines = text.split(/\r\n|\n|\r/).filter(l => l.trim());
+
+          if (lines.length < 2) {
+              showToast('Arquivo vazio ou inválido.', 'error');
+              setIsProcessingImport(false);
+              return;
+          }
+
+          // 2. Detect delimiter (Comma or Semicolon) based on header
+          const header = lines[0];
+          const delimiter = header.includes(';') ? ';' : ',';
+
+          // 3. Process lines
+          const parsedContacts = lines.slice(1).map(line => {
+              if (!line.trim()) return null;
+
+              const parts = line.split(delimiter);
+              
+              // Helper to clean quotes and whitespace
+              const clean = (val: string) => val ? val.trim().replace(/^["']|["']$/g, '') : '';
+
+              const name = clean(parts[0]);
+              const phoneRaw = clean(parts[1]);
+              const email = clean(parts[2]);
+              const tagsStr = clean(parts[3]);
+
+              if (!name || !phoneRaw) return null;
+
+              // Basic validation
+              const phone = phoneRaw.replace(/\D/g, '');
+              if (phone.length < 8) return null;
+
+              return { 
+                  name, 
+                  phone, 
+                  email, 
+                  tags: tagsStr ? tagsStr.split(';').map(t => clean(t)) : [] 
+              };
+          }).filter((c): c is NonNullable<typeof c> => c !== null);
+
+          if (parsedContacts.length === 0) {
+              showToast('Nenhum contato válido encontrado.', 'error');
+              setIsProcessingImport(false);
+              return;
+          }
 
           try {
               const count = await contactService.bulkImportContacts(parsedContacts, formData.ownerId);
@@ -634,7 +676,7 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
                                 <code className="block bg-slate-100 dark:bg-slate-800 p-2 rounded border border-slate-200 dark:border-slate-600 font-mono text-xs mb-2">
                                     Nome, Telefone, Email, Tags
                                 </code>
-                                <p className="text-xs text-slate-500">A primeira linha deve ser o cabeçalho. As tags devem ser separadas por ponto e vírgula (;).</p>
+                                <p className="text-xs text-slate-500">A primeira linha deve ser o cabeçalho. Aceita CSV (,) ou Excel (;).</p>
                             </div>
                         </div>
                     )}
