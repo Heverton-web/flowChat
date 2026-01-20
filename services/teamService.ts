@@ -67,6 +67,17 @@ export const addAgent = async (agent: AddAgentPayload): Promise<AgentPlan> => {
   });
 };
 
+export const updateAgent = async (id: string, updates: Partial<AgentPlan>): Promise<AgentPlan> => {
+    return new Promise(resolve => {
+        const agents = loadData();
+        const updatedAgents = agents.map(a => 
+            a.id === id ? { ...a, ...updates } : a
+        );
+        saveData(updatedAgents);
+        setTimeout(() => resolve(updatedAgents.find(a => a.id === id)!), 500);
+    });
+};
+
 export const removeAgent = async (id: string): Promise<void> => {
   return new Promise(resolve => {
     const agents = loadData();
