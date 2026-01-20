@@ -1,0 +1,5 @@
+{
+  "name": "FlowChat - WhatsApp Operations",
+  "description": "A professional dashboard to manage WhatsApp workflows, instances via Evolution API, and track team performance.",
+  "requestFramePermissions": []
+}
