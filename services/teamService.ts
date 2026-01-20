@@ -38,7 +38,7 @@ let MOCK_AGENTS: AgentPlan[] = [
 
 // Mock Global Subscription State
 let MOCK_SUBSCRIPTION: GlobalSubscription = {
-    planType: 'business',
+    planType: 'enterprise',
     status: 'active',
     renewalDate: new Date(new Date().setDate(new Date().getDate() + 25)).toISOString(), // 25 days left
     totalMessagePacksPurchased: 10, // Total bought by manager

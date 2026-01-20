@@ -1,42 +1,19 @@
 
-import { Transaction } from '../types';
+import { Transaction, License } from '../types';
 import * as teamService from './teamService';
 
+// MOCK DATA for Transactions
 let MOCK_TRANSACTIONS: Transaction[] = [
   {
     id: 't1',
     userId: 'manager-1',
     userName: 'Gestor Admin',
     date: '2023-11-01T10:00:00Z',
-    description: 'Renovação Mensal - Plano Business',
-    amount: 199.50,
+    description: 'Setup Inicial + Licença Enterprise (Mensalidade)',
+    amount: 2500.00,
     type: 'subscription',
     status: 'completed',
-    paymentMethod: 'credit_card',
-    invoiceUrl: '#'
-  },
-  {
-    id: 't2',
-    userId: 'agent-1',
-    userName: 'Atendente Demo',
-    date: '2023-11-05T14:30:00Z',
-    description: 'Pacote Adicional (1.000 msgs)',
-    amount: 9.90,
-    type: 'extra_pack',
-    status: 'completed',
     paymentMethod: 'pix',
-    invoiceUrl: '#'
-  },
-  {
-    id: 't3',
-    userId: 'agent-2',
-    userName: 'Roberto Vendas',
-    date: '2023-11-10T09:15:00Z',
-    description: 'Pacote Adicional (2.000 msgs)',
-    amount: 19.80,
-    type: 'extra_pack',
-    status: 'completed',
-    paymentMethod: 'credit_card',
     invoiceUrl: '#'
   }
 ];
@@ -45,14 +22,39 @@ export const getTransactions = async (userId: string, role: string): Promise<Tra
   return new Promise((resolve) => {
     setTimeout(() => {
       if (role === 'manager') {
-        // Managers see everything
         resolve([...MOCK_TRANSACTIONS].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
       } else {
-        // Agents see only their purchases
         resolve(MOCK_TRANSACTIONS.filter(t => t.userId === userId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
       }
     }, 600);
   });
+};
+
+// NEW: Mock for Single-Tenant License Status
+// Simulating the CLIENT SCENARIO: 20 Agents on an Enterprise Plan (Max 30)
+export const getLicenseStatus = async (): Promise<License> => {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve({
+                type: 'enterprise',
+                maxUsers: 30,
+                maxInstances: 30, // Parity 1:1
+                status: 'active',
+                renewalDate: new Date(new Date().setDate(new Date().getDate() + 15)).toISOString(), // 15 days to renew
+                modules: ['crm', 'kanban', 'api_access', 'reports_advanced'],
+                
+                // Real Usage (Simulating the 20 agents scenario)
+                activeUsers: 20, 
+                activeInstances: 20, // All connected
+                
+                features: {
+                    canUseApi: true,
+                    whiteLabel: true,
+                    prioritySupport: true
+                }
+            });
+        }, 800);
+    });
 };
 
 export const purchaseExtraPack = async (
@@ -81,7 +83,7 @@ export const purchaseExtraPack = async (
             userId,
             userName,
             date: new Date().toISOString(),
-            description: `Pacote Adicional (${quantity * unitSize} ${unitLabel})`,
+            description: `Add-on: Pacote Adicional (${quantity * unitSize} ${unitLabel})`,
             amount,
             type: 'extra_pack',
             status: 'completed',
@@ -92,7 +94,6 @@ export const purchaseExtraPack = async (
         MOCK_TRANSACTIONS.unshift(newTransaction);
 
         // 3. Update Agent Quota (Call teamService)
-        // We first need to get current agent data
         const agent = await teamService.getAgentById(userId);
         if (agent) {
             if (packType === 'messages') {
@@ -112,12 +113,8 @@ export const purchasePremiumSubscription = async (
     paymentMethod: 'pix' | 'credit_card'
 ): Promise<Transaction> => {
     return new Promise(async (resolve) => {
-        // 1. Simulate Payment Processing delay
         await new Promise(r => setTimeout(r, 2000));
-
         const amount = 19.90;
-
-        // 2. Create Transaction Record
         const newTransaction: Transaction = {
             id: Math.random().toString(36).substr(2, 9),
             userId,
@@ -130,12 +127,8 @@ export const purchasePremiumSubscription = async (
             paymentMethod,
             invoiceUrl: '#'
         };
-
         MOCK_TRANSACTIONS.unshift(newTransaction);
-
-        // 3. Activate Premium
         await teamService.activateAgentPremium(userId);
-
         resolve(newTransaction);
     });
 };

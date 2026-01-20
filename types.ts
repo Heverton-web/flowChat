@@ -7,7 +7,7 @@ export interface User {
   role: UserRole;
   avatar: string;
   email: string;
-  hasProFeatures?: boolean; // New flag for upgrade status
+  hasProFeatures?: boolean;
 }
 
 export interface AgentPermissions {
@@ -20,22 +20,46 @@ export interface AgentPlan {
   id: string;
   name: string;
   email: string;
-  extraPacks: number; // Number of R$9.90 packs (Messages) assigned to this agent
-  extraContactPacks: number; // Number of R$7.99 packs (Contacts) assigned to this agent
+  extraPacks: number; // Internal quota units allocated by admin
+  extraContactPacks: number; // Internal quota units allocated by admin
   status: 'active' | 'pending_invite' | 'suspended';
-  messagesUsed: number; // Current usage in the cycle
-  permissions: AgentPermissions; // Global permissions set by manager
-  tempPassword?: string; // Optional: Only for display immediately after creation
-  personalPremiumExpiry?: string; // ISO Date if agent bought premium personally
+  messagesUsed: number;
+  permissions: AgentPermissions;
+  tempPassword?: string;
+  personalPremiumExpiry?: string;
 }
 
+// Kept for backward compatibility with Team.tsx and Dashboard.tsx
+// In the Enterprise model, this reflects the total resource pool available for distribution
 export interface GlobalSubscription {
-  planType: 'basic' | 'business' | 'enterprise';
-  status: 'active' | 'suspended' | 'canceled';
-  renewalDate: string; // ISO Date
-  totalMessagePacksPurchased: number; // Global pool of message packs
-  totalContactPacksPurchased: number; // Global pool of contact packs
+  planType: 'enterprise'; // Fixed to enterprise
+  status: 'active';
+  renewalDate: string;
+  totalMessagePacksPurchased: number; // Legacy name, now represents "Total Message Quota Units"
+  totalContactPacksPurchased: number; // Legacy name, now represents "Total Contact Quota Units"
   hasPremiumFeatures: boolean;
+}
+
+// NEW: Enterprise License Structure
+export type LicenseType = 'standard' | 'enterprise';
+
+export interface License {
+  type: LicenseType;
+  maxUsers: number;
+  maxInstances: number;
+  status: 'active' | 'blocked' | 'trial';
+  modules: string[]; // e.g. ['crm', 'kanban', 'api_access']
+  renewalDate: string;
+  
+  // Real-time usage data
+  activeUsers: number;
+  activeInstances: number;
+  
+  features: {
+    canUseApi: boolean;
+    whiteLabel: boolean;
+    prioritySupport: boolean;
+  };
 }
 
 export interface Instance {
@@ -45,10 +69,10 @@ export interface Instance {
   phone?: string;
   lastUpdate: string;
   battery?: number;
-  messagesUsed: number; // Usage tracking
-  messagesLimit: number; // SaaS limit (1000 base + packs)
-  ownerId: string; // ID of the user who owns this instance
-  ownerName: string; // Name of the owner for display
+  messagesUsed: number;
+  messagesLimit: number;
+  ownerId: string;
+  ownerName: string;
 }
 
 export interface TeamMember {
@@ -64,14 +88,13 @@ export interface TeamMember {
 export interface Contact {
   id: string;
   name: string;
-  phone: string; // Evolution API format (only numbers, with country code)
+  phone: string;
   email?: string;
   tags: string[];
-  campaignHistory: string[]; // List of Campaign IDs
+  campaignHistory: string[];
   notes?: string;
   createdAt: string;
-  ownerId: string; // Which agent owns this contact
-  // Specific restrictions set by manager for this contact
+  ownerId: string;
   lockEdit?: boolean; 
   lockDelete?: boolean;
 }
@@ -84,15 +107,14 @@ export type WorkflowStepType = 'text' | 'audio' | 'image' | 'video' | 'document'
 export interface WorkflowStep {
   id: string;
   type: WorkflowStepType;
-  content: string; // Text content, Caption, or Poll Name
-  file?: File; // For upload simulation
-  mediaUrl?: string; // For URL option
-  delay: number; // Evolution API option: delay in milliseconds
+  content: string;
+  file?: File;
+  mediaUrl?: string;
+  delay: number;
   order: number;
-  // Poll Specifics
   pollConfig?: {
       selectableCount: number;
-      values: string[]; // Options
+      values: string[];
   };
 }
 
@@ -103,14 +125,13 @@ export interface Campaign {
   objective: CampaignObjective;
   status: CampaignStatus;
   agentName: string;
-  ownerId: string; // Added to filter visibility
+  ownerId: string;
   totalContacts: number;
-  deliveryRate?: number; // 0-100
+  deliveryRate?: number;
   executedAt?: string;
   workflow: WorkflowStep[];
-  // Anti-ban configuration
-  minDelay: number; // seconds
-  maxDelay: number; // seconds
+  minDelay: number;
+  maxDelay: number;
 }
 
 export interface DashboardStats {

@@ -36,18 +36,18 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister }) => {
           if (isDemoManager || email.includes('admin') || email.includes('gestor')) {
               onLogin({
                   id: 'manager-1',
-                  name: 'Gestor Demo',
+                  name: 'Gestor Admin',
                   role: 'manager',
-                  email: isDemoManager ? 'admin@flowchat.com' : email,
-                  avatar: 'https://ui-avatars.com/api/?name=Gestor+Demo&background=0D8ABC&color=fff'
+                  email: isDemoManager ? 'admin@enterprise.com' : email,
+                  avatar: 'https://ui-avatars.com/api/?name=Gestor+Admin&background=0D8ABC&color=fff'
               });
           } else if (isDemoAgent || email.includes('agente') || email.includes('atendente')) {
               onLogin({
                   id: 'agent-1',
-                  name: 'Atendente Demo',
+                  name: 'Atendente 01',
                   role: 'agent',
-                  email: isDemoAgent ? 'agent@flowchat.com' : email,
-                  avatar: 'https://ui-avatars.com/api/?name=Atendente+Demo&background=10B981&color=fff'
+                  email: isDemoAgent ? 'agent@enterprise.com' : email,
+                  avatar: 'https://ui-avatars.com/api/?name=Atendente+01&background=10B981&color=fff'
               });
           } else {
               // Fallback for custom emails
@@ -74,33 +74,32 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister }) => {
           <MessageCircle size={32} fill="currentColor" />
         </div>
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">FlowChat</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-2">{t('login_subtitle')}</p>
+        <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-medium uppercase tracking-wider">Enterprise Edition</p>
       </div>
 
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-8 w-full max-w-md animate-in fade-in zoom-in-95 duration-300 transition-colors">
         
         {/* Demo Mode Actions */}
         <div className="mb-6 space-y-3">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider text-center mb-2">{t('demo_mode')}</h3>
             <div className="grid grid-cols-2 gap-3">
                 <button 
                     onClick={() => handleAuth('manager')}
                     className="flex flex-col items-center justify-center p-3 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 rounded-xl transition-colors text-indigo-700 dark:text-indigo-300 gap-1 group"
                 >
                     <div className="bg-white dark:bg-slate-700 p-1.5 rounded-full shadow-sm group-hover:scale-110 transition-transform"><Play size={14} fill="currentColor"/></div>
-                    <span className="text-xs font-bold">{t('manager')}</span>
+                    <span className="text-xs font-bold">Admin Demo</span>
                 </button>
                 <button 
                     onClick={() => handleAuth('agent')}
                     className="flex flex-col items-center justify-center p-3 bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800 rounded-xl transition-colors text-emerald-700 dark:text-emerald-300 gap-1 group"
                 >
                     <div className="bg-white dark:bg-slate-700 p-1.5 rounded-full shadow-sm group-hover:scale-110 transition-transform"><Play size={14} fill="currentColor"/></div>
-                    <span className="text-xs font-bold">{t('agent')}</span>
+                    <span className="text-xs font-bold">Agent Demo</span>
                 </button>
             </div>
             <div className="relative flex py-2 items-center">
                 <div className="flex-grow border-t border-slate-100 dark:border-slate-700"></div>
-                <span className="flex-shrink-0 mx-4 text-slate-300 text-xs">OU ACESSE SUA CONTA</span>
+                <span className="flex-shrink-0 mx-4 text-slate-300 text-xs uppercase">Acesso Corporativo</span>
                 <div className="flex-grow border-t border-slate-100 dark:border-slate-700"></div>
             </div>
         </div>
@@ -161,9 +160,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister }) => {
 
         <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-700 text-center">
           <p className="text-slate-500 dark:text-slate-400 text-sm">
-            Não tem uma conta?{' '}
+            Primeiro acesso?{' '}
             <button onClick={onNavigateToRegister} className="text-blue-600 font-bold hover:underline">
-              Criar conta e configurar plano
+              Configurar Admin
             </button>
           </p>
         </div>
