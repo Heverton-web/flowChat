@@ -71,6 +71,7 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ role, onNavigate }) => {
   const { t, theme } = useApp();
   const currentUserId = role === 'agent' ? 'agent-1' : 'manager-1'; 
+  const isManagerOrAdmin = role === 'manager' || role === 'super_admin';
 
   const [agents, setAgents] = useState<AgentPlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,7 +90,7 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onNavigate }) => {
           financialService.getLicenseStatus()
       ];
 
-      if (role === 'manager') {
+      if (isManagerOrAdmin) {
           promises.push(teamService.getAgents() as any);
       }
 
@@ -112,11 +113,12 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onNavigate }) => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            {role === 'manager' ? t('welcome_manager') : t('welcome_agent')}
+            {isManagerOrAdmin ? t('welcome_manager') : t('welcome_agent')}
             {role === 'manager' && <span className="px-2 py-0.5 rounded text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-bold uppercase tracking-wide border border-blue-200 dark:border-blue-800">Admin</span>}
+            {role === 'super_admin' && <span className="px-2 py-0.5 rounded text-[10px] bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold uppercase tracking-wide border border-indigo-200 dark:border-indigo-800">Super Admin</span>}
           </h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
-            {role === 'manager' ? 'Visão unificada da operação e infraestrutura.' : 'Suas métricas de performance hoje.'}
+            {isManagerOrAdmin ? 'Visão unificada da operação e infraestrutura.' : 'Suas métricas de performance hoje.'}
           </p>
         </div>
         
@@ -143,18 +145,18 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onNavigate }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <KPICard 
             title={t('stats_messages')} 
-            value={role === 'manager' ? (licenseStatus?.usage.usedMessagesThisMonth.toLocaleString() || '0') : "1,240"} 
+            value={isManagerOrAdmin ? (licenseStatus?.usage.usedMessagesThisMonth.toLocaleString() || '0') : "1,240"} 
             trend={12.5} 
             trendLabel="semana passada"
             icon={MessageSquare} 
             color="bg-blue-500" 
         />
         <KPICard 
-            title={role === 'manager' ? "Instâncias Online" : "Tempo Médio Resp."}
-            value={role === 'manager' ? `${licenseStatus?.usage.usedInstances || 0}/${licenseStatus?.totalSeats || 0}` : "1m 30s"} 
-            trend={role === 'manager' ? 0 : -15} // Negative time is good
-            trendLabel={role === 'manager' ? "ontem" : "média da equipe"}
-            icon={role === 'manager' ? Server : Clock} 
+            title={isManagerOrAdmin ? "Instâncias Online" : "Tempo Médio Resp."}
+            value={isManagerOrAdmin ? `${licenseStatus?.usage.usedInstances || 0}/${licenseStatus?.totalSeats || 0}` : "1m 30s"} 
+            trend={isManagerOrAdmin ? 0 : -15} // Negative time is good
+            trendLabel={isManagerOrAdmin ? "ontem" : "média da equipe"}
+            icon={isManagerOrAdmin ? Server : Clock} 
             color="bg-emerald-500" 
         />
         <KPICard 
@@ -166,11 +168,11 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onNavigate }) => {
             color="bg-indigo-500" 
         />
         <KPICard 
-            title={role === 'manager' ? "Custo Estimado" : "Satisfação (CSAT)"} 
-            value={role === 'manager' ? "R$ 4.500" : "4.9/5.0"} 
-            trend={role === 'manager' ? 2.1 : 0.5} 
-            trendLabel={role === 'manager' ? "mês anterior" : "últimos 10 chats"}
-            icon={role === 'manager' ? Activity : Zap} 
+            title={isManagerOrAdmin ? "Custo Estimado" : "Satisfação (CSAT)"} 
+            value={isManagerOrAdmin ? "R$ 4.500" : "4.9/5.0"} 
+            trend={isManagerOrAdmin ? 2.1 : 0.5} 
+            trendLabel={isManagerOrAdmin ? "mês anterior" : "últimos 10 chats"}
+            icon={isManagerOrAdmin ? Activity : Zap} 
             color="bg-amber-500" 
         />
       </div>
@@ -312,8 +314,8 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onNavigate }) => {
         </div>
       </div>
 
-      {/* Bottom Section: Leaderboard (Manager) or History (Agent) */}
-      {role === 'manager' && (
+      {/* Bottom Section: Leaderboard (Manager/Admin) or History (Agent) */}
+      {isManagerOrAdmin && (
           <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
               <div className="flex justify-between items-center mb-6">
                   <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">

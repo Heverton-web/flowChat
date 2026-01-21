@@ -22,10 +22,6 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, type = 
     } else {
       const timer = setTimeout(() => {
         setIsVisible(false);
-        // Only restore scrolling if no other modals are likely open (simplistic check)
-        // For nested modals, the parent should ideally manage this, but we'll reset here.
-        // If we wanted to be robust we'd check for other z-50 elements.
-        // For now, we accept that closing the top modal might re-enable scrolling.
         document.body.style.overflow = 'unset';
       }, 300);
       return () => clearTimeout(timer);
@@ -36,39 +32,42 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, type = 
 
   const getHeaderIcon = () => {
     switch (type) {
-      case 'danger': return <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-full text-red-600"><AlertTriangle size={24} /></div>;
-      case 'success': return <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-full text-green-600"><CheckCircle size={24} /></div>;
-      case 'info': return <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full text-blue-600"><Info size={24} /></div>;
+      case 'danger': return <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-full text-red-600 border border-red-200 dark:border-red-800"><AlertTriangle size={24} /></div>;
+      case 'success': return <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-full text-green-600 border border-green-200 dark:border-green-800"><CheckCircle size={24} /></div>;
+      case 'info': return <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full text-blue-600 border border-blue-200 dark:border-blue-800"><Info size={24} /></div>;
       default: return null;
     }
   };
 
   return (
     <div 
-      className={`fixed inset-0 flex items-center justify-center p-4 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}
+      className={`fixed inset-0 flex items-center justify-center p-4 transition-all duration-300 ${isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
       style={{ zIndex }}
       aria-modal="true"
       role="dialog"
     >
-      {/* Backdrop */}
+      {/* Backdrop with stronger blur */}
       <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+        className="absolute inset-0 bg-slate-900/70 backdrop-blur-md transition-opacity duration-300" 
         onClick={onClose}
       ></div>
 
-      {/* Modal Content */}
+      {/* Modal Content with sleek animation */}
       <div 
-        className={`bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden relative z-10 transform transition-all duration-300 ${isOpen ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'}`}
+        className={`bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden relative z-10 transform transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) border border-slate-200 dark:border-slate-700 ${isOpen ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-4 opacity-0'}`}
       >
         <div className="p-6">
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex items-center gap-3">
+          <div className="flex justify-between items-start mb-6">
+            <div className="flex items-center gap-4">
               {getHeaderIcon()}
-              <h3 className="text-xl font-bold text-slate-800 dark:text-white mt-1">{title}</h3>
+              <div>
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-white leading-tight">{title}</h3>
+                  {type === 'default' && <div className="h-1 w-8 bg-blue-600 rounded-full mt-1.5"></div>}
+              </div>
             </div>
             <button 
               onClick={onClose} 
-              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"
             >
               <X size={20} />
             </button>
@@ -80,7 +79,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, type = 
         </div>
 
         {footer && (
-          <div className="bg-slate-50 dark:bg-slate-700/30 p-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
+          <div className="bg-slate-50 dark:bg-slate-900/50 p-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
             {footer}
           </div>
         )}

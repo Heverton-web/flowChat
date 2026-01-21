@@ -1,111 +1,107 @@
 
 import { Instance } from '../types';
+import { supabase } from './supabaseClient';
 import * as financialService from './financialService';
-
-const STORAGE_KEY = 'flowchat_instances';
-
-// Default Mocks
-const MOCK_DEFAULTS: Instance[] = [
-  { 
-    id: '1', name: 'Suporte Geral', status: 'connected', phone: '5511999999999', 
-    lastUpdate: '2023-10-27T10:00:00Z', battery: 85, messagesUsed: 850, 
-    messagesLimit: 0, ownerId: 'manager-1', ownerName: 'Gestor Admin'
-  },
-  { 
-    id: '2', name: 'Vendas Júnior', status: 'disconnected', lastUpdate: '2023-10-26T14:30:00Z',
-    messagesUsed: 1980, messagesLimit: 0, ownerId: 'agent-1', ownerName: 'Atendente Demo'
-  }
-];
-
-// Helper to load/save
-const loadData = (): Instance[] => {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) return JSON.parse(stored);
-  // If not found, save defaults
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_DEFAULTS));
-  return MOCK_DEFAULTS;
-};
-
-const saveData = (data: Instance[]) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-};
+import { mockStore } from './mockDataStore';
 
 export const fetchInstances = async (userId: string, role: string): Promise<Instance[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-        const instances = loadData();
-        if (role === 'manager') {
-            resolve(instances); 
-        } else {
-            resolve(instances.filter(i => i.ownerId === userId)); 
-        }
-    }, 600);
-  });
+  if (mockStore.isMockMode()) {
+      await new Promise(r => setTimeout(r, 500));
+      return mockStore.getInstances(userId, role);
+  }
+
+  let query = supabase.from('instances').select('*');
+  if (role !== 'manager' && role !== 'super_admin') {
+    query = query.eq('owner_id', userId);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+      console.error(error);
+      return [];
+  }
+
+  return data.map((i: any) => ({
+    id: i.id,
+    name: i.name,
+    status: i.status as Instance['status'],
+    phone: i.phone,
+    lastUpdate: i.last_update,
+    battery: i.battery,
+    messagesUsed: i.messages_used,
+    messagesLimit: i.messages_limit,
+    ownerId: i.owner_id,
+    ownerName: 'Usuário' 
+  }));
 };
 
 export const createInstance = async (name: string, ownerId: string, ownerName: string): Promise<Instance> => {
-  
-  // 1. Check Global Seat/Instance Limit
+  if (mockStore.isMockMode()) {
+      await new Promise(r => setTimeout(r, 800));
+      return mockStore.createInstance(name, ownerId, ownerName);
+  }
+
   const license = await financialService.getLicenseStatus();
-  const instances = loadData();
+  const { count } = await supabase.from('instances').select('*', { count: 'exact', head: true });
   
-  if (instances.length >= license.totalSeats) {
+  if ((count || 0) >= license.totalSeats) {
       throw new Error(`Limite global de instâncias atingido (${license.totalSeats}). Expanda sua licença.`);
   }
 
-  // 2. Check 1:1 User Limit
-  const existingInstance = instances.find(i => i.ownerId === ownerId);
-  if (existingInstance) {
+  const { data: existing } = await supabase.from('instances').select('id').eq('owner_id', ownerId).single();
+  if (existing) {
       throw new Error("Você já possui uma instância ativa (Limite 1 por usuário).");
   }
 
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const newInstance: Instance = {
-        id: Math.random().toString(36).substr(2, 9),
-        name,
-        status: 'connecting', // Initial state
-        lastUpdate: new Date().toISOString(),
-        messagesUsed: 0,
-        messagesLimit: 0,
-        ownerId,
-        ownerName
-      };
-      
-      const updated = [...instances, newInstance];
-      saveData(updated);
-      resolve(newInstance);
-    }, 1500); // Simulated delay for "Creating..."
-  });
+  const { data, error } = await supabase.from('instances').insert({
+    name,
+    owner_id: ownerId,
+    status: 'connecting',
+    messages_used: 0,
+    messages_limit: 0
+  }).select().single();
+
+  if (error) throw error;
+
+  return {
+    id: data.id,
+    name: data.name,
+    status: data.status as Instance['status'],
+    lastUpdate: data.created_at,
+    messagesUsed: 0,
+    messagesLimit: 0,
+    ownerId: data.owner_id,
+    ownerName
+  };
 };
 
 export const deleteInstance = async (id: string, name: string): Promise<void> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const instances = loadData();
-      const updated = instances.filter(i => i.id !== id);
-      saveData(updated);
-      resolve();
-    }, 600);
-  });
+  if (mockStore.isMockMode()) {
+      mockStore.deleteInstance(id);
+      return;
+  }
+  const { error } = await supabase.from('instances').delete().eq('id', id);
+  if (error) throw error;
 };
 
 export const getInstanceQRCode = async (instanceId: string): Promise<string> => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      // Return a static QR or dynamic one
       resolve('https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=EvolutionAPI_Connection_Test_' + instanceId);
-    }, 1500); // Simulate API generation time
+    }, 1500); 
   });
 };
 
 export const connectInstance = async (instanceId: string): Promise<void> => {
-   return new Promise((resolve) => {
-       setTimeout(() => {
-           const instances = loadData();
-           const updated = instances.map(i => i.id === instanceId ? { ...i, status: 'connected' as const, phone: '5511999999999' } : i);
-           saveData(updated);
-           resolve();
-       }, 500); // Fast update, visual delay handled in frontend
-   });
+   if (mockStore.isMockMode()) {
+       mockStore.connectInstance(instanceId);
+       return;
+   }
+   const { error } = await supabase.from('instances').update({
+       status: 'connected',
+       phone: '5511999999999',
+       last_update: new Date().toISOString()
+   }).eq('id', instanceId);
+   
+   if (error) throw error;
 }

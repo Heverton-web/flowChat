@@ -1,46 +1,50 @@
 
-import { AgentPlan, AgentPermissions } from '../types';
-import * as financialService from './financialService';
-
-const STORAGE_KEY = 'flowchat_agents';
-
-// Default Mocks
-const MOCK_DEFAULTS: AgentPlan[] = [
-  { 
-    id: 'agent-1', name: 'Atendente Demo', email: 'agente@empresa.com', 
-    status: 'active', messagesUsed: 850, 
-    permissions: { 
-        canCreate: true, canEdit: true, canDelete: true,
-        canCreateTags: true, canEditTags: true, canDeleteTags: true 
-    }
-  },
-  { 
-    id: 'agent-2', name: 'Roberto Vendas', email: 'roberto@empresa.com', 
-    status: 'active', messagesUsed: 2800, 
-    permissions: { 
-        canCreate: true, canEdit: true, canDelete: false,
-        canCreateTags: true, canEditTags: false, canDeleteTags: false
-    } 
-  }
-];
-
-const loadData = (): AgentPlan[] => {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) return JSON.parse(stored);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_DEFAULTS));
-  return MOCK_DEFAULTS;
-};
-
-const saveData = (data: AgentPlan[]) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-};
+import { AgentPlan, AgentPermissions, UserRole } from '../types';
+import { supabase } from './supabaseClient';
+import { mockStore } from './mockDataStore';
 
 export const getAgents = async (): Promise<AgentPlan[]> => {
-  return new Promise(resolve => setTimeout(() => resolve(loadData()), 500));
+  if (mockStore.isMockMode()) {
+      return mockStore.getAgents() as AgentPlan[];
+  }
+
+  const { data, error } = await supabase.from('profiles').select('*').eq('role', 'agent');
+  if (error) {
+      console.error(error);
+      return [];
+  }
+
+  return data.map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      email: p.email,
+      role: p.role as UserRole,
+      status: 'active',
+      messagesUsed: 0,
+      permissions: { 
+          canCreate: true, canEdit: true, canDelete: false,
+          canCreateTags: true, canEditTags: true, canDeleteTags: false
+      },
+      avatar: p.avatar_url
+  }));
 };
 
 export const getAgentById = async (id: string): Promise<AgentPlan | undefined> => {
-    return new Promise(resolve => setTimeout(() => resolve(loadData().find(a => a.id === id)), 300));
+    if (mockStore.isMockMode()) {
+        return mockStore.getAgents().find(a => a.id === id) as AgentPlan | undefined;
+    }
+
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', id).single();
+    if (error || !data) return undefined;
+    return {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        role: data.role as UserRole,
+        status: 'active',
+        messagesUsed: 0,
+        permissions: { canCreate: true, canEdit: true, canDelete: false, canCreateTags: true, canEditTags: true, canDeleteTags: false }
+    };
 }
 
 interface AddAgentPayload {
@@ -51,54 +55,34 @@ interface AddAgentPayload {
 }
 
 export const addAgent = async (agent: AddAgentPayload): Promise<AgentPlan> => {
-  // Check License Limits
-  const license = await financialService.getLicenseStatus();
-  if (license.usage.usedSeats >= license.totalSeats) {
-      throw new Error(`Limite de Seats atingido (${license.totalSeats}). Solicite expansão da licença.`);
+  if (mockStore.isMockMode()) {
+      // Em modo mock, apenas fingimos que criamos
+      return {
+          id: `mock_agent_${Date.now()}`,
+          name: agent.name,
+          email: agent.email,
+          status: 'active',
+          messagesUsed: 0,
+          permissions: agent.permissions || { canCreate: true, canEdit: true, canDelete: false, canCreateTags: true, canEditTags: true, canDeleteTags: false }
+      };
   }
-
-  return new Promise(resolve => {
-    const agents = loadData();
-    const newAgent: AgentPlan = { 
-      id: Math.random().toString(36).substr(2, 9), 
-      name: agent.name,
-      email: agent.email,
-      status: 'active', 
-      messagesUsed: 0,
-      permissions: agent.permissions || { 
-          canCreate: true, canEdit: true, canDelete: false,
-          canCreateTags: true, canEditTags: true, canDeleteTags: false
-      },
-      tempPassword: agent.password 
-    };
-    saveData([...agents, newAgent]);
-    setTimeout(() => resolve(newAgent), 800);
-  });
+  
+  throw new Error("Backend Function Required: Creating new users requires server-side admin privileges. Please set up an Edge Function.");
 };
 
 export const updateAgent = async (id: string, updates: Partial<AgentPlan>): Promise<AgentPlan> => {
-    return new Promise(resolve => {
-        const agents = loadData();
-        const updatedAgents = agents.map(a => 
-            a.id === id ? { ...a, ...updates } : a
-        );
-        saveData(updatedAgents);
-        setTimeout(() => resolve(updatedAgents.find(a => a.id === id)!), 500);
-    });
+    if (mockStore.isMockMode()) return { ...updates, id } as AgentPlan;
+
+    const { data, error } = await supabase.from('profiles').update({
+        name: updates.name,
+    }).eq('id', id).select().single();
+
+    if (error) throw error;
+    return { ...updates, id } as AgentPlan;
 };
 
 export const removeAgent = async (id: string): Promise<void> => {
-  return new Promise(resolve => {
-    const agents = loadData();
-    saveData(agents.filter(a => a.id !== id));
-    setTimeout(resolve, 500);
-  });
-};
-
-export const updateAgentPermissions = async (id: string, permissions: AgentPermissions): Promise<void> => {
-    return new Promise(resolve => {
-        const agents = loadData();
-        saveData(agents.map(a => a.id === id ? { ...a, permissions } : a));
-        setTimeout(resolve, 300);
-    });
+  if (mockStore.isMockMode()) return;
+  const { error } = await supabase.from('profiles').delete().eq('id', id);
+  if (error) throw error;
 };

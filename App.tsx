@@ -1,12 +1,11 @@
 
-import React, { useState } from 'react';
-import { LayoutDashboard, Smartphone, Users, Settings as SettingsIcon, LogOut, Menu, X, CreditCard, Send, MessageCircle, PieChart, DollarSign, Moon, Sun, Globe, PlayCircle, ChevronLeft, ChevronRight, HelpCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { LayoutDashboard, Smartphone, Users, Settings as SettingsIcon, LogOut, Menu, X, CreditCard, Send, MessageCircle, PieChart, DollarSign, Moon, Sun, Globe, PlayCircle, ChevronLeft, ChevronRight, HelpCircle, Loader2, Terminal, Plug, Activity } from 'lucide-react';
 import { ViewState, UserRole, User } from './types';
 import Dashboard from './components/Dashboard';
 import Instances from './components/Instances';
 import Contacts from './components/Contacts';
-import Subscription from './components/Subscription';
-import Team from './components/Team'; // New Import
+import Team from './components/Team'; 
 import Campaigns from './components/Campaigns';
 import Settings from './components/Settings';
 import Reports from './components/Reports';
@@ -14,7 +13,10 @@ import Financial from './components/Financial';
 import Login from './components/Login';
 import Register from './components/Register';
 import Onboarding from './components/Onboarding';
+import DeveloperConsole from './components/DeveloperConsole';
 import { AppProvider, useApp } from './contexts/AppContext';
+import { supabase } from './services/supabaseClient';
+import * as authService from './services/authService';
 
 // Inner App Component to use the Context
 const FlowChatApp: React.FC = () => {
@@ -22,6 +24,7 @@ const FlowChatApp: React.FC = () => {
   
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [authView, setAuthView] = useState<'login' | 'register'>('login');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
@@ -30,19 +33,103 @@ const FlowChatApp: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  // --- Auth Handlers ---
+  // --- Auth & Session Handling ---
+  useEffect(() => {
+    checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        // Small delay to ensure DB triggers have finished if it's a new signup
+        if (event === 'SIGNED_IN') await new Promise(r => setTimeout(r, 500));
+        
+        try {
+            const user = await authService.fetchUserProfile(session.user.id);
+            setCurrentUser(user);
+            setIsAuthenticated(true);
+            // Default view based on role
+            if (user.role === 'developer') setActiveView('dev_integrations');
+            else setActiveView('dashboard');
+        } catch (e) {
+            console.error("Error fetching profile on auth change", e);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setCurrentUser(null);
+        setIsAuthenticated(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const checkSession = async () => {
+    setIsAuthLoading(true);
+    try {
+        const userPromise = authService.getCurrentUser();
+        const timeoutPromise = new Promise<null>((resolve) => 
+            setTimeout(() => {
+                console.warn("Session check timed out - defaulting to login");
+                resolve(null);
+            }, 8000)
+        );
+
+        const user = await Promise.race([userPromise, timeoutPromise]);
+        
+        if (user) {
+          setCurrentUser(user);
+          setIsAuthenticated(true);
+          if (user.role === 'developer') setActiveView('dev_integrations');
+        }
+    } catch (error) {
+        console.error("Session check failed:", error);
+        setCurrentUser(null);
+        setIsAuthenticated(false);
+    } finally {
+        setIsAuthLoading(false);
+    }
+  };
+
   const handleLogin = (user: User) => {
       setCurrentUser(user);
       setIsAuthenticated(true);
-      // Redirect to Onboarding on first login
-      setActiveView('onboarding');
+      if (user.role === 'developer') setActiveView('dev_integrations');
+      else setActiveView('dashboard');
   };
 
-  const handleLogout = () => {
-      setCurrentUser(null);
-      setIsAuthenticated(false);
-      setAuthView('login');
+  const handleLogout = async () => {
+      setIsAuthLoading(true); 
+      try {
+        const signOutPromise = authService.signOut();
+        const timeoutPromise = new Promise(resolve => setTimeout(resolve, 3000));
+        await Promise.race([signOutPromise, timeoutPromise]);
+        
+        setCurrentUser(null);
+        setIsAuthenticated(false);
+        setAuthView('login');
+      } catch (error) {
+        console.error("Erro no logout:", error);
+        setCurrentUser(null);
+        setIsAuthenticated(false);
+        setAuthView('login');
+      } finally {
+        setIsAuthLoading(false);
+      }
   };
+
+  // --- Role Based Checks ---
+  const isSuperAdmin = currentUser?.role === 'super_admin';
+  const isManager = currentUser?.role === 'manager';
+  const isAgent = currentUser?.role === 'agent';
+  const isDeveloper = currentUser?.role === 'developer';
+
+  // --- Loading Screen ---
+  if (isAuthLoading) {
+      return (
+          <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 transition-colors gap-4">
+              <Loader2 className="animate-spin text-blue-600" size={48} />
+              <p className="text-slate-500 dark:text-slate-400 text-sm font-medium animate-pulse">Conectando ao servidor...</p>
+          </div>
+      );
+  }
 
   // --- Render Auth Views ---
   if (!isAuthenticated || !currentUser) {
@@ -125,26 +212,48 @@ const FlowChatApp: React.FC = () => {
         {/* Navigation */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
           
-          <NavItem view="onboarding" icon={PlayCircle} label={t('onboarding')} />
+          {/* COMMON FOR EVERYONE EXCEPT DEVELOPER */}
+          {!isDeveloper && <NavItem view="onboarding" icon={PlayCircle} label={t('onboarding')} />}
 
-          <SectionHeader label={t('menu')} />
-          
-          <NavItem view="dashboard" icon={LayoutDashboard} label={t('dashboard')} />
-          <NavItem view="campaigns" icon={Send} label={t('campaigns')} />
-          <NavItem view="instances" icon={Smartphone} label={t('instances')} />
-          <NavItem view="contacts" icon={Users} label={t('contacts')} />
-          
-          {currentUser.role === 'manager' && (
-            <NavItem view="financial" icon={DollarSign} label={t('financial')} />
+          {/* OPERATIONAL MENU (Agents & Managers) */}
+          {(isAgent || isManager) && (
+              <>
+                <SectionHeader label={t('menu')} />
+                <NavItem view="dashboard" icon={LayoutDashboard} label={t('dashboard')} />
+                <NavItem view="campaigns" icon={Send} label={t('campaigns')} />
+                <NavItem view="instances" icon={Smartphone} label={t('instances')} />
+                <NavItem view="contacts" icon={Users} label={t('contacts')} />
+              </>
           )}
-          
-          {currentUser.role === 'manager' && (
+
+          {/* SUPER ADMIN MENU (Audit & Finance) */}
+          {isSuperAdmin && (
+              <>
+                <SectionHeader label="Gestão Global" />
+                <NavItem view="dashboard" icon={LayoutDashboard} label="Auditoria" />
+                <NavItem view="financial" icon={DollarSign} label={t('financial')} />
+                <NavItem view="reports" icon={PieChart} label={t('reports')} />
+                <NavItem view="team" icon={Users} label="Gestão de Acessos" />
+                <NavItem view="settings" icon={SettingsIcon} label="Conta" />
+              </>
+          )}
+
+          {/* MANAGER MENU (Team Management) */}
+          {isManager && (
               <>
                 <SectionHeader label={t('admin')} />
                 <NavItem view="reports" icon={PieChart} label={t('reports')} />
-                <NavItem view="subscription" icon={CreditCard} label={t('subscription')} />
                 <NavItem view="team" icon={Users} label="Equipe" />
-                <NavItem view="settings" icon={SettingsIcon} label={t('settings')} />
+              </>
+          )}
+
+          {/* DEVELOPER MENU (Tech Only) */}
+          {isDeveloper && (
+              <>
+                <SectionHeader label="Developer Zone" />
+                <NavItem view="dev_integrations" icon={Plug} label="Integrações" />
+                <NavItem view="dev_api" icon={Terminal} label="Developer API" />
+                <NavItem view="dev_diagnostics" icon={Activity} label="Diagnóstico" />
               </>
           )}
         </nav>
@@ -195,7 +304,7 @@ const FlowChatApp: React.FC = () => {
               {!isSidebarCollapsed ? (
                   <div className="truncate min-w-0 flex-1 animate-in fade-in slide-in-from-left-2">
                       <p className="text-sm font-bold text-slate-800 dark:text-white truncate leading-tight">{currentUser.name}</p>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{currentUser.email}</p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate capitalize">{currentUser.role.replace('_', ' ')}</p>
                   </div>
               ) : null}
 
@@ -220,93 +329,6 @@ const FlowChatApp: React.FC = () => {
         </div>
       </aside>
 
-      {/* Mobile Header & Sidebar Overlay */}
-      <div className="md:hidden absolute top-0 left-0 w-full z-20">
-        <div className="bg-white dark:bg-slate-800 p-4 flex justify-between items-center shadow-sm dark:border-b dark:border-slate-700">
-            <div className="flex items-center gap-2">
-                 <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
-                    <MessageCircle size={18} fill="currentColor" />
-                 </div>
-                 <h1 className="text-lg font-bold text-slate-800 dark:text-white">FlowChat</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-slate-600 dark:text-slate-300 p-2">
-                  {mobileMenuOpen ? <X /> : <Menu />}
-              </button>
-            </div>
-        </div>
-        {mobileMenuOpen && (
-            <div className="absolute top-full left-0 w-full bg-white dark:bg-slate-800 shadow-xl border-b border-slate-200 dark:border-slate-700 p-4 space-y-2 max-h-[85vh] overflow-y-auto animate-in slide-in-from-top-2">
-                 {/* Mobile Controls */}
-                 <div className="flex gap-2 mb-4 p-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                    <button 
-                        onClick={toggleTheme} 
-                        className="flex-1 flex items-center justify-center gap-2 py-2 bg-white dark:bg-slate-700 rounded border border-slate-200 dark:border-slate-600 shadow-sm text-sm font-medium text-slate-700 dark:text-slate-200"
-                    >
-                        {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-                        {theme === 'dark' ? t('light') : t('dark')}
-                    </button>
-                    <div className="flex-1 relative">
-                         <Globe size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                         <select 
-                            value={language} 
-                            onChange={(e) => setLanguage(e.target.value as any)}
-                            className="w-full h-full bg-white dark:bg-slate-700 pl-9 pr-2 border border-slate-200 dark:border-slate-600 rounded shadow-sm text-sm font-medium text-slate-700 dark:text-slate-200 appearance-none outline-none"
-                         >
-                            <option value="pt-BR">🇧🇷 PT-BR</option>
-                            <option value="pt-PT">🇵🇹 PT-PT</option>
-                            <option value="en-US">🇺🇸 EN-US</option>
-                            <option value="es-ES">🇪🇸 ES-ES</option>
-                         </select>
-                    </div>
-                 </div>
-
-                 <div className="mb-2">
-                     <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-2 mb-1">Início</div>
-                     <NavItem view="onboarding" icon={PlayCircle} label={t('onboarding')} />
-                 </div>
-
-                 <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-2 mb-1">{t('menu')}</div>
-                 <NavItem view="dashboard" icon={LayoutDashboard} label={t('dashboard')} />
-                 <NavItem view="campaigns" icon={Send} label={t('campaigns')} />
-                 <NavItem view="instances" icon={Smartphone} label={t('instances')} />
-                 <NavItem view="contacts" icon={Users} label={t('contacts')} />
-                 {currentUser.role === 'manager' && (
-                    <NavItem view="financial" icon={DollarSign} label={t('financial')} />
-                 )}
-                 
-                 {currentUser.role === 'manager' && (
-                     <>
-                        <div className="border-t border-slate-100 dark:border-slate-700 my-2 pt-2">
-                             <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-2 mb-1">{t('admin')}</div>
-                             <NavItem view="reports" icon={PieChart} label={t('reports')} />
-                             <NavItem view="subscription" icon={CreditCard} label={t('subscription')} />
-                             <NavItem view="team" icon={Users} label="Equipe" />
-                             <NavItem view="settings" icon={SettingsIcon} label={t('settings')} />
-                        </div>
-                     </>
-                 )}
-                 
-                 <div className="border-t border-slate-100 dark:border-slate-700 pt-4 mt-2">
-                    <div className="flex items-center gap-3 px-2 mb-4">
-                        <img src={currentUser.avatar} alt="Avatar" className="w-8 h-8 rounded-full" />
-                        <div>
-                            <p className="text-sm font-bold text-slate-800 dark:text-white">{currentUser.name}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">{currentUser.email}</p>
-                        </div>
-                    </div>
-                    <button 
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-red-500 bg-red-50 dark:bg-red-900/10 rounded-lg"
-                    >
-                        <LogOut size={20} />
-                        <span className="font-medium">{t('logout')}</span>
-                    </button>
-                 </div>
-            </div>
-        )}
-      </div>
-
       {/* Main Content */}
       <main className="flex-1 overflow-auto h-full w-full pt-16 md:pt-0 bg-slate-50 dark:bg-slate-900">
         <div className="p-6 md:p-10 max-w-screen-2xl mx-auto min-h-full">
@@ -315,11 +337,15 @@ const FlowChatApp: React.FC = () => {
           {activeView === 'instances' && <Instances currentUser={currentUser} />}
           {activeView === 'campaigns' && <Campaigns currentUser={currentUser} />}
           {activeView === 'contacts' && <Contacts currentUser={currentUser} />}
-          {activeView === 'financial' && currentUser.role === 'manager' && <Financial currentUser={currentUser} />}
-          {activeView === 'subscription' && currentUser.role === 'manager' && <Subscription />}
-          {activeView === 'team' && currentUser.role === 'manager' && <Team onNavigate={setActiveView} />}
-          {activeView === 'settings' && currentUser.role === 'manager' && <Settings />}
-          {activeView === 'reports' && currentUser.role === 'manager' && <Reports />}
+          {activeView === 'financial' && isSuperAdmin && <Financial currentUser={currentUser} />}
+          {activeView === 'team' && (isSuperAdmin || isManager) && <Team onNavigate={setActiveView} currentUser={currentUser} />}
+          {activeView === 'settings' && <Settings currentUser={currentUser} />}
+          {activeView === 'reports' && (isSuperAdmin || isManager) && <Reports />}
+          
+          {/* New Developer Routes */}
+          {(activeView === 'dev_integrations' || activeView === 'dev_api' || activeView === 'dev_diagnostics') && isDeveloper && (
+              <DeveloperConsole view={activeView === 'dev_integrations' ? 'integrations' : activeView === 'dev_api' ? 'api' : 'diagnostics'} />
+          )}
         </div>
       </main>
     </div>

@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
-import { MessageCircle, Mail, Lock, ArrowRight, Loader2, ShieldCheck, Play } from 'lucide-react';
+import { MessageCircle, Mail, Lock, ArrowRight, Loader2, ShieldCheck, AlertTriangle, Crown, Briefcase, Headset, Terminal } from 'lucide-react';
 import { User } from '../types';
 import { useApp } from '../contexts/AppContext';
+import * as authService from '../services/authService';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -10,61 +11,46 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister }) => {
-  const { t } = useApp();
+  const { t, showToast } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleAuth = (demoType?: 'manager' | 'agent') => {
-      setLoading(true);
-      setError('');
-      
-      const isDemoManager = demoType === 'manager';
-      const isDemoAgent = demoType === 'agent';
-      
-      // If manual login, check values (Mock)
-      if (!demoType && !email) {
-          setError('Digite seu email');
-          setLoading(false);
-          return;
+  const handleAutoFill = (role: 'super' | 'manager' | 'agent' | 'dev') => {
+      setPassword('123456');
+      switch(role) {
+          case 'super': setEmail('super@flowchat.com'); break;
+          case 'manager': setEmail('admin@flowchat.com'); break;
+          case 'agent': setEmail('agent@flowchat.com'); break;
+          case 'dev': setEmail('dev@flowchat.com'); break;
       }
-
-      setTimeout(() => {
-          setLoading(false);
-          
-          if (isDemoManager || email.includes('admin') || email.includes('gestor')) {
-              onLogin({
-                  id: 'manager-1',
-                  name: 'Gestor Admin',
-                  role: 'manager',
-                  email: isDemoManager ? 'admin@enterprise.com' : email,
-                  avatar: 'https://ui-avatars.com/api/?name=Gestor+Admin&background=0D8ABC&color=fff'
-              });
-          } else if (isDemoAgent || email.includes('agente') || email.includes('atendente')) {
-              onLogin({
-                  id: 'agent-1',
-                  name: 'Atendente 01',
-                  role: 'agent',
-                  email: isDemoAgent ? 'agent@enterprise.com' : email,
-                  avatar: 'https://ui-avatars.com/api/?name=Atendente+01&background=10B981&color=fff'
-              });
-          } else {
-              // Fallback for custom emails
-              onLogin({
-                  id: 'manager-1',
-                  name: 'Novo Usuário',
-                  role: 'manager',
-                  email: email,
-                  avatar: `https://ui-avatars.com/api/?name=${email.split('@')[0]}&background=0D8ABC&color=fff`
-              });
-          }
-      }, 1000);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    handleAuth();
+    if (!email || !password) {
+        setError('Preencha todos os campos');
+        return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+        const user = await authService.signIn(email, password);
+        onLogin(user);
+    } catch (err: any) {
+        console.error(err);
+        if (err.message?.includes('Invalid login') || err.message?.includes('credentials')) {
+            setError('Email ou senha incorretos.');
+        } else {
+            setError(err.message || 'Falha no login. Verifique suas credenciais.');
+        }
+        showToast('Erro ao entrar no sistema', 'error');
+    } finally {
+        setLoading(false);
+    }
   };
 
   return (
@@ -79,40 +65,35 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister }) => {
 
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-8 w-full max-w-md animate-in fade-in zoom-in-95 duration-300 transition-colors">
         
-        {/* Demo Mode Actions */}
-        <div className="mb-6 space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-                <button 
-                    onClick={() => handleAuth('manager')}
-                    className="flex flex-col items-center justify-center p-3 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 rounded-xl transition-colors text-indigo-700 dark:text-indigo-300 gap-1 group"
-                >
-                    <div className="bg-white dark:bg-slate-700 p-1.5 rounded-full shadow-sm group-hover:scale-110 transition-transform"><Play size={14} fill="currentColor"/></div>
-                    <span className="text-xs font-bold">Admin Demo</span>
+        {/* Quick Access Buttons */}
+        <div className="mb-6">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider text-center mb-3">Acesso Rápido (Demo)</p>
+            <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => handleAutoFill('super')} className="flex items-center justify-center gap-2 p-2 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-lg text-xs font-bold hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors border border-purple-100 dark:border-purple-800">
+                    <Crown size={14} /> SUPER ADMIN
                 </button>
-                <button 
-                    onClick={() => handleAuth('agent')}
-                    className="flex flex-col items-center justify-center p-3 bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800 rounded-xl transition-colors text-emerald-700 dark:text-emerald-300 gap-1 group"
-                >
-                    <div className="bg-white dark:bg-slate-700 p-1.5 rounded-full shadow-sm group-hover:scale-110 transition-transform"><Play size={14} fill="currentColor"/></div>
-                    <span className="text-xs font-bold">Agent Demo</span>
+                <button onClick={() => handleAutoFill('manager')} className="flex items-center justify-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors border border-blue-100 dark:border-blue-800">
+                    <Briefcase size={14} /> GESTOR
                 </button>
-            </div>
-            <div className="relative flex py-2 items-center">
-                <div className="flex-grow border-t border-slate-100 dark:border-slate-700"></div>
-                <span className="flex-shrink-0 mx-4 text-slate-300 text-xs uppercase">Acesso Corporativo</span>
-                <div className="flex-grow border-t border-slate-100 dark:border-slate-700"></div>
+                <button onClick={() => handleAutoFill('agent')} className="flex items-center justify-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg text-xs font-bold hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors border border-green-100 dark:border-green-800">
+                    <Headset size={14} /> ATENDENTE
+                </button>
+                <button onClick={() => handleAutoFill('dev')} className="flex items-center justify-center gap-2 p-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors border border-slate-200 dark:border-slate-600">
+                    <Terminal size={14} /> DEV
+                </button>
             </div>
         </div>
 
         <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-4 text-center">{t('login_title')}</h2>
         
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm p-3 rounded-lg mb-4">
-            {error}
+          <div className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm p-3 rounded-lg mb-4 flex items-start gap-2">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0"/>
+            <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-1">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('email_label')}</label>
             <div className="relative">
@@ -162,7 +143,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister }) => {
           <p className="text-slate-500 dark:text-slate-400 text-sm">
             Primeiro acesso?{' '}
             <button onClick={onNavigateToRegister} className="text-blue-600 font-bold hover:underline">
-              Configurar Admin
+              Setup Admin
             </button>
           </p>
         </div>

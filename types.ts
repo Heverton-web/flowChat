@@ -1,6 +1,5 @@
 
-
-export type UserRole = 'manager' | 'agent';
+export type UserRole = 'super_admin' | 'manager' | 'agent' | 'developer';
 
 export interface User {
   id: string;
@@ -24,11 +23,13 @@ export interface AgentPlan {
   id: string;
   name: string;
   email: string;
+  role?: UserRole; // Added to track role in Team view
   status: 'active' | 'pending_invite' | 'suspended';
   messagesUsed: number;
   permissions: AgentPermissions;
   tempPassword?: string;
   extraContactPacks?: number;
+  department?: string; // Optional for UI display
 }
 
 // --- ENTERPRISE LICENSE TYPES ---
@@ -161,4 +162,4 @@ export interface Transaction {
   invoiceUrl?: string;
 }
 
-export type ViewState = 'dashboard' | 'instances' | 'campaigns' | 'contacts' | 'subscription' | 'team' | 'settings' | 'reports' | 'financial' | 'onboarding';
+export type ViewState = 'dashboard' | 'instances' | 'campaigns' | 'contacts' | 'financial' | 'reports' | 'team' | 'settings' | 'onboarding' | 'dev_integrations' | 'dev_api' | 'dev_diagnostics';

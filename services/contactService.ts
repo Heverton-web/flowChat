@@ -1,102 +1,9 @@
 
 import { Contact } from '../types';
-import * as teamService from './teamService';
-
-const STORAGE_KEY = 'flowchat_contacts';
-const STORAGE_TAGS_KEY = 'flowchat_tags';
-
-const MOCK_DEFAULTS: Contact[] = [
-  { id: '1', name: 'Carlos Cliente', phone: '5511999998888', email: 'carlos@email.com', tags: ['Vip', 'Outubro/23'], campaignHistory: [], notes: 'Cliente prefere contato pela manhã.', createdAt: '2023-10-01T10:00:00Z', ownerId: 'manager-1' },
-  { id: '2', name: 'Mariana Lead', phone: '5511988887777', email: 'mariana@site.com.br', tags: ['Novo Lead'], campaignHistory: [], notes: '', createdAt: '2023-11-12T15:30:00Z', ownerId: 'agent-1' },
-];
-
-const loadData = (): Contact[] => {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) return JSON.parse(stored);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_DEFAULTS));
-  return MOCK_DEFAULTS;
-};
-
-const saveData = (data: Contact[]) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-};
-
-// --- TAGS MANAGEMENT START ---
-
-const loadTags = (): string[] => {
-    const stored = localStorage.getItem(STORAGE_TAGS_KEY);
-    if (stored) return JSON.parse(stored);
-    
-    // Initial Seed from contacts if empty
-    const contacts = loadData();
-    const unique = Array.from(new Set(contacts.flatMap(c => c.tags)));
-    localStorage.setItem(STORAGE_TAGS_KEY, JSON.stringify(unique));
-    return unique;
-};
-
-const saveTagsData = (tags: string[]) => {
-    localStorage.setItem(STORAGE_TAGS_KEY, JSON.stringify(tags));
-};
-
-export const getTags = async (): Promise<string[]> => {
-    return new Promise(resolve => setTimeout(() => resolve(loadTags()), 300));
-};
-
-export const createTag = async (tagName: string): Promise<string[]> => {
-    return new Promise((resolve, reject) => {
-        const tags = loadTags();
-        if (tags.includes(tagName)) {
-            reject(new Error('Tag já existe.'));
-            return;
-        }
-        const newTags = [...tags, tagName];
-        saveTagsData(newTags);
-        setTimeout(() => resolve(newTags), 400);
-    });
-};
-
-export const updateTag = async (oldName: string, newName: string): Promise<string[]> => {
-    return new Promise((resolve) => {
-        // 1. Update List
-        const tags = loadTags();
-        const newTags = tags.map(t => t === oldName ? newName : t);
-        saveTagsData(newTags);
-
-        // 2. Update All Contacts
-        const contacts = loadData();
-        const updatedContacts = contacts.map(c => ({
-            ...c,
-            tags: c.tags.map(t => t === oldName ? newName : t)
-        }));
-        saveData(updatedContacts);
-
-        setTimeout(() => resolve(newTags), 500);
-    });
-};
-
-export const deleteTag = async (tagName: string): Promise<string[]> => {
-    return new Promise((resolve) => {
-         // 1. Remove from List
-        const tags = loadTags();
-        const newTags = tags.filter(t => t !== tagName);
-        saveTagsData(newTags);
-
-        // 2. Remove from All Contacts
-        const contacts = loadData();
-        const updatedContacts = contacts.map(c => ({
-            ...c,
-            tags: (c.tags || []).filter(t => t !== tagName)
-        }));
-        saveData(updatedContacts);
-
-        setTimeout(() => resolve(newTags), 500);
-    });
-};
-
-// --- TAGS MANAGEMENT END ---
+import { supabase } from './supabaseClient';
+import { mockStore } from './mockDataStore';
 
 const BASE_CONTACT_LIMIT = 500;
-const CONTACT_PACK_SIZE = 500;
 
 export const formatPhoneForEvolution = (phone: string): string => {
   let clean = phone.replace(/\D/g, '');
@@ -107,171 +14,173 @@ export const formatPhoneForEvolution = (phone: string): string => {
 };
 
 export const getContacts = async (userId: string, role: string): Promise<Contact[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const contacts = loadData();
-      if (role === 'manager') {
-        resolve(contacts);
-      } else {
-        resolve(contacts.filter(c => c.ownerId === userId));
-      }
-    }, 500);
-  });
+  if (mockStore.isMockMode()) {
+      // Mock Delay Simulation
+      await new Promise(r => setTimeout(r, 600)); 
+      return mockStore.getContacts(userId, role);
+  }
+
+  let query = supabase.from('contacts').select('*');
+  if (role !== 'manager' && role !== 'super_admin') {
+    query = query.eq('owner_id', userId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return data.map((c: any) => ({
+    id: c.id,
+    name: c.name,
+    phone: c.phone,
+    email: c.email,
+    tags: c.tags || [],
+    campaignHistory: c.campaign_history || [],
+    notes: c.notes,
+    createdAt: c.created_at,
+    ownerId: c.owner_id,
+    lockEdit: c.lock_edit,
+    lockDelete: c.lock_delete
+  }));
+};
+
+export const getTags = async (): Promise<string[]> => {
+  if (mockStore.isMockMode()) return ['Lead', 'Vip', 'Novo', 'Boleto', 'Suporte', 'Frio'];
+  const { data, error } = await supabase.from('tags').select('name');
+  if (error) return [];
+  return data.map((t: any) => t.name);
+};
+
+export const createTag = async (tagName: string): Promise<string[]> => {
+  if (mockStore.isMockMode()) return ['Lead', 'Vip', tagName]; // Simplificado para mock
+  const { error } = await supabase.from('tags').insert({ name: tagName, owner_id: (await supabase.auth.getUser()).data.user?.id });
+  if (error) throw error;
+  return getTags();
+};
+
+export const updateTag = async (oldName: string, newName: string): Promise<string[]> => {
+  if (mockStore.isMockMode()) return getTags();
+  await supabase.from('tags').update({ name: newName }).eq('name', oldName);
+  return getTags();
+};
+
+export const deleteTag = async (tagName: string): Promise<string[]> => {
+  if (mockStore.isMockMode()) return getTags();
+  await supabase.from('tags').delete().eq('name', tagName);
+  return getTags();
 };
 
 export const saveContact = async (
   contact: Omit<Contact, 'id' | 'createdAt' | 'campaignHistory'>, 
   ownerId: string
 ): Promise<Contact> => {
-  return new Promise(async (resolve, reject) => {
-    
-    const contacts = loadData();
-    const ownerCount = contacts.filter(c => c.ownerId === ownerId).length;
-    
-    let limit = BASE_CONTACT_LIMIT;
-    try {
-        const agent = await teamService.getAgentById(ownerId);
-        if (agent) {
-            limit = BASE_CONTACT_LIMIT + ((agent.extraContactPacks || 0) * CONTACT_PACK_SIZE);
-        }
-    } catch (e) { console.error(e); }
+  if (mockStore.isMockMode()) {
+      await new Promise(r => setTimeout(r, 500));
+      return mockStore.saveContact({ ...contact, ownerId });
+  }
 
-    if (ownerCount >= limit) {
-      setTimeout(() => reject(new Error(`O limite de ${limit} contatos foi atingido.`)), 300);
-      return;
-    }
+  const { count } = await supabase.from('contacts').select('*', { count: 'exact', head: true }).eq('owner_id', ownerId);
+  if ((count || 0) >= BASE_CONTACT_LIMIT) {
+      throw new Error(`O limite de ${BASE_CONTACT_LIMIT} contatos foi atingido.`);
+  }
 
-    setTimeout(() => {
-      const newContact: Contact = {
-        ...contact,
-        id: Math.random().toString(36).substr(2, 9),
-        campaignHistory: [],
-        createdAt: new Date().toISOString(),
-        phone: formatPhoneForEvolution(contact.phone),
-        ownerId: ownerId
-      };
-      
-      saveData([newContact, ...contacts]);
-      
-      // Sync tags if new ones introduced
-      const currentTags = loadTags();
-      const newTagsFromContact = contact.tags.filter(t => !currentTags.includes(t));
-      if (newTagsFromContact.length > 0) {
-          saveTagsData([...currentTags, ...newTagsFromContact]);
-      }
+  const { data, error } = await supabase.from('contacts').insert({
+    name: contact.name,
+    phone: formatPhoneForEvolution(contact.phone),
+    email: contact.email,
+    tags: contact.tags,
+    notes: contact.notes,
+    owner_id: ownerId,
+    lock_edit: contact.lockEdit,
+    lock_delete: contact.lockDelete
+  }).select().single();
 
-      resolve(newContact);
-    }, 600);
-  });
+  if (error) throw error;
+
+  return {
+    id: data.id,
+    name: data.name,
+    phone: data.phone,
+    email: data.email,
+    tags: data.tags || [],
+    campaignHistory: data.campaign_history || [],
+    notes: data.notes,
+    createdAt: data.created_at,
+    ownerId: data.owner_id
+  };
 };
 
 export const updateContact = async (id: string, updates: Partial<Contact>): Promise<Contact> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const contacts = loadData();
-      const updatedContacts = contacts.map(c => 
-        c.id === id ? { ...c, ...updates, phone: updates.phone ? formatPhoneForEvolution(updates.phone) : c.phone } : c
-      );
-      saveData(updatedContacts);
+  if (mockStore.isMockMode()) {
+      return mockStore.updateContact(id, updates);
+  }
 
-      // Sync tags if new ones introduced
-      if (updates.tags) {
-        const currentTags = loadTags();
-        const newTagsFromContact = updates.tags.filter(t => !currentTags.includes(t));
-        if (newTagsFromContact.length > 0) {
-            saveTagsData([...currentTags, ...newTagsFromContact]);
-        }
-      }
+  const payload: any = { ...updates };
+  if (updates.phone) payload.phone = formatPhoneForEvolution(updates.phone);
+  if (updates.tags) payload.tags = updates.tags;
+  if (updates.lockEdit !== undefined) payload.lock_edit = updates.lockEdit;
+  if (updates.lockDelete !== undefined) payload.lock_delete = updates.lockDelete;
+  
+  Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
 
-      resolve(updatedContacts.find(c => c.id === id)!);
-    }, 400);
-  });
+  const { data, error } = await supabase.from('contacts').update(payload).eq('id', id).select().single();
+  if (error) throw error;
+
+  return {
+    id: data.id,
+    name: data.name,
+    phone: data.phone,
+    email: data.email,
+    tags: data.tags || [],
+    campaignHistory: data.campaign_history || [],
+    notes: data.notes,
+    createdAt: data.created_at,
+    ownerId: data.owner_id,
+    lockEdit: data.lock_edit,
+    lockDelete: data.lock_delete
+  };
 };
 
 export const deleteContact = async (id: string): Promise<void> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const contacts = loadData();
-      saveData(contacts.filter(c => c.id !== id));
-      resolve();
-    }, 400);
-  });
+  if (mockStore.isMockMode()) {
+      mockStore.deleteContact(id);
+      return;
+  }
+  const { error } = await supabase.from('contacts').delete().eq('id', id);
+  if (error) throw error;
 };
 
 export const assignContact = async (contactId: string, newOwnerId: string): Promise<void> => {
-  return new Promise(async (resolve, reject) => {
-    const contacts = loadData();
-    const newOwnerCount = contacts.filter(c => c.ownerId === newOwnerId).length;
-    
-    let limit = BASE_CONTACT_LIMIT;
-    try {
-        const agent = await teamService.getAgentById(newOwnerId);
-        if (agent) {
-            limit = BASE_CONTACT_LIMIT + ((agent.extraContactPacks || 0) * CONTACT_PACK_SIZE);
-        }
-    } catch (e) { console.error(e); }
-
-    if (newOwnerCount >= limit) {
-      setTimeout(() => reject(new Error(`O atendente destino atingiu o limite de ${limit} contatos.`)), 300);
-      return;
-    }
-
-    setTimeout(() => {
-      const updatedContacts = contacts.map(c => 
-        c.id === contactId ? { ...c, ownerId: newOwnerId } : c
-      );
-      saveData(updatedContacts);
-      resolve();
-    }, 500);
-  });
+  if (mockStore.isMockMode()) return;
+  const { error } = await supabase.from('contacts').update({ owner_id: newOwnerId }).eq('id', contactId);
+  if (error) throw error;
 };
 
 export const bulkImportContacts = async (
   rawContacts: {name: string, phone: string, email?: string, tags?: string[]}[], 
   ownerId: string
 ): Promise<number> => {
-  return new Promise(async (resolve, reject) => {
-    const contacts = loadData();
-    const ownerCount = contacts.filter(c => c.ownerId === ownerId).length;
-    let limit = BASE_CONTACT_LIMIT;
-    try {
-        const agent = await teamService.getAgentById(ownerId);
-        if (agent) limit = BASE_CONTACT_LIMIT + ((agent.extraContactPacks || 0) * CONTACT_PACK_SIZE);
-    } catch (e) { console.error(e); }
+  if (mockStore.isMockMode()) {
+      await new Promise(r => setTimeout(r, 1000));
+      rawContacts.forEach(c => mockStore.saveContact({...c, ownerId}));
+      return rawContacts.length;
+  }
 
-    const remainingSlots = limit - ownerCount;
-    if (remainingSlots <= 0) {
-        setTimeout(() => reject(new Error(`Limite excedido. Atual: ${limit}`)), 500);
-        return;
-    }
+  const contactsToInsert = rawContacts.map(c => ({
+    name: c.name,
+    phone: formatPhoneForEvolution(c.phone),
+    email: c.email || null,
+    tags: c.tags || [],
+    owner_id: ownerId,
+    created_at: new Date().toISOString()
+  }));
 
-    setTimeout(() => {
-      const toAdd = rawContacts.slice(0, remainingSlots).map(c => ({
-        id: Math.random().toString(36).substr(2, 9),
-        name: c.name,
-        phone: formatPhoneForEvolution(c.phone),
-        email: c.email || '',
-        tags: c.tags || [],
-        campaignHistory: [],
-        notes: '',
-        createdAt: new Date().toISOString(),
-        ownerId: ownerId
-      }));
+  const { error } = await supabase.from('contacts').insert(contactsToInsert);
+  if (error) throw error;
 
-      // Sync tags from import
-      const currentTags = loadTags();
-      const allNewTags = toAdd.flatMap(c => c.tags);
-      const uniqueNewTags = Array.from(new Set(allNewTags)).filter(t => !currentTags.includes(t));
-      if (uniqueNewTags.length > 0) {
-          saveTagsData([...currentTags, ...uniqueNewTags]);
-      }
-
-      saveData([...toAdd, ...contacts]);
-      resolve(toAdd.length);
-    }, 1000);
-  });
+  return contactsToInsert.length;
 };
 
+// ... (CSV export functions remain the same as they are purely client side logic)
 export const downloadCSVTemplate = () => {
     const csvContent = "Nome,Telefone,Email,Tags\nMaria Silva,5511999998888,maria@email.com,Lead;Vip\nJoao Souza,11988887777,,Outubro";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });

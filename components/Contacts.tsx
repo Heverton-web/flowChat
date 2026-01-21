@@ -464,9 +464,6 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
                   <button onClick={() => {contactService.exportContactsToCSV(contacts.filter(c => selectedContacts.has(c.id))); showToast('Exportando seleção...', 'success')}} className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-sm font-medium transition-colors">
                       <FileDown size={16} /> Exportar
                   </button>
-                  <button className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm ml-2">
-                      <MessageSquare size={16} /> Campanha
-                  </button>
               </div>
 
               <button onClick={() => setSelectedContacts(new Set())} className="ml-2 p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-400">

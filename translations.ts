@@ -8,9 +8,9 @@ const ptBase = {
   campaigns: 'Campanhas',
   instances: 'Instâncias',
   contacts: 'Contatos',
-  financial: 'Financeiro',
+  financial: 'Assinatura e Cobrança', // Renamed
   reports: 'Relatórios',
-  subscription: 'Assinatura',
+  subscription: 'Planos', // Deprecated/Hidden logic handled in App.tsx
   settings: 'Configurações',
   admin: 'Admin',
   logout: 'Sair',
@@ -175,8 +175,8 @@ const ptBase = {
   type_message_here: 'Digite sua mensagem aqui. Variáveis disponíveis: {nome}',
   
   // Financial
-  financial_title: 'Financeiro',
-  financial_sub_manager: 'Histórico de pagamentos e custos da equipe.',
+  financial_title: 'Assinatura e Cobrança',
+  financial_sub_manager: 'Gerencie seu plano, faturas e métodos de pagamento.',
   financial_sub_agent: 'Gerencie seus pacotes de envio adicionais.',
   purchase_pack: 'Comprar Pacote',
   history: 'Histórico de Compras',
@@ -226,9 +226,9 @@ const enBase = {
   campaigns: 'Campaigns',
   instances: 'Instances',
   contacts: 'Contacts',
-  financial: 'Financial',
+  financial: 'Subscription & Billing', // Renamed
   reports: 'Reports',
-  subscription: 'Subscription',
+  subscription: 'Plans',
   settings: 'Settings',
   admin: 'Admin',
   logout: 'Logout',
@@ -444,9 +444,9 @@ const esBase = {
   campaigns: 'Campañas',
   instances: 'Instancias',
   contacts: 'Contactos',
-  financial: 'Financiero',
+  financial: 'Suscripción y Facturación', // Renamed
   reports: 'Informes',
-  subscription: 'Suscripción',
+  subscription: 'Planes',
   settings: 'Configuración',
   admin: 'Admin',
   logout: 'Salir',
