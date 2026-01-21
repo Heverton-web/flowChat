@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Smartphone, Users, Settings as SettingsIcon, LogOut, Menu, X, CreditCard, Send, MessageCircle, PieChart, DollarSign, Moon, Sun, Globe, PlayCircle, ChevronLeft, ChevronRight, HelpCircle, Loader2, Terminal, Plug, Activity } from 'lucide-react';
+import { LayoutDashboard, Smartphone, Users, Settings as SettingsIcon, LogOut, Menu, X, CreditCard, Send, MessageCircle, PieChart, DollarSign, Moon, Sun, Globe, PlayCircle, ChevronLeft, ChevronRight, HelpCircle, Loader2, Terminal, Plug, Activity, Inbox } from 'lucide-react';
 import { ViewState, UserRole, User } from './types';
 import Dashboard from './components/Dashboard';
 import Instances from './components/Instances';
@@ -14,6 +14,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import Onboarding from './components/Onboarding';
 import DeveloperConsole from './components/DeveloperConsole';
+import InboxComponent from './components/Inbox'; // Renamed to avoid conflict
 import { AppProvider, useApp } from './contexts/AppContext';
 import { supabase } from './services/supabaseClient';
 import * as authService from './services/authService';
@@ -220,6 +221,7 @@ const FlowChatApp: React.FC = () => {
               <>
                 <SectionHeader label={t('menu')} />
                 <NavItem view="dashboard" icon={LayoutDashboard} label={t('dashboard')} />
+                <NavItem view="inbox" icon={Inbox} label="Inbox" />
                 <NavItem view="campaigns" icon={Send} label={t('campaigns')} />
                 <NavItem view="instances" icon={Smartphone} label={t('instances')} />
                 <NavItem view="contacts" icon={Users} label={t('contacts')} />
@@ -252,7 +254,6 @@ const FlowChatApp: React.FC = () => {
               <>
                 <SectionHeader label="Developer Zone" />
                 <NavItem view="dev_integrations" icon={Plug} label="Integrações" />
-                <NavItem view="dev_api" icon={Terminal} label="Developer API" />
                 <NavItem view="dev_diagnostics" icon={Activity} label="Diagnóstico" />
               </>
           )}
@@ -334,6 +335,7 @@ const FlowChatApp: React.FC = () => {
         <div className="p-6 md:p-10 max-w-screen-2xl mx-auto min-h-full">
           {activeView === 'dashboard' && <Dashboard role={currentUser.role} onNavigate={setActiveView} />}
           {activeView === 'onboarding' && <Onboarding onNavigate={setActiveView} currentUser={currentUser} />}
+          {activeView === 'inbox' && <InboxComponent currentUser={currentUser} />}
           {activeView === 'instances' && <Instances currentUser={currentUser} />}
           {activeView === 'campaigns' && <Campaigns currentUser={currentUser} />}
           {activeView === 'contacts' && <Contacts currentUser={currentUser} />}

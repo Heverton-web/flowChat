@@ -107,6 +107,41 @@ export interface Contact {
   lockDelete?: boolean;
 }
 
+// --- CHAT / INBOX TYPES ---
+
+export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'file';
+export type MessageSender = 'contact' | 'agent' | 'system';
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  content: string;
+  sender: MessageSender;
+  senderName?: string; // For agents
+  type: MessageType;
+  isPrivate: boolean; // For internal notes (Chatwoot feature)
+  createdAt: string;
+  status: 'sent' | 'delivered' | 'read' | 'failed';
+  attachmentUrl?: string;
+}
+
+export interface Conversation {
+  id: string;
+  contactId: string;
+  contactName: string;
+  contactPhone: string; // WhatsApp Identifier
+  contactAvatar?: string;
+  lastMessage: string;
+  lastMessageAt: string;
+  unreadCount: number;
+  status: 'open' | 'resolved' | 'pending';
+  assignedTo?: string; // Agent ID
+  tags: string[];
+  channel: 'whatsapp';
+}
+
+// ------------------------------------------------
+
 export type CampaignObjective = 'prospecting' | 'communication' | 'promotion' | 'sales' | 'maintenance';
 export type CampaignStatus = 'scheduled' | 'processing' | 'completed';
 
@@ -135,6 +170,7 @@ export interface Campaign {
   agentName: string;
   ownerId: string;
   totalContacts: number;
+  targetList?: string[]; // IDs of contacts to receive the campaign
   deliveryRate?: number;
   executedAt?: string;
   workflow: WorkflowStep[];
@@ -162,4 +198,10 @@ export interface Transaction {
   invoiceUrl?: string;
 }
 
-export type ViewState = 'dashboard' | 'instances' | 'campaigns' | 'contacts' | 'financial' | 'reports' | 'team' | 'settings' | 'onboarding' | 'dev_integrations' | 'dev_api' | 'dev_diagnostics';
+export type ViewState = 'dashboard' | 'inbox' | 'instances' | 'campaigns' | 'contacts' | 'financial' | 'reports' | 'team' | 'settings' | 'onboarding' | 'dev_integrations' | 'dev_api' | 'dev_diagnostics';
+
+export interface WebhookConfig {
+  event: string;
+  url: string;
+  active: boolean;
+}

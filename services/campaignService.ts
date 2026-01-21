@@ -29,6 +29,7 @@ export const getCampaigns = async (userId: string, role: string): Promise<Campai
     agentName: c.agent_name || 'Desconhecido',
     ownerId: c.owner_id,
     totalContacts: c.total_contacts,
+    targetList: c.target_list || [], // Mapped from DB JSON column
     deliveryRate: c.delivery_rate,
     executedAt: c.executed_at,
     workflow: c.workflow || [],
@@ -45,6 +46,7 @@ export const createCampaign = async (
       return mockStore.createCampaign(campaignData);
   }
 
+  // In production, we save the targetList (array of IDs) to a JSON column or specific table
   const { data, error } = await supabase.from('campaigns').insert({
     name: campaignData.name,
     scheduled_date: campaignData.scheduledDate,
@@ -52,6 +54,7 @@ export const createCampaign = async (
     owner_id: campaignData.ownerId,
     agent_name: campaignData.agentName,
     total_contacts: campaignData.totalContacts,
+    target_list: campaignData.targetList, // Stores the audience IDs
     workflow: campaignData.workflow,
     min_delay: campaignData.minDelay,
     max_delay: campaignData.maxDelay,
@@ -71,6 +74,7 @@ export const createCampaign = async (
     agentName: data.agent_name,
     ownerId: data.owner_id,
     totalContacts: data.total_contacts,
+    targetList: data.target_list,
     workflow: data.workflow,
     minDelay: data.min_delay,
     maxDelay: data.max_delay

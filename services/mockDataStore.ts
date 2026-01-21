@@ -1,5 +1,5 @@
 
-import { AgentPlan, Campaign, Contact, Instance, Transaction } from '../types';
+import { AgentPlan, Campaign, Contact, Instance, Transaction, Conversation, Message, WebhookConfig } from '../types';
 
 // Chaves do LocalStorage
 const KEYS = {
@@ -8,14 +8,12 @@ const KEYS = {
     CAMPAIGNS: 'mock_campaigns',
     AGENTS: 'mock_agents',
     TRANSACTIONS: 'mock_transactions',
-    WEBHOOKS: 'mock_webhooks' // Nova chave para webhooks
+    WEBHOOKS: 'mock_webhooks',
+    CONVERSATIONS: 'mock_conversations',
+    MESSAGES: 'mock_messages'
 };
 
-export interface WebhookConfig {
-    event: string;
-    url: string;
-    active: boolean;
-}
+export type { WebhookConfig };
 
 // Dados Iniciais (Seeds) para o cliente ver o sistema "vivo"
 const SEED_CONTACTS: Contact[] = [
@@ -46,6 +44,35 @@ const SEED_WEBHOOKS: WebhookConfig[] = [
     { event: 'campaign.completed', url: '', active: false }
 ];
 
+// --- SEED CHAT DATA (NEW) ---
+const SEED_CONVERSATIONS: Conversation[] = [
+    { 
+        id: 'conv_1', contactId: 'c1', contactName: 'Roberto Almeida', contactPhone: '5511999991111', 
+        lastMessage: 'Gostaria de saber mais sobre a API.', lastMessageAt: new Date().toISOString(), 
+        unreadCount: 1, status: 'open', channel: 'whatsapp', tags: ['Lead Quente'], assignedTo: 'agent-1'
+    },
+    { 
+        id: 'conv_2', contactId: 'c2', contactName: 'Fernanda Costa', contactPhone: '5511999992222', 
+        lastMessage: 'Obrigada pelo atendimento!', lastMessageAt: new Date(Date.now() - 3600000).toISOString(), 
+        unreadCount: 0, status: 'resolved', channel: 'whatsapp', tags: ['Novo'], assignedTo: 'manager-1'
+    },
+    { 
+        id: 'conv_3', contactId: 'c3', contactName: 'Marcos Silva', contactPhone: '5521988887777', 
+        lastMessage: 'Meu boleto venceu, pode enviar outro?', lastMessageAt: new Date(Date.now() - 7200000).toISOString(), 
+        unreadCount: 2, status: 'open', channel: 'whatsapp', tags: ['Boleto Pendente'] // Unassigned
+    }
+];
+
+const SEED_MESSAGES: Message[] = [
+    { id: 'm1', conversationId: 'conv_1', content: 'Olá, bom dia!', sender: 'contact', type: 'text', isPrivate: false, createdAt: new Date(Date.now() - 8000000).toISOString(), status: 'read' },
+    { id: 'm2', conversationId: 'conv_1', content: 'Olá Roberto, como posso ajudar?', sender: 'agent', senderName: 'Agente Mock', type: 'text', isPrivate: false, createdAt: new Date(Date.now() - 7900000).toISOString(), status: 'read' },
+    { id: 'm3', conversationId: 'conv_1', content: 'Gostaria de saber mais sobre a API.', sender: 'contact', type: 'text', isPrivate: false, createdAt: new Date().toISOString(), status: 'delivered' },
+    
+    { id: 'm4', conversationId: 'conv_3', content: 'Oi, preciso de ajuda com financeiro.', sender: 'contact', type: 'text', isPrivate: false, createdAt: new Date(Date.now() - 7300000).toISOString(), status: 'read' },
+    { id: 'm5', conversationId: 'conv_3', content: 'Meu boleto venceu, pode enviar outro?', sender: 'contact', type: 'text', isPrivate: false, createdAt: new Date(Date.now() - 7200000).toISOString(), status: 'delivered' },
+    { id: 'm6', conversationId: 'conv_3', content: 'Cliente solicitou boleto vencido. Verificar no sistema.', sender: 'agent', senderName: 'System', type: 'text', isPrivate: true, createdAt: new Date().toISOString(), status: 'read' }, // Private Note
+];
+
 // --- HELPER FUNCTIONS ---
 
 const get = <T>(key: string, seed: T[]): T[] => {
@@ -70,7 +97,6 @@ export const mockStore = {
         if(active) localStorage.setItem('flowchat_mock_mode', 'true');
         else {
             localStorage.removeItem('flowchat_mock_mode');
-            // Limpar dados mock ao sair? Opcional. Vamos manter para persistencia de sessão.
         }
     },
 
@@ -160,7 +186,6 @@ export const mockStore = {
 
     // Agents
     getAgents: () => {
-        // Retorna sempre a lista estática simulada + os criados
         return [
             { id: 'manager-1', name: 'Gestor Mock', email: 'admin@flowchat.com', role: 'manager', status: 'active', messagesUsed: 1200, permissions: { canCreate: true, canEdit: true, canDelete: true, canCreateTags: true, canEditTags: true, canDeleteTags: true } },
             { id: 'agent-1', name: 'Agente Mock', email: 'agent@flowchat.com', role: 'agent', status: 'active', messagesUsed: 450, permissions: { canCreate: true, canEdit: true, canDelete: false, canCreateTags: false, canEditTags: false, canDeleteTags: false } },
@@ -181,5 +206,48 @@ export const mockStore = {
             all.push({ event, url, active });
         }
         set(KEYS.WEBHOOKS, all);
+    },
+
+    // --- CHAT METHODS ---
+    getConversations: (userId: string, role: string) => {
+        let all = get(KEYS.CONVERSATIONS, SEED_CONVERSATIONS);
+        // Filter logic could be expanded based on role (e.g., agents only see assigned)
+        return all;
+    },
+    
+    updateConversation: (id: string, updates: Partial<Conversation>) => {
+        const all = get(KEYS.CONVERSATIONS, SEED_CONVERSATIONS);
+        const index = all.findIndex(c => c.id === id);
+        if (index >= 0) {
+            all[index] = { ...all[index], ...updates };
+            set(KEYS.CONVERSATIONS, all);
+            return all[index];
+        }
+        throw new Error('Conversation not found');
+    },
+
+    getMessages: (conversationId: string) => {
+        const all = get(KEYS.MESSAGES, SEED_MESSAGES);
+        return all.filter(m => m.conversationId === conversationId).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    },
+
+    sendMessage: (msg: Message) => {
+        const all = get(KEYS.MESSAGES, SEED_MESSAGES);
+        all.push(msg);
+        set(KEYS.MESSAGES, all);
+        
+        // Update conversation last message
+        const convs = get(KEYS.CONVERSATIONS, SEED_CONVERSATIONS);
+        const convIdx = convs.findIndex(c => c.id === msg.conversationId);
+        if (convIdx >= 0) {
+            convs[convIdx].lastMessage = msg.content;
+            convs[convIdx].lastMessageAt = msg.createdAt;
+            if (msg.sender === 'contact') {
+                convs[convIdx].unreadCount += 1;
+                convs[convIdx].status = 'open'; // Reopen if new message
+            }
+            set(KEYS.CONVERSATIONS, convs);
+        }
+        return msg;
     }
 };

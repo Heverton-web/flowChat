@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   Send, Plus, Calendar, FileText, Upload, CheckCircle, BarChart2, Loader2, X, Target, Clock, User, Download,
-  MessageSquare, Mic, Image as ImageIcon, Video, Trash2, ArrowDown, ArrowUp, List, Search, GripVertical, Settings, Hourglass, Filter, ShieldCheck, ShieldAlert, Lock, Zap, Shield, Crown, Link as LinkIcon, ListChecks, File, ArrowLeft, Eye, Copy, MoreVertical, Play, Pause, AlertTriangle, Activity, Rocket, DollarSign, RefreshCw, Smartphone, Users, Bold, Italic, Strikethrough, Code, Music, Paperclip
+  MessageSquare, Mic, Image as ImageIcon, Video, Trash2, ArrowDown, ArrowUp, List, Search, GripVertical, Settings, Hourglass, Filter, ShieldCheck, ShieldAlert, Lock, Zap, Shield, Crown, Link as LinkIcon, ListChecks, File, ArrowLeft, Eye, Copy, MoreVertical, Play, Pause, AlertTriangle, Activity, Rocket, DollarSign, RefreshCw, Smartphone, Users, Bold, Italic, Strikethrough, Code, Music, Paperclip, ExternalLink
 } from 'lucide-react';
 import { Campaign, CampaignObjective, WorkflowStep, WorkflowStepType, Contact, User as UserType } from '../types';
 import * as campaignService from '../services/campaignService';
@@ -155,8 +155,6 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
     name: '',
     date: '',
     objective: 'prospecting' as CampaignObjective,
-    contactsMode: 'text' as 'text' | 'csv' | 'list',
-    contactsInput: '',
     contactsCount: 0,
     minDelay: 30, // Default Low Risk
     maxDelay: 120 // Default Low Risk
@@ -168,7 +166,6 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
   const [contactSearchTerm, setContactSearchTerm] = useState('');
   const [filterTag, setFilterTag] = useState<string>('all');
   const [loadingContacts, setLoadingContacts] = useState(false);
-  const [csvPreviewData, setCsvPreviewData] = useState<{name: string, phone: string}[]>([]);
 
   // Workflow State
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([]);
@@ -183,23 +180,21 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
   const [mediaMode, setMediaMode] = useState<'upload' | 'url'>('upload');
   const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
   const [pollSelectableCount, setPollSelectableCount] = useState(1);
-  const [isProcessingFile, setIsProcessingFile] = useState(false);
 
   useEffect(() => {
     loadCampaigns();
   }, [currentUser]);
 
+  // Load contacts whenever creation starts to ensure fresh data
   useEffect(() => {
-    if (formData.contactsMode === 'list' && availableContacts.length === 0) {
+    if (isCreating) {
         loadContacts();
     }
-  }, [formData.contactsMode]);
+  }, [isCreating]);
 
   useEffect(() => {
-      if (formData.contactsMode === 'list') {
-          setFormData(prev => ({ ...prev, contactsCount: selectedContactIds.size }));
-      }
-  }, [selectedContactIds, formData.contactsMode]);
+      setFormData(prev => ({ ...prev, contactsCount: selectedContactIds.size }));
+  }, [selectedContactIds]);
 
   const loadCampaigns = async () => {
     setLoading(true);
@@ -225,15 +220,13 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
           name: `${campaign.name} (Cópia)`,
           date: new Date().toISOString().split('T')[0],
           objective: campaign.objective,
-          contactsMode: 'text', // Reset to text for simplicity in this mock
-          contactsInput: '', 
           contactsCount: 0,
           minDelay: campaign.minDelay,
           maxDelay: campaign.maxDelay
       });
       setWorkflowSteps([...campaign.workflow]);
       setIsCreating(true);
-      showToast('Configurações da campanha duplicadas.', 'success');
+      showToast('Configurações da campanha duplicadas. Selecione o público.', 'success');
   };
 
   const handleDeleteCampaign = (id: string) => {
@@ -243,74 +236,26 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
       showToast('Campanha excluída.', 'success');
   };
 
-  // ... (Existing helper functions like handleFileUpload, toggleSelection, etc. kept same) ...
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setIsProcessingFile(true);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        const text = event.target?.result as string;
-        if (!text) { setIsProcessingFile(false); return; }
-        const lines = text.split(/\r\n|\n/);
-        const preview: {name: string, phone: string}[] = [];
-        lines.forEach(line => {
-            const trimmedLine = line.trim();
-            if (trimmedLine) {
-                const delimiter = trimmedLine.includes(';') ? ';' : ',';
-                const parts = trimmedLine.split(delimiter);
-                if (parts.length >= 2) {
-                    const name = parts[0].trim().replace(/^["']|["']$/g, '');
-                    const phoneRaw = parts[1].trim().replace(/^["']|["']$/g, '');
-                    const phone = phoneRaw.replace(/\D/g, '');
-                    if (name && phone.length >= 8) preview.push({ name, phone });
-                }
-            }
-        });
-        if (preview.length > 0) {
-             const firstRowName = preview[0].name.toLowerCase();
-             if (['name', 'nome', 'nome completo', 'contato', 'full name'].includes(firstRowName)) preview.shift();
-        }
-        setCsvPreviewData(preview);
-        setFormData(prev => ({ ...prev, contactsCount: preview.length }));
-        setIsProcessingFile(false);
-        e.target.value = '';
-    };
-    reader.readAsText(file);
-  };
-
-  const handleTextChange = (text: string) => {
-      const count = text.split('\n').filter(l => l.trim().length > 0).length;
-      setFormData(prev => ({ ...prev, contactsInput: text, contactsCount: count }));
-  };
-
   const toggleContactSelection = (id: string) => {
       const newSet = new Set(selectedContactIds);
       if (newSet.has(id)) newSet.delete(id); else newSet.add(id);
       setSelectedContactIds(newSet);
   };
 
-  const toggleSelectAll = (filteredContacts: Contact[]) => {
-      if (filteredContacts.every(c => selectedContactIds.has(c.id))) {
-          const newSet = new Set(selectedContactIds);
-          filteredContacts.forEach(c => newSet.delete(c.id));
-          setSelectedContactIds(newSet);
+  const toggleSelectAll = (filteredList: Contact[]) => {
+      const allSelected = filteredList.length > 0 && filteredList.every(c => selectedContactIds.has(c.id));
+      const newSet = new Set(selectedContactIds);
+      
+      if (allSelected) {
+          filteredList.forEach(c => newSet.delete(c.id));
       } else {
-          const newSet = new Set(selectedContactIds);
-          filteredContacts.forEach(c => newSet.add(c.id));
-          setSelectedContactIds(newSet);
+          filteredList.forEach(c => newSet.add(c.id));
       }
+      setSelectedContactIds(newSet);
   };
 
   const handleCreate = async () => {
-    let finalContactCount = 0;
-    if (formData.contactsMode === 'text') {
-        finalContactCount = formData.contactsInput.split('\n').filter(l => l.trim().length > 0).length;
-    } else if (formData.contactsMode === 'csv') {
-        finalContactCount = csvPreviewData.length;
-    } else {
-        finalContactCount = selectedContactIds.size;
-    }
+    const finalContactCount = selectedContactIds.size;
 
     if (!formData.name || !formData.date || finalContactCount === 0 || workflowSteps.length === 0) return;
 
@@ -321,6 +266,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
         agentName: currentUser.name,
         ownerId: currentUser.id,
         totalContacts: finalContactCount,
+        targetList: Array.from(selectedContactIds), // CRITICAL: Sending the actual list of IDs
         workflow: workflowSteps,
         minDelay: formData.minDelay,
         maxDelay: formData.maxDelay
@@ -333,13 +279,12 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
   };
 
   const resetForm = () => {
-    setFormData({ name: '', date: '', objective: 'prospecting', contactsMode: 'text', contactsInput: '', contactsCount: 0, minDelay: 30, maxDelay: 120 });
+    setFormData({ name: '', date: '', objective: 'prospecting', contactsCount: 0, minDelay: 30, maxDelay: 120 });
     setWorkflowSteps([]);
     resetStepForm();
     setSelectedContactIds(new Set());
     setContactSearchTerm('');
     setFilterTag('all');
-    setCsvPreviewData([]);
   };
 
   const resetStepForm = () => {
@@ -404,7 +349,6 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
       setWorkflowSteps(reordered);
   };
 
-  // ... (Other helpers like getObjectiveLabel, getSafetyInfo kept same) ...
   const getObjectiveLabel = (obj: CampaignObjective) => {
       switch(obj) {
           case 'prospecting': return t('prospecting');
@@ -467,7 +411,6 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* ... (Stats cards logic remains same) ... */}
           <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-4">
               <div className="p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
                   <Activity size={24} />
@@ -533,7 +476,6 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                 {filteredCampaigns.map(campaign => {
                     const safetyInfo = getSafetyInfo(campaign.minDelay);
                     const SafetyIcon = safetyInfo.icon;
-                    // ... (Card logic) ...
                     return (
                     <div 
                         key={campaign.id} 
@@ -653,7 +595,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
           )}
       </div>
 
-      {/* Campaign Creation Modal (Preserving the complex Workflow Builder) */}
+      {/* Campaign Creation Modal */}
       {isCreating && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-[95vw] max-h-[90vh] h-[90vh] shadow-2xl flex flex-col lg:flex-row overflow-hidden border border-slate-200 dark:border-slate-700 transition-colors">
@@ -728,115 +670,73 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                             </div>
                         </section>
 
-                        {/* 3. Audience - Segmented Control */}
+                        {/* 3. Audience - Database List ONLY */}
                         <section className="space-y-4">
                             <div className="flex justify-between items-center">
                                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                                    <Users size={14}/> Quem receberá?
+                                    <Users size={14}/> Selecionar Contatos
                                 </label>
                                 <span className="text-[10px] font-bold bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded text-slate-600 dark:text-slate-300">
-                                    {formData.contactsCount} contatos
+                                    {formData.contactsCount} selecionados
                                 </span>
                             </div>
                             
-                            <div className="bg-slate-200 dark:bg-slate-800 p-1 rounded-xl flex text-xs font-bold">
-                                {[
-                                    { id: 'text', label: 'Colar' },
-                                    { id: 'csv', label: 'CSV' },
-                                    { id: 'list', label: 'Lista' }
-                                ].map((mode) => (
-                                    <button
-                                        key={mode.id}
-                                        onClick={() => { setFormData({...formData, contactsMode: mode.id as any}); setCsvPreviewData([]); }}
-                                        className={`flex-1 py-2 rounded-lg transition-all ${
-                                            formData.contactsMode === mode.id 
-                                            ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-white shadow-sm' 
-                                            : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
-                                        }`}
-                                    >
-                                        {mode.label}
-                                    </button>
-                                ))}
-                            </div>
-
-                            {/* Dynamic Input Area */}
-                            <div className="min-h-[150px]">
-                                {formData.contactsMode === 'text' && (
-                                    <textarea 
-                                        className="w-full h-40 border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl p-3 text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none resize-none shadow-sm transition-colors"
-                                        placeholder="5511999998888&#10;5511999997777"
-                                        value={formData.contactsInput}
-                                        onChange={e => handleTextChange(e.target.value)}
-                                    ></textarea>
-                                )}
-
-                                {formData.contactsMode === 'csv' && (
-                                    <>
-                                        {csvPreviewData.length > 0 ? (
-                                            <div className="border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 overflow-hidden flex flex-col h-[200px] shadow-sm">
-                                                <div className="p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 flex justify-between items-center">
-                                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Preview ({csvPreviewData.length})</span>
-                                                    <button onClick={() => { setCsvPreviewData([]); setFormData(prev => ({ ...prev, contactsCount: 0 })); }} className="text-[10px] text-red-500 hover:underline flex items-center gap-1"><Trash2 size={10}/> Limpar</button>
-                                                </div>
-                                                <div className="overflow-y-auto flex-1 p-0 custom-scrollbar">
-                                                    <table className="w-full text-left text-[10px]">
-                                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                                                            {csvPreviewData.map((row, idx) => (
-                                                                <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                                                                    <td className="px-3 py-1.5 text-slate-700 dark:text-slate-300 truncate max-w-[100px]">{row.name}</td>
-                                                                    <td className="px-3 py-1.5 text-slate-500 dark:text-slate-400 font-mono">{row.phone}</td>
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-6 text-center hover:bg-white dark:hover:bg-slate-800/80 transition-colors relative h-40 flex flex-col items-center justify-center bg-slate-50/50 dark:bg-slate-800/30 group">
-                                                <input type="file" accept=".csv" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                                                <div className="text-slate-500 text-sm group-hover:scale-105 transition-transform duration-300">
-                                                    {isProcessingFile ? <Loader2 className="animate-spin mx-auto mb-2"/> : <Upload className="mx-auto mb-2 text-slate-400" size={24} />}
-                                                    <p className="font-medium text-slate-700 dark:text-slate-300">{isProcessingFile ? 'Lendo...' : t('drag_csv')}</p>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </>
-                                )}
-
-                                {formData.contactsMode === 'list' && (
-                                    <div className="border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 overflow-hidden flex flex-col h-[200px] shadow-sm">
-                                        <div className="p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 space-y-2">
-                                            <div className="flex items-center gap-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1">
-                                                <Search size={12} className="text-slate-400"/>
-                                                <input type="text" placeholder={t('search')} className="w-full bg-transparent text-xs outline-none dark:text-white" value={contactSearchTerm} onChange={(e) => setContactSearchTerm(e.target.value)} />
-                                            </div>
-                                            <div className="flex items-center gap-2">
+                            {/* List Selector */}
+                            <div className="min-h-[250px]">
+                                <div className="border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 overflow-hidden flex flex-col h-[300px] shadow-sm">
+                                    <div className="p-3 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 space-y-2">
+                                        <div className="flex items-center gap-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5">
+                                            <Search size={14} className="text-slate-400"/>
+                                            <input type="text" placeholder={t('search')} className="w-full bg-transparent text-xs outline-none dark:text-white" value={contactSearchTerm} onChange={(e) => setContactSearchTerm(e.target.value)} />
+                                        </div>
+                                        <div className="flex items-center gap-2 justify-between">
+                                            <div className="flex items-center gap-2 flex-1">
                                                 <Filter size={12} className="text-slate-400" />
-                                                <select className="w-full bg-transparent text-[10px] outline-none border-none p-0 text-slate-600 dark:text-slate-300 font-bold uppercase" value={filterTag} onChange={(e) => setFilterTag(e.target.value)}>
+                                                <select className="w-full bg-transparent text-[10px] outline-none border-none p-0 text-slate-600 dark:text-slate-300 font-bold uppercase cursor-pointer" value={filterTag} onChange={(e) => setFilterTag(e.target.value)}>
                                                     <option value="all">Todas as Tags</option>
                                                     {allTags.map(tag => <option key={tag} value={tag}>{tag}</option>)}
                                                 </select>
                                             </div>
-                                        </div>
-                                        <div className="overflow-y-auto flex-1 p-1 space-y-0.5 custom-scrollbar">
-                                            {loadingContacts ? (
-                                                <div className="flex justify-center p-4"><Loader2 className="animate-spin text-slate-400" size={16}/></div>
-                                            ) : filteredContacts.length === 0 ? (
-                                                <div className="p-8 text-center text-xs text-slate-400">Nenhum contato.</div>
-                                            ) : (
-                                                filteredContacts.map(contact => (
-                                                    <label key={contact.id} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer group transition-colors ${selectedContactIds.has(contact.id) ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
-                                                        <input type="checkbox" checked={selectedContactIds.has(contact.id)} onChange={() => toggleContactSelection(contact.id)} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3 h-3" />
-                                                        <div className="flex-1 overflow-hidden">
-                                                            <div className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">{contact.name}</div>
-                                                            <div className="text-[10px] text-slate-400">{contact.phone}</div>
-                                                        </div>
-                                                    </label>
-                                                ))
-                                            )}
+                                            <button 
+                                                onClick={() => toggleSelectAll(filteredContacts)}
+                                                className="text-[10px] text-blue-600 font-bold hover:underline"
+                                            >
+                                                {filteredContacts.length > 0 && filteredContacts.every(c => selectedContactIds.has(c.id)) ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                                            </button>
                                         </div>
                                     </div>
-                                )}
+                                    
+                                    <div className="overflow-y-auto flex-1 p-1 space-y-0.5 custom-scrollbar">
+                                        {loadingContacts ? (
+                                            <div className="flex justify-center p-4"><Loader2 className="animate-spin text-slate-400" size={16}/></div>
+                                        ) : filteredContacts.length === 0 ? (
+                                            <div className="p-8 text-center flex flex-col items-center">
+                                                <p className="text-xs text-slate-400 mb-2">Nenhum contato encontrado.</p>
+                                                <a href="#" className="text-[10px] text-blue-500 hover:underline flex items-center gap-1">
+                                                    Ir para Contatos <ExternalLink size={10}/>
+                                                </a>
+                                            </div>
+                                        ) : (
+                                            filteredContacts.map(contact => (
+                                                <label key={contact.id} className={`flex items-center gap-2 p-2.5 rounded-lg cursor-pointer group transition-colors ${selectedContactIds.has(contact.id) ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                                                    <input type="checkbox" checked={selectedContactIds.has(contact.id)} onChange={() => toggleContactSelection(contact.id)} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer" />
+                                                    <div className="flex-1 overflow-hidden">
+                                                        <div className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">{contact.name}</div>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            <span className="text-[10px] text-slate-400 font-mono">{contact.phone}</span>
+                                                            {contact.tags.slice(0, 1).map(tag => (
+                                                                <span key={tag} className="px-1.5 py-0.5 rounded text-[8px] bg-slate-100 dark:bg-slate-700 text-slate-500 border border-slate-200 dark:border-slate-600">{tag}</span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </label>
+                                            ))
+                                        )}
+                                    </div>
+                                    <div className="p-2 bg-yellow-50 dark:bg-yellow-900/10 border-t border-yellow-100 dark:border-yellow-800/30 text-[10px] text-yellow-700 dark:text-yellow-400 text-center">
+                                        Para importar novos contatos, acesse o menu <strong>Contatos</strong>.
+                                    </div>
+                                </div>
                             </div>
                         </section>
 
@@ -877,7 +777,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                     </div>
                 </div>
 
-                {/* Right Panel: Workflow Builder */}
+                {/* Right Panel: Workflow Builder (Identical to previous, preserved) */}
                 <div className="flex-1 bg-white dark:bg-slate-800 flex flex-col h-full min-w-0 transition-colors">
                     
                     {/* Header */}
@@ -931,7 +831,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                                     return (
                                         <div key={step.id} className="relative flex flex-col items-center animate-in slide-in-from-bottom-4 fade-in duration-500 group/node">
                                             
-                                            {/* Visual Delay Indicator (on the connecting line of PREVIOUS step, conceptually, but displayed before this card) */}
+                                            {/* Visual Delay Indicator */}
                                             {index >= 0 && (
                                                 <div className="absolute -top-4 z-20 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
                                                     <Hourglass size={10} /> {(step.delay / 1000).toFixed(1)}s
@@ -1033,7 +933,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                                     );
                                 })}
 
-                                {/* Add Step Button (Floating node style) */}
+                                {/* Add Step Button */}
                                 <div className="flex justify-center">
                                     <button 
                                         onClick={() => setIsStepModalOpen(true)}
@@ -1046,7 +946,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                             </div>
                         )}
 
-                        {/* Step Type Selection Modal (Internal) */}
+                        {/* Step Type Selection Modal (Same as before) */}
                         {isStepModalOpen && (
                             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in transition-colors">
                                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
