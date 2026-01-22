@@ -36,7 +36,7 @@ export const signIn = async (email: string, password: string): Promise<User> => 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (!error && data.user) {
-      return fetchUserProfile(data.user.id, email);
+      return fetchUserProfile(data.user.id, data.user.email);
   }
 
   if (error) throw error;
@@ -60,22 +60,43 @@ export const signUp = async (name: string, email: string, password: string, role
 
   if (error) throw error;
   if (data.user && !data.session) {
+      // Email confirmation required case, or session handling different
       return { id: data.user.id, name, email, role, avatar: '' };
   }
   if (!data.user) throw new Error('Erro ao criar usuário');
 
-  // Retry logic para aguardar trigger
+  // Retry logic para aguardar trigger de criação de perfil no banco
   let retries = 5;
   while (retries > 0) {
       try {
-          return await fetchUserProfile(data.user.id, email);
+          const profile = await fetchUserProfile(data.user.id);
+          // Se encontrou o perfil, retorna.
+          return profile;
       } catch (e) {
           retries--;
-          if (retries === 0) return await fetchUserProfile(data.user.id, email);
+          // Se esgotou as tentativas, retorna um objeto User otimista com o ROLE CORRETO
+          // Isso evita que o fetchUserProfile use o fallback que define como 'agent'
+          if (retries === 0) {
+             return { 
+                 id: data.user.id, 
+                 name: name, 
+                 email: email, 
+                 role: role, // IMPORTANTE: Força o role solicitado
+                 avatar: `https://ui-avatars.com/api/?name=${name.replace(' ','+')}&background=0D8ABC&color=fff` 
+             };
+          }
           await new Promise(resolve => setTimeout(resolve, 1000));
       }
   }
-  throw new Error("Erro desconhecido no cadastro.");
+  
+  // Fallback final
+  return { 
+     id: data.user.id, 
+     name: name, 
+     email: email, 
+     role: role, 
+     avatar: '' 
+  };
 };
 
 export const signOut = async () => {
@@ -102,9 +123,12 @@ export const fetchUserProfile = async (userId: string, emailContext?: string): P
 
   if (error || !profile) {
       if (emailContext) {
-          // Robustez para novos cadastros reais que ainda não têm perfil syncado
+          // Fallback temporário para quando o perfil ainda não existe no banco
+          // Mas cuidado: isso pode sobrescrever roles importantes se chamado isoladamente.
+          // O ideal é que o signUp lide com a criação otimista.
           let derivedRole: UserRole = 'agent';
-          if (emailContext.includes('admin')) derivedRole = 'manager';
+          if (emailContext.includes('admin') || emailContext.includes('super')) derivedRole = 'manager';
+          
           return { id: userId, name: emailContext.split('@')[0], email: emailContext, role: derivedRole, avatar: '' };
       }
       throw error || new Error("Perfil não encontrado.");

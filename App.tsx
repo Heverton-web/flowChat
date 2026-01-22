@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Smartphone, Users, Settings as SettingsIcon, LogOut, Menu, X, CreditCard, Send, MessageCircle, PieChart, DollarSign, Moon, Sun, Globe, PlayCircle, ChevronLeft, ChevronRight, HelpCircle, Loader2, Terminal, Plug, Activity, Inbox } from 'lucide-react';
+import { LayoutDashboard, Smartphone, Users, Settings as SettingsIcon, LogOut, Menu, X, CreditCard, Send, MessageCircle, PieChart, DollarSign, Moon, Sun, Globe, PlayCircle, ChevronLeft, ChevronRight, HelpCircle, Loader2, Terminal, Plug, Activity } from 'lucide-react';
 import { ViewState, UserRole, User } from './types';
 import Dashboard from './components/Dashboard';
 import Instances from './components/Instances';
@@ -12,9 +12,9 @@ import Reports from './components/Reports';
 import Financial from './components/Financial';
 import Login from './components/Login';
 import Register from './components/Register';
+import SalesPage from './components/SalesPage';
 import Onboarding from './components/Onboarding';
 import DeveloperConsole from './components/DeveloperConsole';
-import InboxComponent from './components/Inbox'; // Renamed to avoid conflict
 import { AppProvider, useApp } from './contexts/AppContext';
 import { supabase } from './services/supabaseClient';
 import * as authService from './services/authService';
@@ -26,7 +26,7 @@ const FlowChatApp: React.FC = () => {
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [authView, setAuthView] = useState<'login' | 'register'>('login');
+  const [authView, setAuthView] = useState<'login' | 'register' | 'sales'>('login');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // App Navigation State
@@ -134,8 +134,11 @@ const FlowChatApp: React.FC = () => {
 
   // --- Render Auth Views ---
   if (!isAuthenticated || !currentUser) {
+      if (authView === 'sales') {
+          return <SalesPage onBack={() => setAuthView('login')} onSuccess={handleLogin} />;
+      }
       if (authView === 'login') {
-          return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthView('register')} />;
+          return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthView('register')} onNavigateToSales={() => setAuthView('sales')} />;
       } else {
           return <Register onRegister={handleLogin} onNavigateToLogin={() => setAuthView('login')} />;
       }
@@ -221,7 +224,6 @@ const FlowChatApp: React.FC = () => {
               <>
                 <SectionHeader label={t('menu')} />
                 <NavItem view="dashboard" icon={LayoutDashboard} label={t('dashboard')} />
-                <NavItem view="inbox" icon={Inbox} label="Inbox" />
                 <NavItem view="campaigns" icon={Send} label={t('campaigns')} />
                 <NavItem view="instances" icon={Smartphone} label={t('instances')} />
                 <NavItem view="contacts" icon={Users} label={t('contacts')} />
@@ -240,7 +242,7 @@ const FlowChatApp: React.FC = () => {
               </>
           )}
 
-          {/* MANAGER MENU (Team Management) */}
+          {/* MANAGER MENU (Team Management only, Finance REMOVED) */}
           {isManager && (
               <>
                 <SectionHeader label={t('admin')} />
@@ -255,6 +257,14 @@ const FlowChatApp: React.FC = () => {
                 <SectionHeader label="Developer Zone" />
                 <NavItem view="dev_integrations" icon={Plug} label="Integrações" />
                 <NavItem view="dev_diagnostics" icon={Activity} label="Diagnóstico" />
+              </>
+          )}
+
+          {/* SETTINGS FOR AGENTS & MANAGERS */}
+          {(isManager || isAgent) && (
+              <>
+                <SectionHeader label="Sistema" />
+                <NavItem view="settings" icon={SettingsIcon} label={t('settings')} />
               </>
           )}
         </nav>
@@ -335,11 +345,16 @@ const FlowChatApp: React.FC = () => {
         <div className="p-6 md:p-10 max-w-screen-2xl mx-auto min-h-full">
           {activeView === 'dashboard' && <Dashboard role={currentUser.role} onNavigate={setActiveView} />}
           {activeView === 'onboarding' && <Onboarding onNavigate={setActiveView} currentUser={currentUser} />}
-          {activeView === 'inbox' && <InboxComponent currentUser={currentUser} />}
+          
+          {/* Inbox Component Removed Completely */}
+          
           {activeView === 'instances' && <Instances currentUser={currentUser} />}
           {activeView === 'campaigns' && <Campaigns currentUser={currentUser} />}
           {activeView === 'contacts' && <Contacts currentUser={currentUser} />}
-          {activeView === 'financial' && isSuperAdmin && <Financial currentUser={currentUser} />}
+          
+          {/* Financial Restrict to Super Admin */}
+          {(activeView === 'financial' && isSuperAdmin) && <Financial currentUser={currentUser} />}
+          
           {activeView === 'team' && (isSuperAdmin || isManager) && <Team onNavigate={setActiveView} currentUser={currentUser} />}
           {activeView === 'settings' && <Settings currentUser={currentUser} />}
           {activeView === 'reports' && (isSuperAdmin || isManager) && <Reports />}

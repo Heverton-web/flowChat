@@ -1,13 +1,15 @@
 
-import { Transaction, LicenseStatus } from '../types';
+import { Transaction, LicenseStatus, PLAN_DEFS } from '../types';
 import { supabase } from './supabaseClient';
 import { mockStore } from './mockDataStore';
 
+// Default mock adjusted to match new START plan logic as base
 const MOCK_LIC_DEFAULT: LicenseStatus = {
     license: {
-        tier: 'STANDARD', status: 'ACTIVE',
+        tier: 'START', 
+        status: 'ACTIVE',
         renewalDate: new Date(new Date().setDate(new Date().getDate() + 30)).toISOString(),
-        limits: { maxSeats: 5, maxMessagesPerMonth: 5000, maxContacts: 1000 },
+        limits: { maxSeats: PLAN_DEFS.START.seats, maxMessagesPerMonth: 5000, maxContacts: 1000 },
         addonSeats: 0,
         features: { canUseApi: false, whiteLabel: false, prioritySupport: false }
     },
@@ -84,7 +86,7 @@ export const requestAddonSeat = async (quantity: number): Promise<void> => {
     await supabase.from('transactions').insert({
         user_id: user.id,
         description: `Solicitação: +${quantity} Seat(s) Adicionais`,
-        amount: quantity * 150.00,
+        amount: quantity * 47.00, // Updated Price from Addon list
         type: 'addon_seat',
         status: 'completed',
         payment_method: 'credit_card'

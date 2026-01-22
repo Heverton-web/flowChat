@@ -34,7 +34,7 @@ export interface AgentPlan {
 
 // --- ENTERPRISE LICENSE TYPES ---
 
-export type LicenseTier = 'STANDARD' | 'PROFESSIONAL' | 'ENTERPRISE';
+export type LicenseTier = 'START' | 'GROWTH' | 'SCALE' | 'STANDARD' | 'PROFESSIONAL' | 'ENTERPRISE';
 
 export interface LicenseLimits {
   maxSeats: number;      // 1 Seat = 1 User + 1 Instance
@@ -67,6 +67,34 @@ export interface LicenseStatus {
   usage: LicenseUsage;
   totalSeats: number; // Base + Addons
 }
+
+// --- PLAN DEFINITIONS (NEW) ---
+export const PLAN_DEFS = {
+  START: {
+    name: 'Start',
+    price: 497,
+    seats: 5,
+    connections: 5,
+    description: 'Essencial para pequenas operações.',
+    features: ['5 Usuários', '5 Conexões WhatsApp', 'Gestão de Contatos', 'Funil Básico']
+  },
+  GROWTH: {
+    name: 'Growth',
+    price: 797,
+    seats: 10,
+    connections: 10,
+    description: 'Para times em crescimento.',
+    features: ['10 Usuários', '10 Conexões WhatsApp', 'API de Integração', 'Relatórios Avançados', 'Suporte Prioritário']
+  },
+  SCALE: {
+    name: 'Scale',
+    price: 1297,
+    seats: 30,
+    connections: 30,
+    description: 'Potência máxima e controle total.',
+    features: ['30 Usuários', '30 Conexões WhatsApp', 'API Ilimitada', 'Gestor de Conta', 'White Label Parcial']
+  }
+};
 
 // ------------------------------------------------
 
@@ -198,7 +226,7 @@ export interface Transaction {
   invoiceUrl?: string;
 }
 
-export type ViewState = 'dashboard' | 'inbox' | 'instances' | 'campaigns' | 'contacts' | 'financial' | 'reports' | 'team' | 'settings' | 'onboarding' | 'dev_integrations' | 'dev_api' | 'dev_diagnostics';
+export type ViewState = 'dashboard' | 'instances' | 'campaigns' | 'contacts' | 'financial' | 'reports' | 'team' | 'settings' | 'onboarding' | 'dev_integrations' | 'dev_api' | 'dev_diagnostics';
 
 export interface WebhookConfig {
   event: string;

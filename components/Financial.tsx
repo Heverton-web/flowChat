@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   DollarSign, CreditCard, Calendar, Download, Search, TrendingUp, TrendingDown,
@@ -235,7 +234,7 @@ const Financial: React.FC<FinancialProps> = ({ currentUser }) => {
       setIsProcessing(true);
       setTimeout(() => {
           setSavedCards([...savedCards, {
-              id: `card-${Math.random()}`, brand: 'visa', last4: newCardData.number.slice(-4) || '1234',
+              id: `card-${Math.random()}`, brand: 'visa', last4: newCardData.number.replace(/\s/g, '').slice(-4) || '1234',
               expiry: newCardData.expiry || '10/28', holder: newCardData.holder.toUpperCase() || 'NOVO CARTAO', isDefault: false
           }]);
           setIsProcessing(false);
@@ -248,6 +247,29 @@ const Financial: React.FC<FinancialProps> = ({ currentUser }) => {
   const removeCard = (id: string) => {
       setSavedCards(savedCards.filter(c => c.id !== id));
       showToast('Cartão removido.', 'success');
+  };
+
+  // Card Masking
+  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value.replace(/\D/g, '').substring(0, 16);
+    const parts = [];
+    for (let i = 0; i < v.length; i += 4) {
+      parts.push(v.substring(i, i + 4));
+    }
+    setNewCardData({ ...newCardData, number: parts.join(' ') });
+  };
+
+  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let v = e.target.value.replace(/\D/g, '').substring(0, 4);
+    if (v.length >= 2) {
+      v = v.substring(0, 2) + '/' + v.substring(2);
+    }
+    setNewCardData({ ...newCardData, expiry: v });
+  };
+
+  const handleCvcChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value.replace(/\D/g, '').substring(0, 3); // Limit to 3 digits
+    setNewCardData({ ...newCardData, cvc: v });
   };
 
   const chartColor = "#3b82f6";
@@ -590,20 +612,39 @@ const Financial: React.FC<FinancialProps> = ({ currentUser }) => {
           <div className="space-y-4">
               <div>
                   <label className="text-xs font-bold uppercase text-slate-500">Número do Cartão</label>
-                  <input type="text" className="w-full p-3 border rounded-lg dark:bg-slate-700 dark:border-slate-600" placeholder="0000 0000 0000 0000" value={newCardData.number} onChange={e => setNewCardData({...newCardData, number: e.target.value})}/>
+                  <input 
+                    type="text" 
+                    className="w-full p-3 border rounded-lg dark:bg-slate-700 dark:border-slate-600" 
+                    placeholder="0000 0000 0000 0000" 
+                    value={newCardData.number} 
+                    onChange={handleCardNumberChange}
+                  />
               </div>
               <div>
                   <label className="text-xs font-bold uppercase text-slate-500">Nome no Cartão</label>
-                  <input type="text" className="w-full p-3 border rounded-lg dark:bg-slate-700 dark:border-slate-600" placeholder="NOME COMO NO CARTAO" value={newCardData.holder} onChange={e => setNewCardData({...newCardData, holder: e.target.value})}/>
+                  <input type="text" className="w-full p-3 border rounded-lg dark:bg-slate-700 dark:border-slate-600 uppercase" placeholder="NOME COMO NO CARTAO" value={newCardData.holder} onChange={e => setNewCardData({...newCardData, holder: e.target.value})}/>
               </div>
               <div className="grid grid-cols-2 gap-4">
                   <div>
                       <label className="text-xs font-bold uppercase text-slate-500">Validade</label>
-                      <input type="text" className="w-full p-3 border rounded-lg dark:bg-slate-700 dark:border-slate-600" placeholder="MM/AA" value={newCardData.expiry} onChange={e => setNewCardData({...newCardData, expiry: e.target.value})}/>
+                      <input 
+                        type="text" 
+                        className="w-full p-3 border rounded-lg dark:bg-slate-700 dark:border-slate-600 text-center" 
+                        placeholder="MM/AA" 
+                        value={newCardData.expiry} 
+                        onChange={handleExpiryChange}
+                      />
                   </div>
                   <div>
                       <label className="text-xs font-bold uppercase text-slate-500">CVC</label>
-                      <input type="text" className="w-full p-3 border rounded-lg dark:bg-slate-700 dark:border-slate-600" placeholder="123" value={newCardData.cvc} onChange={e => setNewCardData({...newCardData, cvc: e.target.value})}/>
+                      <input 
+                        type="text" 
+                        className="w-full p-3 border rounded-lg dark:bg-slate-700 dark:border-slate-600 text-center" 
+                        placeholder="123" 
+                        maxLength={3} // Limited to 3
+                        value={newCardData.cvc} 
+                        onChange={handleCvcChange}
+                      />
                   </div>
               </div>
               <button onClick={handleAddCard} disabled={isProcessing} className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold mt-4 flex items-center justify-center gap-2">
