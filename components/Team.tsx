@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { 
     Users, Shield, Plus, Trash2, Mail, CheckCircle, Search, Loader2, 
     Edit2, Eye, EyeOff, Key, User as UserIcon, Crown, ArrowRight, RefreshCw, Tag,
-    Briefcase, Headset, Star, Activity, ToggleLeft, ToggleRight, MoreVertical, Lock, AlertCircle, Terminal, Copy, Check
+    Briefcase, Headset, Star, Activity, ToggleLeft, ToggleRight, MoreVertical, Lock, Unlock, AlertCircle, Terminal, Copy, Check, X
 } from 'lucide-react';
 import { AgentPlan, AgentPermissions, LicenseStatus, ViewState, User, UserRole } from '../types';
 import * as teamService from '../services/teamService';
@@ -41,6 +41,8 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
 
   // Checks
   const isSuperAdmin = currentUser.role === 'super_admin';
+  const isManager = currentUser.role === 'manager';
+  const canManageTeam = isSuperAdmin || isManager;
 
   useEffect(() => {
     loadData();
@@ -64,7 +66,7 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
           name: '',
           email: '',
           password: '',
-          role: 'agent',
+          role: 'agent', // Default for everyone, Managers can't change this easily
           department: 'Suporte',
           permissions: { canCreate: true, canEdit: true, canDelete: false, canCreateTags: true, canEditTags: true, canDeleteTags: false }
       });
@@ -97,6 +99,7 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
               name: formData.name,
               email: formData.email,
               password: formData.password,
+              permissions: formData.permissions
               // role: formData.role // Pass role to backend
           });
           showToast(`Usuário (${formData.role}) criado e credenciais geradas!`, 'success');
@@ -113,31 +116,50 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
       setModalMode(null);
   };
 
-  const RoleCard = ({ role, label, desc, icon: Icon }: any) => {
+  const RoleCard = ({ role, label, desc, icon: Icon, disabled = false }: any) => {
       const isSelected = formData.role === role;
       return (
           <button 
-            onClick={() => setFormData({...formData, role})}
-            className={`relative flex flex-col items-start p-4 rounded-xl border-2 transition-all duration-200 group w-full text-left ${
+            onClick={() => !disabled && setFormData({...formData, role})}
+            disabled={disabled}
+            className={`relative flex flex-col items-start p-3 rounded-xl border-2 transition-all duration-200 group w-full text-left h-full ${
+                disabled ? 'opacity-50 cursor-not-allowed bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700' :
                 isSelected 
                 ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 shadow-md ring-1 ring-blue-600' 
                 : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-sm'
             }`}
           >
-              <div className={`p-2 rounded-lg mb-3 ${isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400'}`}>
-                  <Icon size={20} />
+              <div className="flex items-center gap-2 mb-2">
+                  <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400'}`}>
+                      <Icon size={16} />
+                  </div>
+                  <h4 className={`font-bold text-sm ${isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-slate-800 dark:text-white'}`}>{label}</h4>
               </div>
-              <h4 className={`font-bold text-sm ${isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-slate-800 dark:text-white'}`}>{label}</h4>
-              <p className={`text-xs mt-1 leading-relaxed ${isSelected ? 'text-blue-600/80 dark:text-blue-300/70' : 'text-slate-500 dark:text-slate-400'}`}>{desc}</p>
+              <p className={`text-[10px] leading-tight ${isSelected ? 'text-blue-600/80 dark:text-blue-300/70' : 'text-slate-500 dark:text-slate-400'}`}>{desc}</p>
               
               {isSelected && (
-                  <div className="absolute top-3 right-3 text-blue-600 dark:text-blue-400">
-                      <CheckCircle size={18} fill="currentColor" className="text-white dark:text-slate-900" />
+                  <div className="absolute top-2 right-2 text-blue-600 dark:text-blue-400">
+                      <CheckCircle size={14} fill="currentColor" className="text-white dark:text-slate-900" />
                   </div>
               )}
           </button>
       );
   };
+
+  const PermissionToggle = ({ label, checked, onChange, danger = false }: { label: string, checked: boolean, onChange: (v: boolean) => void, danger?: boolean }) => (
+    <button
+        type="button"
+        onClick={() => onChange(!checked)}
+        className={`flex-1 px-2 py-1.5 rounded-lg text-[10px] font-bold border transition-all flex items-center justify-center gap-1.5 ${
+            checked 
+            ? (danger ? 'bg-red-50 border-red-200 text-red-600 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400' : 'bg-green-50 border-green-200 text-green-600 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400')
+            : 'bg-slate-50 border-slate-200 text-slate-400 dark:bg-slate-800 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+        }`}
+    >
+        {checked ? (danger ? <Unlock size={12} /> : <CheckCircle size={12} />) : <Lock size={12} />}
+        {label}
+    </button>
+  );
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -150,11 +172,11 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
                 Gestão de Acessos e Equipe
             </h2>
             <p className="text-slate-500 dark:text-slate-400">
-                {isSuperAdmin ? 'Crie e gerencie todos os acessos ao sistema.' : 'Visualize os membros da equipe.'}
+                {isSuperAdmin ? 'Crie e gerencie todos os acessos ao sistema.' : 'Gerencie os membros da sua equipe e permissões.'}
             </p>
         </div>
         
-        {isSuperAdmin && (
+        {canManageTeam && (
             <button 
                 onClick={openCreateModal}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all shadow-md shadow-blue-600/20 font-bold"
@@ -181,7 +203,7 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
                       <th className="px-6 py-4">Usuário</th>
                       <th className="px-6 py-4">Função (Role)</th>
                       <th className="px-6 py-4">Status</th>
-                      {isSuperAdmin && <th className="px-6 py-4 text-right">Ações</th>}
+                      {canManageTeam && <th className="px-6 py-4 text-right">Ações</th>}
                   </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
@@ -209,7 +231,7 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
                               </span>
                           </td>
                           <td className="px-6 py-4"><span className="text-green-600 font-bold text-xs bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full border border-green-200 dark:border-green-800">Ativo</span></td>
-                          {isSuperAdmin && (
+                          {canManageTeam && (
                               <td className="px-6 py-4 text-right">
                                   <button className="text-slate-400 hover:text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={16}/></button>
                               </td>
@@ -221,115 +243,171 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
       </div>
 
       {/* Create User Modal */}
-      <Modal isOpen={!!modalMode} onClose={closeModal} title="Criar Credenciais de Acesso">
-          <div className="space-y-6">
+      <Modal isOpen={!!modalMode} onClose={closeModal} title="Criar Credenciais de Acesso" size="lg">
+          <div className="space-y-5">
               
               {/* Role Selection */}
               <div>
-                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 block">Nível de Acesso</label>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 block">Nível de Acesso</label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                       <RoleCard 
                         role="manager" 
                         label="Gestor" 
-                        desc="Controle total de equipes, campanhas e financeiro." 
-                        icon={Briefcase} 
+                        desc="Controle total equipes/finan." 
+                        icon={Briefcase}
+                        disabled={!isSuperAdmin}
                       />
                       <RoleCard 
                         role="agent" 
                         label="Atendente" 
-                        desc="Acesso focado em chats, contatos e tags." 
+                        desc="Foco em chats/contatos." 
                         icon={Headset} 
                       />
                       <RoleCard 
                         role="developer" 
-                        label="Developer" 
-                        desc="Acesso técnico a API, Webhooks e Logs." 
-                        icon={Terminal} 
+                        label="Dev" 
+                        desc="Acesso API/Webhooks." 
+                        icon={Terminal}
+                        disabled={!isSuperAdmin}
                       />
                   </div>
               </div>
 
-              {/* Form Fields */}
-              <div className="grid gap-4">
+              {/* Form Fields - Redistributed in Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Nome Completo</label>
+                      <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Nome</label>
                       <div className="relative">
-                          <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                          <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                           <input 
                             type="text" 
-                            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 dark:text-white transition-all" 
+                            className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 dark:text-white transition-all text-sm" 
                             value={formData.name} 
                             onChange={e => setFormData({...formData, name: e.target.value})} 
-                            placeholder="Ex: João Silva"
+                            placeholder="João Silva"
                           />
                       </div>
                   </div>
                   
                   <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Email Corporativo</label>
+                      <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Email</label>
                       <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                           <input 
                             type="email" 
-                            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 dark:text-white transition-all" 
+                            className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 dark:text-white transition-all text-sm" 
                             value={formData.email} 
                             onChange={e => setFormData({...formData, email: e.target.value})} 
-                            placeholder="nome@empresa.com"
+                            placeholder="email@empresa.com"
                           />
-                      </div>
-                  </div>
-
-                  <div className="space-y-1">
-                      <div className="flex justify-between items-center">
-                        <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Senha de Acesso</label>
-                        <button onClick={generatePassword} className="text-xs text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1"><RefreshCw size={10}/> Gerar Senha</button>
-                      </div>
-                      <div className="relative flex gap-2">
-                          <div className="relative flex-1">
-                            <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                            <input 
-                                type={showPassword ? "text" : "password"} 
-                                className="w-full pl-10 pr-10 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 dark:text-white font-mono transition-all" 
-                                value={formData.password} 
-                                onChange={e => setFormData({...formData, password: e.target.value})} 
-                                placeholder="******"
-                            />
-                            <button 
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                            >
-                                {showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}
-                            </button>
-                          </div>
-                          {formData.password && (
-                              <button onClick={() => copyToClipboard(formData.password)} className="px-3 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-500 hover:text-blue-600 hover:border-blue-300 transition-colors" title="Copiar Senha">
-                                  <Copy size={18}/>
-                              </button>
-                          )}
                       </div>
                   </div>
               </div>
 
+              <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Senha</label>
+                    <button onClick={generatePassword} className="text-[10px] text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded"><RefreshCw size={10}/> Gerar</button>
+                  </div>
+                  <div className="relative flex gap-2">
+                      <div className="relative flex-1">
+                        <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                        <input 
+                            type={showPassword ? "text" : "password"} 
+                            className="w-full pl-9 pr-9 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 dark:text-white font-mono transition-all text-sm" 
+                            value={formData.password} 
+                            onChange={e => setFormData({...formData, password: e.target.value})} 
+                            placeholder="******"
+                        />
+                        <button 
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        >
+                            {showPassword ? <EyeOff size={14}/> : <Eye size={14}/>}
+                        </button>
+                      </div>
+                      {formData.password && (
+                          <button onClick={() => copyToClipboard(formData.password)} className="px-3 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-500 hover:text-blue-600 hover:border-blue-300 transition-colors" title="Copiar">
+                              <Copy size={16}/>
+                          </button>
+                      )}
+                  </div>
+              </div>
+
+              {/* PERMISSIONS LOCKS (Compact Grid) */}
+              {(formData.role === 'agent' || formData.role === 'manager') && (
+                <div className="bg-slate-50 dark:bg-slate-700/30 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                    <h5 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <Shield size={14} /> Travas de Segurança (CRUD)
+                    </h5>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Contact Permissions */}
+                        <div>
+                            <label className="text-[10px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">Contatos</label>
+                            <div className="flex gap-1.5">
+                                <PermissionToggle 
+                                    label="Criar" 
+                                    checked={formData.permissions.canCreate} 
+                                    onChange={(v) => setFormData(prev => ({...prev, permissions: {...prev.permissions, canCreate: v}}))} 
+                                />
+                                <PermissionToggle 
+                                    label="Editar" 
+                                    checked={formData.permissions.canEdit} 
+                                    onChange={(v) => setFormData(prev => ({...prev, permissions: {...prev.permissions, canEdit: v}}))} 
+                                />
+                                <PermissionToggle 
+                                    label="Excluir" 
+                                    checked={formData.permissions.canDelete} 
+                                    onChange={(v) => setFormData(prev => ({...prev, permissions: {...prev.permissions, canDelete: v}}))} 
+                                    danger
+                                />
+                            </div>
+                        </div>
+
+                        {/* Tag Permissions */}
+                        <div>
+                            <label className="text-[10px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">Tags</label>
+                            <div className="flex gap-1.5">
+                                <PermissionToggle 
+                                    label="Criar" 
+                                    checked={formData.permissions.canCreateTags} 
+                                    onChange={(v) => setFormData(prev => ({...prev, permissions: {...prev.permissions, canCreateTags: v}}))} 
+                                />
+                                <PermissionToggle 
+                                    label="Editar" 
+                                    checked={formData.permissions.canEditTags} 
+                                    onChange={(v) => setFormData(prev => ({...prev, permissions: {...prev.permissions, canEditTags: v}}))} 
+                                />
+                                <PermissionToggle 
+                                    label="Excluir" 
+                                    checked={formData.permissions.canDeleteTags} 
+                                    onChange={(v) => setFormData(prev => ({...prev, permissions: {...prev.permissions, canDeleteTags: v}}))} 
+                                    danger
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+              )}
+
               {/* Info Box */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl flex gap-3 items-start border border-blue-100 dark:border-blue-800">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-full text-blue-600 dark:text-blue-200 shrink-0">
-                    <Mail size={16}/>
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl flex gap-3 items-center border border-blue-100 dark:border-blue-800">
+                  <div className="p-1.5 bg-blue-100 dark:bg-blue-800 rounded-full text-blue-600 dark:text-blue-200 shrink-0">
+                    <Mail size={14}/>
                   </div>
-                  <div>
-                    <h5 className="text-sm font-bold text-blue-800 dark:text-blue-200 mb-1">Envio Automático</h5>
-                    <p className="text-xs text-blue-700/80 dark:text-blue-300/80 leading-relaxed">
-                        Ao criar o acesso, as credenciais serão enviadas automaticamente para o email informado e uma cópia será enviada para o seu WhatsApp conectado.
-                    </p>
-                  </div>
+                  <p className="text-[10px] text-blue-700/80 dark:text-blue-300/80 leading-relaxed">
+                      As credenciais serão enviadas automaticamente para o email informado e WhatsApp.
+                  </p>
               </div>
 
               {/* Footer */}
               <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-700">
-                  <button onClick={closeModal} className="px-4 py-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg mr-2 transition-colors font-medium">
+                  <button onClick={closeModal} className="px-4 py-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg mr-2 transition-colors font-medium text-sm">
                       Cancelar
                   </button>
-                  <button onClick={handleSubmit} disabled={isSubmitting} className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-bold flex items-center gap-2 hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all disabled:opacity-70 disabled:cursor-not-allowed">
-                      {isSubmitting ? <Loader2 className="animate-spin" size={18}/> : <CheckCircle size={18}/>} 
+                  <button onClick={handleSubmit} disabled={isSubmitting} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all disabled:opacity-70 disabled:cursor-not-allowed text-sm">
+                      {isSubmitting ? <Loader2 className="animate-spin" size={16}/> : <CheckCircle size={16}/>} 
                       {isSubmitting ? 'Criando...' : 'Criar Acesso'}
                   </button>
               </div>

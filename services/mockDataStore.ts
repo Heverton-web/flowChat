@@ -44,7 +44,7 @@ const SEED_WEBHOOKS: WebhookConfig[] = [
     { event: 'campaign.completed', url: '', active: false }
 ];
 
-// --- SEED CHAT DATA (NEW) ---
+// --- SEED CHAT DATA (CHATWOOT MODEL) ---
 const SEED_CONVERSATIONS: Conversation[] = [
     { 
         id: 'conv_1', contactId: 'c1', contactName: 'Roberto Almeida', contactPhone: '5511999991111', 
@@ -92,52 +92,25 @@ const set = <T>(key: string, data: T[]) => {
 
 export const mockStore = {
     // Flag de Controle
-    isMockMode: () => localStorage.getItem('flowchat_mock_mode') === 'true',
-    setMockMode: (active: boolean) => {
-        if(active) localStorage.setItem('flowchat_mock_mode', 'true');
-        else {
-            localStorage.removeItem('flowchat_mock_mode');
-        }
+    isMockMode: () => {
+        const stored = localStorage.getItem('flowchat_mock_mode');
+        // Default to false if not set, but if services explicitly call it, check if we have mock session
+        return stored === 'true';
+    },
+    setMockMode: (enabled: boolean) => {
+        localStorage.setItem('flowchat_mock_mode', enabled ? 'true' : 'false');
     },
 
-    // Contacts
-    getContacts: (userId: string, role: string) => {
-        let all = get(KEYS.CONTACTS, SEED_CONTACTS);
-        if (role === 'manager' || role === 'super_admin') return all;
-        return all.filter(c => c.ownerId === userId);
-    },
-    saveContact: (contact: any) => {
-        const all = get(KEYS.CONTACTS, SEED_CONTACTS);
-        const newContact = { ...contact, id: `mock_c_${Date.now()}`, createdAt: new Date().toISOString() };
-        all.unshift(newContact);
-        set(KEYS.CONTACTS, all);
-        return newContact;
-    },
-    updateContact: (id: string, updates: any) => {
-        const all = get(KEYS.CONTACTS, SEED_CONTACTS);
-        const index = all.findIndex(c => c.id === id);
-        if (index >= 0) {
-            all[index] = { ...all[index], ...updates };
-            set(KEYS.CONTACTS, all);
-            return all[index];
-        }
-        throw new Error('Contact not found in mock store');
-    },
-    deleteContact: (id: string) => {
-        const all = get(KEYS.CONTACTS, SEED_CONTACTS);
-        set(KEYS.CONTACTS, all.filter(c => c.id !== id));
-    },
-
-    // Instances
-    getInstances: (userId: string, role: string) => {
-        let all = get(KEYS.INSTANCES, SEED_INSTANCES);
+    // --- Instances ---
+    getInstances: (userId: string, role: string): Instance[] => {
+        const all = get<Instance>(KEYS.INSTANCES, SEED_INSTANCES);
         if (role === 'manager' || role === 'super_admin') return all;
         return all.filter(i => i.ownerId === userId);
     },
-    createInstance: (name: string, ownerId: string, ownerName: string) => {
-        const all = get(KEYS.INSTANCES, SEED_INSTANCES);
+    createInstance: (name: string, ownerId: string, ownerName: string): Instance => {
+        const all = get<Instance>(KEYS.INSTANCES, SEED_INSTANCES);
         const newInstance: Instance = {
-            id: `mock_inst_${Date.now()}`,
+            id: `inst_${Date.now()}`,
             name,
             status: 'connecting',
             lastUpdate: new Date().toISOString(),
@@ -146,59 +119,85 @@ export const mockStore = {
             ownerId,
             ownerName
         };
-        all.push(newInstance);
-        set(KEYS.INSTANCES, all);
+        set(KEYS.INSTANCES, [...all, newInstance]);
         return newInstance;
     },
     deleteInstance: (id: string) => {
-        const all = get(KEYS.INSTANCES, SEED_INSTANCES);
+        const all = get<Instance>(KEYS.INSTANCES, SEED_INSTANCES);
         set(KEYS.INSTANCES, all.filter(i => i.id !== id));
     },
     connectInstance: (id: string) => {
-        const all = get(KEYS.INSTANCES, SEED_INSTANCES);
-        const index = all.findIndex(i => i.id === id);
-        if (index >= 0) {
-            all[index].status = 'connected';
-            all[index].phone = '5511999998888';
-            all[index].battery = 100;
-            set(KEYS.INSTANCES, all);
-        }
+        const all = get<Instance>(KEYS.INSTANCES, SEED_INSTANCES);
+        const updated = all.map(i => i.id === id ? { ...i, status: 'connected', phone: '5511999999999' } : i);
+        set(KEYS.INSTANCES, updated as Instance[]);
     },
 
-    // Campaigns
-    getCampaigns: (userId: string, role: string) => {
-        let all = get(KEYS.CAMPAIGNS, SEED_CAMPAIGNS);
+    // --- Contacts ---
+    getContacts: (userId: string, role: string): Contact[] => {
+        const all = get<Contact>(KEYS.CONTACTS, SEED_CONTACTS);
         if (role === 'manager' || role === 'super_admin') return all;
         return all.filter(c => c.ownerId === userId);
     },
-    createCampaign: (data: any) => {
-        const all = get(KEYS.CAMPAIGNS, SEED_CAMPAIGNS);
-        const newCamp = { ...data, id: `mock_camp_${Date.now()}`, status: 'processing', deliveryRate: 0 };
-        all.unshift(newCamp);
-        set(KEYS.CAMPAIGNS, all);
+    saveContact: (contact: Partial<Contact>): Contact => {
+        const all = get<Contact>(KEYS.CONTACTS, SEED_CONTACTS);
+        const newContact = { 
+            ...contact, 
+            id: contact.id || `c_${Date.now()}`, 
+            createdAt: contact.createdAt || new Date().toISOString(),
+            campaignHistory: contact.campaignHistory || [],
+            tags: contact.tags || []
+        } as Contact;
+        set(KEYS.CONTACTS, [...all, newContact]);
+        return newContact;
+    },
+    updateContact: (id: string, updates: Partial<Contact>): Contact => {
+        const all = get<Contact>(KEYS.CONTACTS, SEED_CONTACTS);
+        const index = all.findIndex(c => c.id === id);
+        if (index === -1) throw new Error('Contact not found');
+        const updated = { ...all[index], ...updates };
+        all[index] = updated;
+        set(KEYS.CONTACTS, all);
+        return updated;
+    },
+    deleteContact: (id: string) => {
+        const all = get<Contact>(KEYS.CONTACTS, SEED_CONTACTS);
+        set(KEYS.CONTACTS, all.filter(c => c.id !== id));
+    },
+
+    // --- Agents ---
+    getAgents: (): AgentPlan[] => {
+        const mockAgents: AgentPlan[] = [
+            { id: 'manager-1', name: 'Gestor Mock', email: 'admin@flowchat.com', status: 'active', messagesUsed: 1500, permissions: { canCreate: true, canEdit: true, canDelete: true, canCreateTags: true, canEditTags: true, canDeleteTags: true }, role: 'manager' },
+            { id: 'agent-1', name: 'Agente Mock', email: 'agent@flowchat.com', status: 'active', messagesUsed: 450, permissions: { canCreate: true, canEdit: true, canDelete: false, canCreateTags: true, canEditTags: false, canDeleteTags: false }, role: 'agent' }
+        ];
+        return mockAgents;
+    },
+
+    // --- Campaigns ---
+    getCampaigns: (userId: string, role: string): Campaign[] => {
+        const all = get<Campaign>(KEYS.CAMPAIGNS, SEED_CAMPAIGNS);
+        if (role === 'manager' || role === 'super_admin') return all;
+        return all.filter(c => c.ownerId === userId);
+    },
+    createCampaign: (campaign: any): Campaign => {
+        const all = get<Campaign>(KEYS.CAMPAIGNS, SEED_CAMPAIGNS);
+        const newCamp = { ...campaign, id: `camp_${Date.now()}` };
+        set(KEYS.CAMPAIGNS, [...all, newCamp]);
         return newCamp;
     },
 
-    // Transactions
-    getTransactions: (userId: string) => {
-        return get(KEYS.TRANSACTIONS, SEED_TRANSACTIONS);
+    // --- Transactions ---
+    getTransactions: (userId: string): Transaction[] => {
+        const all = get<Transaction>(KEYS.TRANSACTIONS, SEED_TRANSACTIONS);
+        return all.filter(t => t.userId === userId);
     },
 
-    // Agents
-    getAgents: () => {
-        return [
-            { id: 'manager-1', name: 'Gestor Mock', email: 'admin@flowchat.com', role: 'manager', status: 'active', messagesUsed: 1200, permissions: { canCreate: true, canEdit: true, canDelete: true, canCreateTags: true, canEditTags: true, canDeleteTags: true } },
-            { id: 'agent-1', name: 'Agente Mock', email: 'agent@flowchat.com', role: 'agent', status: 'active', messagesUsed: 450, permissions: { canCreate: true, canEdit: true, canDelete: false, canCreateTags: false, canEditTags: false, canDeleteTags: false } },
-            { id: 'dev-1', name: 'Dev Mock', email: 'dev@flowchat.com', role: 'developer', status: 'active', messagesUsed: 0, permissions: { canCreate: true, canEdit: true, canDelete: true, canCreateTags: true, canEditTags: true, canDeleteTags: true } }
-        ];
-    },
-
-    // Webhooks
-    getWebhooks: () => {
-        return get(KEYS.WEBHOOKS, SEED_WEBHOOKS);
+    // --- Webhooks ---
+    getWebhooks: (): WebhookConfig[] => {
+        return get<WebhookConfig>(KEYS.WEBHOOKS, SEED_WEBHOOKS);
     },
     saveWebhook: (event: string, url: string, active: boolean) => {
-        const all = get(KEYS.WEBHOOKS, SEED_WEBHOOKS);
+        const all = get<WebhookConfig>(KEYS.WEBHOOKS, SEED_WEBHOOKS);
         const index = all.findIndex(w => w.event === event);
         if (index >= 0) {
             all[index] = { event, url, active };
@@ -208,46 +207,39 @@ export const mockStore = {
         set(KEYS.WEBHOOKS, all);
     },
 
-    // --- CHAT METHODS ---
-    getConversations: (userId: string, role: string) => {
-        let all = get(KEYS.CONVERSATIONS, SEED_CONVERSATIONS);
-        // Filter logic could be expanded based on role (e.g., agents only see assigned)
-        return all;
+    // --- Chat / Inbox ---
+    getConversations: (userId: string, role: string): Conversation[] => {
+        const all = get<Conversation>(KEYS.CONVERSATIONS, SEED_CONVERSATIONS);
+        if (role === 'manager' || role === 'super_admin') return all;
+        return all.filter(c => c.assignedTo === userId || !c.assignedTo);
     },
-    
-    updateConversation: (id: string, updates: Partial<Conversation>) => {
-        const all = get(KEYS.CONVERSATIONS, SEED_CONVERSATIONS);
-        const index = all.findIndex(c => c.id === id);
-        if (index >= 0) {
-            all[index] = { ...all[index], ...updates };
-            set(KEYS.CONVERSATIONS, all);
-            return all[index];
-        }
-        throw new Error('Conversation not found');
-    },
-
-    getMessages: (conversationId: string) => {
-        const all = get(KEYS.MESSAGES, SEED_MESSAGES);
+    getMessages: (conversationId: string): Message[] => {
+        const all = get<Message>(KEYS.MESSAGES, SEED_MESSAGES);
         return all.filter(m => m.conversationId === conversationId).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     },
-
-    sendMessage: (msg: Message) => {
-        const all = get(KEYS.MESSAGES, SEED_MESSAGES);
-        all.push(msg);
-        set(KEYS.MESSAGES, all);
+    sendMessage: (message: Message): Message => {
+        const all = get<Message>(KEYS.MESSAGES, SEED_MESSAGES);
+        set(KEYS.MESSAGES, [...all, message]);
         
-        // Update conversation last message
-        const convs = get(KEYS.CONVERSATIONS, SEED_CONVERSATIONS);
-        const convIdx = convs.findIndex(c => c.id === msg.conversationId);
-        if (convIdx >= 0) {
-            convs[convIdx].lastMessage = msg.content;
-            convs[convIdx].lastMessageAt = msg.createdAt;
-            if (msg.sender === 'contact') {
-                convs[convIdx].unreadCount += 1;
-                convs[convIdx].status = 'open'; // Reopen if new message
-            }
+        const convs = get<Conversation>(KEYS.CONVERSATIONS, SEED_CONVERSATIONS);
+        const idx = convs.findIndex(c => c.id === message.conversationId);
+        if (idx >= 0) {
+            convs[idx] = { 
+                ...convs[idx], 
+                lastMessage: message.content, 
+                lastMessageAt: message.createdAt,
+                status: 'open' 
+            };
             set(KEYS.CONVERSATIONS, convs);
         }
-        return msg;
+        return message;
+    },
+    updateConversation: (id: string, updates: Partial<Conversation>) => {
+        const all = get<Conversation>(KEYS.CONVERSATIONS, SEED_CONVERSATIONS);
+        const idx = all.findIndex(c => c.id === id);
+        if (idx >= 0) {
+            all[idx] = { ...all[idx], ...updates };
+            set(KEYS.CONVERSATIONS, all);
+        }
     }
 };

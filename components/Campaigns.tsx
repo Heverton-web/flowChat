@@ -153,7 +153,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
   // Form State
   const [formData, setFormData] = useState({
     name: '',
-    date: '',
+    date: '', // Kept in state structure but ignored in creation
     objective: 'prospecting' as CampaignObjective,
     contactsCount: 0,
     minDelay: 30, // Default Low Risk
@@ -257,11 +257,11 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
   const handleCreate = async () => {
     const finalContactCount = selectedContactIds.size;
 
-    if (!formData.name || !formData.date || finalContactCount === 0 || workflowSteps.length === 0) return;
+    if (!formData.name || finalContactCount === 0 || workflowSteps.length === 0) return;
 
     await campaignService.createCampaign({
         name: formData.name,
-        scheduledDate: formData.date,
+        scheduledDate: new Date().toISOString(), // ALWAYS NOW
         objective: formData.objective,
         agentName: currentUser.name,
         ownerId: currentUser.id,
@@ -275,7 +275,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
     setIsCreating(false);
     resetForm();
     loadCampaigns();
-    showToast('Campanha criada com sucesso!', 'success');
+    showToast('Campanha iniciada com sucesso!', 'success');
   };
 
   const resetForm = () => {
@@ -629,15 +629,6 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                                         onChange={e => setFormData({...formData, name: e.target.value})}
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-slate-500 mb-1">Agendar Início</label>
-                                    <input 
-                                        type="datetime-local" 
-                                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                        value={formData.date}
-                                        onChange={e => setFormData({...formData, date: e.target.value})}
-                                    />
-                                </div>
                             </div>
                         </section>
 
@@ -819,7 +810,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                                 {/* Trigger Start Node */}
                                 <div className="flex flex-col items-center mb-0 animate-in slide-in-from-top-4">
                                     <div className="bg-green-600 text-white px-4 py-2 rounded-full font-bold text-sm shadow-md flex items-center gap-2 z-10 relative">
-                                        <Rocket size={16}/> Início: Disparo Agendado
+                                        <Rocket size={16}/> Início: Disparo Imediato
                                     </div>
                                     <div className="h-8 w-0.5 border-l-2 border-dashed border-slate-300 dark:border-slate-600"></div>
                                 </div>
@@ -1220,7 +1211,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                         </div>
                         <div className="flex gap-3">
                             <button onClick={() => setIsCreating(false)} className="px-6 py-3 rounded-xl text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 font-bold transition-colors">{t('cancel')}</button>
-                            <button onClick={handleCreate} disabled={!formData.name || !formData.date || formData.contactsCount === 0 || workflowSteps.length === 0} className="px-8 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-indigo-200 dark:shadow-none transition-all hover:-translate-y-1"><Send size={20} /> {t('start_campaign')}</button>
+                            <button onClick={handleCreate} disabled={!formData.name || formData.contactsCount === 0 || workflowSteps.length === 0} className="px-8 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-indigo-200 dark:shadow-none transition-all hover:-translate-y-1"><Send size={20} /> {t('start_campaign')}</button>
                         </div>
                     </div>
                 </div>
