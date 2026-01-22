@@ -226,7 +226,7 @@ export interface Transaction {
   invoiceUrl?: string;
 }
 
-export type ViewState = 'dashboard' | 'instances' | 'campaigns' | 'contacts' | 'financial' | 'reports' | 'team' | 'settings' | 'onboarding' | 'dev_integrations' | 'dev_api' | 'dev_diagnostics';
+export type ViewState = 'dashboard' | 'instances' | 'campaigns' | 'contacts' | 'financial' | 'reports' | 'team' | 'settings' | 'onboarding' | 'master_console' | 'inbox';
 
 export interface WebhookConfig {
   event: string;

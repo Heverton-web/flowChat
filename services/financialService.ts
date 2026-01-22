@@ -3,6 +3,20 @@ import { Transaction, LicenseStatus, PLAN_DEFS } from '../types';
 import { supabase } from './supabaseClient';
 import { mockStore } from './mockDataStore';
 
+// Mapeamento dos Price IDs da Stripe (Substitua pelos seus IDs reais do Dashboard da Stripe)
+const STRIPE_PRICE_IDS = {
+    monthly: {
+        START: 'price_start_monthly_id',
+        GROWTH: 'price_growth_monthly_id',
+        SCALE: 'price_scale_monthly_id'
+    },
+    yearly: {
+        START: 'price_start_yearly_id',
+        GROWTH: 'price_growth_yearly_id',
+        SCALE: 'price_scale_yearly_id'
+    }
+};
+
 // Default mock adjusted to match new START plan logic as base
 const MOCK_LIC_DEFAULT: LicenseStatus = {
     license: {
@@ -96,4 +110,35 @@ export const requestAddonSeat = async (quantity: number): Promise<void> => {
     if (lic) {
         await supabase.from('licenses').update({ addon_seats: lic.addon_seats + quantity }).eq('id', lic.id);
     }
+};
+
+export const createCheckoutSession = async (planId: keyof typeof PLAN_DEFS, cycle: 'monthly' | 'yearly') => {
+    if (mockStore.isMockMode()) {
+        // Em modo mock, simula um delay e retorna uma URL falsa ou sucesso
+        await new Promise(r => setTimeout(r, 1500));
+        return { url: window.location.origin + '/?success=true' };
+    }
+
+    const priceId = STRIPE_PRICE_IDS[cycle][planId];
+    if (!priceId || priceId.includes('price_')) {
+        // Fallback se IDs não estiverem configurados
+        console.warn("Stripe Price ID não configurado no financialService.ts");
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error("Usuário não autenticado");
+
+    // Chama a Edge Function 'stripe-checkout'
+    const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+        body: {
+            priceId: priceId,
+            userId: session.user.id,
+            email: session.user.email,
+            successUrl: window.location.origin + '/?session_id={CHECKOUT_SESSION_ID}',
+            cancelUrl: window.location.origin + '/sales',
+        }
+    });
+
+    if (error) throw error;
+    return data; // Deve retornar { url: 'https://checkout.stripe.com/...' }
 };

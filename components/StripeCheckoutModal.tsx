@@ -1,7 +1,9 @@
+
 import React, { useState } from 'react';
-import { X, CreditCard, Lock, CheckCircle, Loader2, ShieldCheck, User, Mail, Shield } from 'lucide-react';
+import { X, CreditCard, Lock, CheckCircle, Loader2, ShieldCheck, User, Mail, Shield, ExternalLink, ArrowRight } from 'lucide-react';
 import { PLAN_DEFS } from '../types';
 import * as authService from '../services/authService';
+import * as financialService from '../services/financialService';
 import { useApp } from '../contexts/AppContext';
 
 interface StripeCheckoutModalProps {
@@ -15,13 +17,11 @@ interface StripeCheckoutModalProps {
 const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({ isOpen, onClose, selectedPlanId, billingCycle, onSuccess }) => {
   const { showToast } = useApp();
   const plan = PLAN_DEFS[selectedPlanId];
-  const [step, setStep] = useState<'register' | 'payment' | 'processing'>('register');
+  const [step, setStep] = useState<'register' | 'payment'>('register');
+  const [isLoading, setIsLoading] = useState(false);
   
   // Registration State
   const [regData, setRegData] = useState({ name: '', email: '', password: '' });
-  
-  // Fake Card State
-  const [cardData, setCardData] = useState({ number: '', expiry: '', cvc: '', name: '' });
 
   if (!isOpen) return null;
 
@@ -33,52 +33,43 @@ const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({ isOpen, onClo
           showToast('Preencha todos os campos.', 'error');
           return;
       }
-      setStep('payment');
-  };
-
-  const handlePaymentSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      setStep('processing');
       
+      setIsLoading(true);
       try {
-          // 1. Simulate Stripe Processing
-          await new Promise(resolve => setTimeout(resolve, 2500));
-          
-          // 2. Create User Account (ROLE SUPER_ADMIN as Account Owner)
-          // O usuário que compra é o dono da conta (Super Admin) que criará os outros usuários (Gestores, Atendentes, Devs).
+          // 1. Create User Account (ROLE SUPER_ADMIN)
           const user = await authService.signUp(regData.name, regData.email, regData.password, 'super_admin');
+          // Automatically log them in via context/auth flow usually happens here via Supabase listener
           
-          showToast('Pagamento aprovado e conta criada!', 'success');
-          
-          // 3. Callback to parent to log user in
-          onSuccess(user);
-      } catch (error: any) {
+          showToast('Conta criada com sucesso!', 'success');
           setStep('payment');
-          showToast('Erro no processamento. Tente novamente.', 'error');
+      } catch (error: any) {
+          showToast(error.message || 'Erro ao criar conta.', 'error');
+      } finally {
+          setIsLoading(false);
       }
   };
 
-  // Masking Functions
-  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = e.target.value.replace(/\D/g, '').substring(0, 16);
-    const parts = [];
-    for (let i = 0; i < v.length; i += 4) {
-      parts.push(v.substring(i, i + 4));
-    }
-    setCardData({ ...cardData, number: parts.join(' ') });
-  };
-
-  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let v = e.target.value.replace(/\D/g, '').substring(0, 4);
-    if (v.length >= 2) {
-      v = v.substring(0, 2) + '/' + v.substring(2);
-    }
-    setCardData({ ...cardData, expiry: v });
-  };
-
-  const handleCvcChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = e.target.value.replace(/\D/g, '').substring(0, 3); // Limit to 3 digits
-    setCardData({ ...cardData, cvc: v });
+  const handleRedirectToStripe = async () => {
+      setIsLoading(true);
+      try {
+          const { url } = await financialService.createCheckoutSession(selectedPlanId, billingCycle);
+          
+          if (url) {
+              window.location.href = url; // Redireciona para Stripe
+          } else {
+              // Fallback para Mock Mode
+              showToast('Modo Demonstração: Pagamento Simulado com Sucesso!', 'success');
+              setTimeout(() => {
+                  onSuccess({ id: 'mock', email: regData.email, name: regData.name, role: 'super_admin' });
+                  onClose();
+              }, 1500);
+          }
+      } catch (error: any) {
+          console.error(error);
+          showToast('Erro ao iniciar checkout. Verifique a configuração da API.', 'error');
+      } finally {
+          setIsLoading(false);
+      }
   };
 
   return (
@@ -114,7 +105,7 @@ const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({ isOpen, onClo
                         <CheckCircle size={16} className="text-green-500" /> {plan.connections} Conexões WhatsApp
                     </li>
                     <li className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                        <CheckCircle size={16} className="text-green-500" /> Acesso Imediato
+                        <CheckCircle size={16} className="text-green-500" /> Cobrança via Stripe
                     </li>
                 </ul>
             </div>
@@ -185,110 +176,50 @@ const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({ isOpen, onClo
                             </div>
                         </div>
 
-                        <button type="submit" className="w-full mt-6 bg-slate-900 dark:bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-slate-800 dark:hover:bg-blue-700 transition-all shadow-lg">
-                            Continuar para Pagamento
+                        <button 
+                            type="submit" 
+                            disabled={isLoading}
+                            className="w-full mt-6 bg-slate-900 dark:bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-slate-800 dark:hover:bg-blue-700 transition-all shadow-lg flex items-center justify-center gap-2"
+                        >
+                            {isLoading ? <Loader2 className="animate-spin" /> : 'Criar Conta e Prosseguir'}
                         </button>
                     </form>
                 </div>
             )}
 
             {step === 'payment' && (
-                <div className="animate-in slide-in-from-right-4 fade-in duration-300 flex-1 flex flex-col">
-                    <div className="mb-6">
-                        <button onClick={() => setStep('register')} className="text-xs text-slate-400 hover:text-slate-600 mb-2 hover:underline">Voltar</button>
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Passo 2 de 2</span>
-                                <h2 className="text-2xl font-bold text-slate-800 dark:text-white mt-1">Dados de Pagamento</h2>
-                            </div>
-                            <div className="flex gap-2">
-                                <div className="h-6 w-10 bg-slate-200 dark:bg-slate-700 rounded flex items-center justify-center text-[10px] font-bold text-slate-500">VISA</div>
-                                <div className="h-6 w-10 bg-slate-200 dark:bg-slate-700 rounded flex items-center justify-center text-[10px] font-bold text-slate-500">MC</div>
-                            </div>
+                <div className="animate-in slide-in-from-right-4 fade-in duration-300 flex-1 flex flex-col justify-center items-center text-center">
+                    
+                    <div className="mb-8">
+                        <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600 dark:text-blue-400">
+                            <CreditCard size={40} />
                         </div>
-                    </div>
-
-                    <form onSubmit={handlePaymentSubmit} className="space-y-4 flex-1">
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nome no Cartão</label>
-                            <input 
-                                type="text" 
-                                required
-                                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all dark:text-white uppercase"
-                                placeholder="COMO NO CARTAO"
-                                value={cardData.name}
-                                onChange={e => setCardData({...cardData, name: e.target.value})}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Número do Cartão</label>
-                            <div className="relative">
-                                <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18}/>
-                                <input 
-                                    type="text" 
-                                    required
-                                    className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all dark:text-white font-mono"
-                                    placeholder="0000 0000 0000 0000"
-                                    maxLength={19}
-                                    value={cardData.number}
-                                    onChange={handleCardNumberChange}
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Validade</label>
-                                <input 
-                                    type="text" 
-                                    required
-                                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all dark:text-white text-center"
-                                    placeholder="MM/AA"
-                                    maxLength={5}
-                                    value={cardData.expiry}
-                                    onChange={handleExpiryChange}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">CVC</label>
-                                <div className="relative">
-                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14}/>
-                                    <input 
-                                        type="text" 
-                                        required
-                                        className="w-full pl-8 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all dark:text-white text-center"
-                                        placeholder="123"
-                                        maxLength={3}
-                                        value={cardData.cvc}
-                                        onChange={handleCvcChange}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs text-slate-500 mt-4">
-                            <Lock size={14} className="shrink-0 text-green-500"/>
-                            <p>Pagamento processado de forma segura e criptografada (SSL 256-bit).</p>
-                        </div>
-
-                        <button type="submit" className="w-full mt-4 bg-green-600 text-white py-4 rounded-xl font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-600/20">
-                            Pagar R$ {finalPrice},00
-                        </button>
-                    </form>
-                </div>
-            )}
-
-            {step === 'processing' && (
-                <div className="animate-in fade-in duration-500 flex-1 flex flex-col items-center justify-center text-center space-y-6">
-                    <div className="relative">
-                        <div className="w-20 h-20 border-4 border-slate-100 dark:border-slate-700 rounded-full"></div>
-                        <div className="w-20 h-20 border-4 border-blue-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
-                        <Shield className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-600" size={24}/>
-                    </div>
-                    <div>
-                        <h3 className="text-xl font-bold text-slate-800 dark:text-white">Processando Pagamento...</h3>
-                        <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm max-w-xs mx-auto">
-                            Estamos validando suas informações e criando seu ambiente exclusivo. Não feche esta janela.
+                        <h2 className="text-2xl font-bold text-slate-800 dark:text-white mt-1">Finalizar Assinatura</h2>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm mx-auto mt-2">
+                            Você será redirecionado para o ambiente seguro da Stripe para concluir o pagamento com Cartão, Apple Pay ou Google Pay.
                         </p>
+                    </div>
+
+                    <div className="w-full max-w-sm space-y-4">
+                        <button 
+                            onClick={handleRedirectToStripe}
+                            disabled={isLoading}
+                            className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 flex items-center justify-center gap-2 transform hover:-translate-y-1"
+                        >
+                            {isLoading ? <Loader2 className="animate-spin" size={20}/> : <>Ir para Pagamento Seguro <ArrowRight size={20}/></>}
+                        </button>
+                        
+                        <div className="flex items-center justify-center gap-4 pt-4 opacity-50 grayscale">
+                            {/* Simple badges for trust */}
+                            <span className="text-[10px] font-bold border px-1 rounded">VISA</span>
+                            <span className="text-[10px] font-bold border px-1 rounded">MASTERCARD</span>
+                            <span className="text-[10px] font-bold border px-1 rounded">AMEX</span>
+                        </div>
+                    </div>
+
+                    <div className="mt-auto flex items-center gap-2 text-xs text-slate-400">
+                        <Lock size={12} className="text-green-500"/>
+                        Transação criptografada SSL 256-bits
                     </div>
                 </div>
             )}

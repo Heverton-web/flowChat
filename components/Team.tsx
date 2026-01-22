@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { 
     Users, Shield, Plus, Trash2, Mail, CheckCircle, Search, Loader2, 
     Edit2, Eye, EyeOff, Key, User as UserIcon, Crown, ArrowRight, RefreshCw, Tag,
-    Briefcase, Headset, Star, Activity, ToggleLeft, ToggleRight, MoreVertical, Lock, Unlock, AlertCircle, Terminal, Copy, Check, X
+    Briefcase, Headset, Star, Activity, ToggleLeft, ToggleRight, MoreVertical, Lock, Unlock, AlertCircle, Terminal, Copy, Check, X,
+    FileEdit, Database
 } from 'lucide-react';
 import { AgentPlan, AgentPermissions, LicenseStatus, ViewState, User, UserRole } from '../types';
 import * as teamService from '../services/teamService';
@@ -161,6 +162,12 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
     </button>
   );
 
+  const MiniPermissionBadge = ({ label, active, icon: Icon }: any) => (
+      <div title={label} className={`w-5 h-5 rounded flex items-center justify-center ${active ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-slate-100 text-slate-300 dark:bg-slate-700 dark:text-slate-600'}`}>
+          <Icon size={10} />
+      </div>
+  );
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       
@@ -172,7 +179,7 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
                 Gestão de Acessos e Equipe
             </h2>
             <p className="text-slate-500 dark:text-slate-400">
-                {isSuperAdmin ? 'Crie e gerencie todos os acessos ao sistema.' : 'Gerencie os membros da sua equipe e permissões.'}
+                {isSuperAdmin ? 'Controle Global de Ambientes.' : 'Acompanhamento granular de permissões e performance.'}
             </p>
         </div>
         
@@ -181,7 +188,7 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
                 onClick={openCreateModal}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all shadow-md shadow-blue-600/20 font-bold"
             >
-                <Plus size={18} /> Criar Novo Usuário
+                <Plus size={18} /> Novo Acesso
             </button>
         )}
       </div>
@@ -201,14 +208,15 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
               <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-100 dark:border-slate-700">
                   <tr>
                       <th className="px-6 py-4">Usuário</th>
-                      <th className="px-6 py-4">Função (Role)</th>
+                      <th className="px-6 py-4">Ambiente</th>
+                      <th className="px-6 py-4">Permissões (Granular)</th>
                       <th className="px-6 py-4">Status</th>
                       {canManageTeam && <th className="px-6 py-4 text-right">Ações</th>}
                   </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                   {loading ? (
-                      <tr><td colSpan={4} className="p-8 text-center"><Loader2 className="animate-spin mx-auto text-blue-600"/></td></tr>
+                      <tr><td colSpan={5} className="p-8 text-center"><Loader2 className="animate-spin mx-auto text-blue-600"/></td></tr>
                   ) : agents.map((agent) => (
                       <tr key={agent.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
                           <td className="px-6 py-4">
@@ -221,14 +229,27 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
                               </div>
                           </td>
                           <td className="px-6 py-4">
-                              <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
-                                  agent.role === 'super_admin' ? 'bg-purple-100 text-purple-700' :
-                                  agent.role === 'manager' ? 'bg-indigo-100 text-indigo-700' :
-                                  agent.role === 'developer' ? 'bg-slate-800 text-white' :
-                                  'bg-green-100 text-green-700'
+                              <span className={`px-2 py-1 rounded text-xs font-bold uppercase border ${
+                                  agent.role === 'super_admin' ? 'bg-purple-100 text-purple-700 border-purple-200' :
+                                  agent.role === 'manager' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' :
+                                  agent.role === 'developer' ? 'bg-slate-800 text-white border-slate-600' :
+                                  'bg-green-100 text-green-700 border-green-200'
                               }`}>
-                                  {agent.role || 'Agent'}
+                                  {agent.role === 'manager' ? 'Gestão' : agent.role === 'super_admin' ? 'Administrador' : agent.role === 'developer' ? 'Dev' : 'Operacional'}
                               </span>
+                          </td>
+                          <td className="px-6 py-4">
+                              {agent.role === 'agent' ? (
+                                  <div className="flex items-center gap-1">
+                                      <MiniPermissionBadge label="Criar Contato" active={agent.permissions?.canCreate} icon={Plus} />
+                                      <MiniPermissionBadge label="Editar Contato" active={agent.permissions?.canEdit} icon={FileEdit} />
+                                      <MiniPermissionBadge label="Deletar Contato" active={agent.permissions?.canDelete} icon={Trash2} />
+                                      <div className="w-px h-3 bg-slate-300 mx-1"></div>
+                                      <MiniPermissionBadge label="Gerir Tags" active={agent.permissions?.canCreateTags} icon={Tag} />
+                                  </div>
+                              ) : (
+                                  <span className="text-xs text-slate-400 italic">Acesso Irrestrito</span>
+                              )}
                           </td>
                           <td className="px-6 py-4"><span className="text-green-600 font-bold text-xs bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full border border-green-200 dark:border-green-800">Ativo</span></td>
                           {canManageTeam && (
@@ -248,7 +269,7 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
               
               {/* Role Selection */}
               <div>
-                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 block">Nível de Acesso</label>
+                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 block">Defina o Ambiente</label>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                       <RoleCard 
                         role="manager" 
@@ -408,7 +429,7 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
                   </button>
                   <button onClick={handleSubmit} disabled={isSubmitting} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all disabled:opacity-70 disabled:cursor-not-allowed text-sm">
                       {isSubmitting ? <Loader2 className="animate-spin" size={16}/> : <CheckCircle size={16}/>} 
-                      {isSubmitting ? 'Criando...' : 'Criar Acesso'}
+                      {isSubmitting ? 'Criar Acesso' : 'Criar Acesso'}
                   </button>
               </div>
           </div>

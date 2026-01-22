@@ -1,99 +1,108 @@
 
 import { mockStore, WebhookConfig } from './mockDataStore';
+import { getSystemConfig, hasValidEvolutionConfig } from './configService';
 
-// In a real app, these would come from Supabase 'webhooks' table
+// Helper para obter URL baseada no evento
+const getWebhookUrlForEvent = (event: string): string => {
+    const config = getSystemConfig();
+    switch (event) {
+        case 'user.created': return config.webhook_user_signup;
+        case 'payment.success': return config.webhook_payment_success;
+        case 'instance.disconnected': return config.webhook_instance_error;
+        case 'ticket.created': return config.webhook_ticket_created;
+        default: return '';
+    }
+};
+
 export const getWebhooks = async (): Promise<WebhookConfig[]> => {
     if (mockStore.isMockMode()) {
         return mockStore.getWebhooks();
     }
-    // Simulate API fetch delay
     await new Promise(r => setTimeout(r, 300));
     return mockStore.getWebhooks();
 };
 
 export const saveWebhook = async (event: string, url: string, active: boolean): Promise<void> => {
+    // Legacy support for mock store ui
     if (mockStore.isMockMode()) {
         mockStore.saveWebhook(event, url, active);
         return;
     }
-    await new Promise(r => setTimeout(r, 300));
-    mockStore.saveWebhook(event, url, active); // Fallback to mock logic for now
+    // In real mode, we use configService mainly, but keeping this for legacy components
+    mockStore.saveWebhook(event, url, active); 
 };
 
-export const triggerTestWebhook = async (event: string, url: string): Promise<{ success: boolean; status: number; message: string }> => {
-    if (!url) {
-        throw new Error('URL do Webhook não configurada.');
+export const triggerTestWebhook = async (event: string, directUrl?: string): Promise<{ success: boolean; status: number; message: string }> => {
+    const targetUrl = directUrl || getWebhookUrlForEvent(event);
+
+    if (!targetUrl) {
+        return { success: false, status: 400, message: 'URL não configurada no Master Console.' };
     }
 
-    if (!url.startsWith('http')) {
-        throw new Error('URL inválida. Deve começar com http:// ou https://');
+    if (!targetUrl.startsWith('http')) {
+        return { success: false, status: 400, message: 'URL inválida. Deve começar com http:// ou https://' };
     }
 
+    // Payloads Reais para Teste
     const payloads: Record<string, any> = {
         'user.created': {
             event: 'user.created',
             timestamp: new Date().toISOString(),
             data: {
-                id: 'user_123456',
-                name: 'Novo Usuário Teste',
-                email: 'usuario.teste@empresa.com',
-                role: 'agent',
-                temp_password: 'abc-123-xyz'
+                id: 'usr_test_123',
+                name: 'Usuário de Teste',
+                email: 'test@flowchat.com',
+                role: 'manager',
+                plan: 'TRIAL'
+            }
+        },
+        'payment.success': {
+            event: 'payment.success',
+            timestamp: new Date().toISOString(),
+            data: {
+                transaction_id: 'tx_stripe_999',
+                amount: 29700, // cents
+                currency: 'brl',
+                customer_email: 'cliente@loja.com'
             }
         },
         'instance.disconnected': {
             event: 'instance.disconnected',
             timestamp: new Date().toISOString(),
             data: {
-                instance_id: 'inst_098',
-                name: 'Suporte Vendas',
-                phone: '5511999998888',
-                reason: 'connection_lost_battery'
+                instance_id: 'inst_evo_001',
+                name: 'Suporte Principal',
+                reason: 'phone_disconnected'
             }
         },
-        'campaign.completed': {
-            event: 'campaign.completed',
+        'ticket.created': {
+            event: 'ticket.created',
             timestamp: new Date().toISOString(),
             data: {
-                campaign_id: 'camp_555',
-                name: 'Oferta Relâmpago',
-                stats: {
-                    total: 1500,
-                    sent: 1480,
-                    failed: 20,
-                    read_rate: '68%'
-                }
-            }
-        },
-        'contact.created': {
-            event: 'contact.created',
-            timestamp: new Date().toISOString(),
-            data: {
-                id: 'cont_777',
-                name: 'Cliente Lead',
-                phone: '5511988887777',
-                tags: ['Novo', 'Origem Site']
+                ticket_id: 'tkt_888',
+                contact_phone: '5511999998888',
+                initial_message: 'Olá, gostaria de um orçamento.'
             }
         }
     };
 
-    const payload = payloads[event] || { event, timestamp: new Date().toISOString(), message: "Generic Test Payload" };
+    const payload = payloads[event] || { event, timestamp: new Date().toISOString(), message: "Test Payload from Master Console" };
 
     try {
-        // Attempt a real fetch if it's a valid URL, but catch errors to not break UI if CORS blocks it
-        // Note: Real n8n webhooks might accept POST.
-        const response = await fetch(url, {
+        console.log(`[Webhook] Sending to ${targetUrl}`, payload);
+        
+        // Tenta envio real
+        const response = await fetch(targetUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
-            mode: 'no-cors' // Important: most n8n/webhook endpoints won't have CORS headers for localhost
+            mode: 'no-cors' // Permite envio para n8n/webhooks sem checagem estrita de CORS no browser
         });
         
-        // Since no-cors returns opaque response, we simulate success if no network error occurred
-        return { success: true, status: 200, message: 'Disparo enviado (Opaque Mode)' };
+        // Com no-cors, response.ok é sempre false e status é 0. Assumimos sucesso se não lançar erro de rede.
+        return { success: true, status: 200, message: 'Evento enviado (Opaque Mode)' };
     } catch (e: any) {
-        console.warn("Webhook fetch failed (likely CORS or Network), treating as simulated success for demo purposes", e);
-        // Em modo demo, retornamos sucesso simulado para mostrar a UX
-        return { success: true, status: 200, message: 'Disparo simulado com sucesso (Network Bypass)' };
+        console.error("Webhook Error:", e);
+        return { success: false, status: 500, message: e.message || 'Erro de rede ao conectar no N8N' };
     }
 };

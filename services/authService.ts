@@ -5,6 +5,9 @@ import { mockStore } from './mockDataStore';
 
 // Credenciais MOCK para Fallback (Modo Demonstração)
 const MOCK_USERS = [
+    // MASTER ACCESS - Acesso "Deus" da Plataforma
+    { id: 'master-owner', email: 'owner@flowchat.com', password: 'master', name: 'Platform Owner', role: 'developer' as UserRole }, // Usamos 'developer' como role técnico interno
+    
     { id: 'mock-super', email: 'super@flowchat.com', password: '123456', name: 'Super Admin', role: 'super_admin' as UserRole },
     { id: 'mock-manager', email: 'admin@flowchat.com', password: '123456', name: 'Gestor Mock', role: 'manager' as UserRole },
     { id: 'mock-agent', email: 'agent@flowchat.com', password: '123456', name: 'Agente Mock', role: 'agent' as UserRole },
@@ -12,8 +15,19 @@ const MOCK_USERS = [
 ];
 
 export const signIn = async (email: string, password: string): Promise<User> => {
-  // 1. Verificação MOCK (Prioritária para garantir a demo)
-  const mockUser = MOCK_USERS.find(u => u.email === email && u.password === password);
+  // Normalização para evitar erros de digitação (espaços ou maiúsculas no email)
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanPass = password.trim();
+
+  // 1. Verificação MOCK (Prioritária para garantir a demo e acesso Master)
+  const mockUser = MOCK_USERS.find(u => {
+      const emailMatch = u.email === cleanEmail;
+      // Para o Owner, aceitamos senha case-insensitive para evitar frustração
+      const passMatch = u.id === 'master-owner' 
+          ? u.password.toLowerCase() === cleanPass.toLowerCase() 
+          : u.password === cleanPass;
+      return emailMatch && passMatch;
+  });
   
   if (mockUser) {
       console.log("🔐 MOCK MODE ACTIVATED: Using local cache storage.");
@@ -27,19 +41,22 @@ export const signIn = async (email: string, password: string): Promise<User> => 
           name: mockUser.name,
           email: mockUser.email,
           role: mockUser.role,
-          avatar: `https://ui-avatars.com/api/?name=${mockUser.name.replace(' ','+')}&background=0D8ABC&color=fff`
+          avatar: `https://ui-avatars.com/api/?name=${mockUser.name.replace(' ','+')}&background=0f172a&color=fff&bold=true`
       };
   }
 
   // 2. Se não for mock, tenta Supabase real
   mockStore.setMockMode(false); // Garante que está desligado
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password: cleanPass });
 
   if (!error && data.user) {
       return fetchUserProfile(data.user.id, data.user.email);
   }
 
-  if (error) throw error;
+  if (error) {
+      console.warn("Login failed via Supabase:", error.message);
+      throw new Error('Credenciais inválidas. Verifique email e senha.');
+  }
   throw new Error('Usuário não encontrado');
 };
 

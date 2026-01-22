@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Smartphone, Users, Settings as SettingsIcon, LogOut, Menu, X, CreditCard, Send, MessageCircle, PieChart, DollarSign, Moon, Sun, Globe, PlayCircle, ChevronLeft, ChevronRight, HelpCircle, Loader2, Terminal, Plug, Activity } from 'lucide-react';
+import { LayoutDashboard, Smartphone, Users, Settings as SettingsIcon, LogOut, Menu, X, CreditCard, Send, MessageCircle, PieChart, DollarSign, Moon, Sun, Globe, PlayCircle, ChevronLeft, ChevronRight, HelpCircle, Loader2, Terminal, Plug, Activity, ShieldCheck, Inbox as InboxIcon, Server } from 'lucide-react';
 import { ViewState, UserRole, User } from './types';
 import Dashboard from './components/Dashboard';
 import Instances from './components/Instances';
@@ -15,6 +15,7 @@ import Register from './components/Register';
 import SalesPage from './components/SalesPage';
 import Onboarding from './components/Onboarding';
 import DeveloperConsole from './components/DeveloperConsole';
+import Inbox from './components/Inbox'; // RESTORED
 import { AppProvider, useApp } from './contexts/AppContext';
 import { supabase } from './services/supabaseClient';
 import * as authService from './services/authService';
@@ -34,6 +35,13 @@ const FlowChatApp: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
+  // --- Role Constants ---
+  const isOwner = currentUser?.email === 'owner@flowchat.com'; // CRITICAL: Only this specific email sees the hidden zone
+  const isSuperAdmin = currentUser?.role === 'super_admin';
+  const isManager = currentUser?.role === 'manager';
+  const isAgent = currentUser?.role === 'agent';
+  const isDeveloper = currentUser?.role === 'developer'; // Keeping this for role structure but restricting view
+
   // --- Auth & Session Handling ---
   useEffect(() => {
     checkSession();
@@ -47,9 +55,13 @@ const FlowChatApp: React.FC = () => {
             const user = await authService.fetchUserProfile(session.user.id);
             setCurrentUser(user);
             setIsAuthenticated(true);
-            // Default view based on role
-            if (user.role === 'developer') setActiveView('dev_integrations');
+            
+            // Redirect Owner directly to their console
+            if (user.email === 'owner@flowchat.com') setActiveView('master_console');
+            // Redirect Agents directly to Inbox (Chatwoot Model)
+            else if (user.role === 'agent') setActiveView('inbox');
             else setActiveView('dashboard');
+            
         } catch (e) {
             console.error("Error fetching profile on auth change", e);
         }
@@ -78,7 +90,7 @@ const FlowChatApp: React.FC = () => {
         if (user) {
           setCurrentUser(user);
           setIsAuthenticated(true);
-          if (user.role === 'developer') setActiveView('dev_integrations');
+          if (user.email === 'owner@flowchat.com') setActiveView('master_console');
         }
     } catch (error) {
         console.error("Session check failed:", error);
@@ -92,7 +104,8 @@ const FlowChatApp: React.FC = () => {
   const handleLogin = (user: User) => {
       setCurrentUser(user);
       setIsAuthenticated(true);
-      if (user.role === 'developer') setActiveView('dev_integrations');
+      if (user.email === 'owner@flowchat.com') setActiveView('master_console');
+      else if (user.role === 'agent') setActiveView('inbox');
       else setActiveView('dashboard');
   };
 
@@ -115,12 +128,6 @@ const FlowChatApp: React.FC = () => {
         setIsAuthLoading(false);
       }
   };
-
-  // --- Role Based Checks ---
-  const isSuperAdmin = currentUser?.role === 'super_admin';
-  const isManager = currentUser?.role === 'manager';
-  const isAgent = currentUser?.role === 'agent';
-  const isDeveloper = currentUser?.role === 'developer';
 
   // --- Loading Screen ---
   if (isAuthLoading) {
@@ -202,8 +209,8 @@ const FlowChatApp: React.FC = () => {
 
         {/* Brand Header */}
         <div className={`p-5 border-b border-slate-100 dark:border-slate-700 flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
-            <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20 shrink-0">
-              <MessageCircle size={20} fill="currentColor" className="text-white" />
+            <div className={`w-9 h-9 bg-gradient-to-br ${isOwner ? 'from-red-600 to-red-900' : 'from-blue-600 to-indigo-600'} rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20 shrink-0`}>
+              {isOwner ? <ShieldCheck size={20} className="text-white"/> : <MessageCircle size={20} fill="currentColor" className="text-white" />}
             </div>
             {!isSidebarCollapsed && (
                 <div className="animate-in fade-in slide-in-from-left-2 duration-300 min-w-0">
@@ -216,55 +223,52 @@ const FlowChatApp: React.FC = () => {
         {/* Navigation */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
           
-          {/* COMMON FOR EVERYONE EXCEPT DEVELOPER */}
-          {!isDeveloper && <NavItem view="onboarding" icon={PlayCircle} label={t('onboarding')} />}
+          {/* COMMON FOR EVERYONE EXCEPT OWNER (Owner needs clean nav) */}
+          {!isOwner && <NavItem view="onboarding" icon={PlayCircle} label={t('onboarding')} />}
 
-          {/* OPERATIONAL MENU (Agents & Managers) */}
-          {(isAgent || isManager) && (
+          {/* AMBIENTE OPERACIONAL (Atendentes & Gestores) */}
+          {(isAgent || isManager) && !isOwner && (
               <>
-                <SectionHeader label={t('menu')} />
-                <NavItem view="dashboard" icon={LayoutDashboard} label={t('dashboard')} />
-                <NavItem view="campaigns" icon={Send} label={t('campaigns')} />
-                <NavItem view="instances" icon={Smartphone} label={t('instances')} />
-                <NavItem view="contacts" icon={Users} label={t('contacts')} />
+                <SectionHeader label="Atendimento (Inbox)" />
+                <NavItem view="inbox" icon={InboxIcon} label="Conversas" />
+                <NavItem view="contacts" icon={Users} label="Contatos" />
+                <NavItem view="campaigns" icon={Send} label="Campanhas" />
+                <NavItem view="instances" icon={Smartphone} label="Minha Instância" />
               </>
           )}
 
-          {/* SUPER ADMIN MENU (Audit & Finance) */}
-          {isSuperAdmin && (
+          {/* AMBIENTE DE GESTÃO (Apenas Gestores & Super Admin) */}
+          {(isManager || isSuperAdmin) && !isOwner && (
               <>
-                <SectionHeader label="Gestão Global" />
-                <NavItem view="dashboard" icon={LayoutDashboard} label="Auditoria" />
-                <NavItem view="financial" icon={DollarSign} label={t('financial')} />
-                <NavItem view="reports" icon={PieChart} label={t('reports')} />
-                <NavItem view="team" icon={Users} label="Gestão de Acessos" />
-                <NavItem view="settings" icon={SettingsIcon} label="Conta" />
+                <SectionHeader label="Gestão da Operação" />
+                <NavItem view="dashboard" icon={LayoutDashboard} label="Painel de Controle" />
+                <NavItem view="reports" icon={PieChart} label="Relatórios" />
+                <NavItem view="team" icon={Users} label="Gestão de Equipe" />
               </>
           )}
 
-          {/* MANAGER MENU (Team Management only, Finance REMOVED) */}
-          {isManager && (
+          {/* AMBIENTE ADMINISTRATIVO (Apenas Super Admin) */}
+          {isSuperAdmin && !isOwner && (
               <>
-                <SectionHeader label={t('admin')} />
-                <NavItem view="reports" icon={PieChart} label={t('reports')} />
-                <NavItem view="team" icon={Users} label="Equipe" />
-              </>
-          )}
-
-          {/* DEVELOPER MENU (Tech Only) */}
-          {isDeveloper && (
-              <>
-                <SectionHeader label="Developer Zone" />
-                <NavItem view="dev_integrations" icon={Plug} label="Integrações" />
-                <NavItem view="dev_diagnostics" icon={Activity} label="Diagnóstico" />
+                <SectionHeader label="Admin Global" />
+                <NavItem view="financial" icon={DollarSign} label="Assinatura & Custos" />
+                <NavItem view="instances" icon={Server} label="Todas Instâncias" />
               </>
           )}
 
           {/* SETTINGS FOR AGENTS & MANAGERS */}
-          {(isManager || isAgent) && (
+          {(isManager || isAgent) && !isOwner && (
               <>
                 <SectionHeader label="Sistema" />
                 <NavItem view="settings" icon={SettingsIcon} label={t('settings')} />
+              </>
+          )}
+
+          {/* OWNER ONLY MENU - SINGLE ENTRY POINT */}
+          {isOwner && (
+              <>
+                <SectionHeader label="System" />
+                <NavItem view="master_console" icon={ShieldCheck} label="Master Console" />
               </>
           )}
         </nav>
@@ -346,7 +350,8 @@ const FlowChatApp: React.FC = () => {
           {activeView === 'dashboard' && <Dashboard role={currentUser.role} onNavigate={setActiveView} />}
           {activeView === 'onboarding' && <Onboarding onNavigate={setActiveView} currentUser={currentUser} />}
           
-          {/* Inbox Component Removed Completely */}
+          {/* Inbox Component Restored and Active */}
+          {activeView === 'inbox' && <Inbox currentUser={currentUser} />}
           
           {activeView === 'instances' && <Instances currentUser={currentUser} />}
           {activeView === 'campaigns' && <Campaigns currentUser={currentUser} />}
@@ -359,9 +364,9 @@ const FlowChatApp: React.FC = () => {
           {activeView === 'settings' && <Settings currentUser={currentUser} />}
           {activeView === 'reports' && (isSuperAdmin || isManager) && <Reports />}
           
-          {/* New Developer Routes */}
-          {(activeView === 'dev_integrations' || activeView === 'dev_api' || activeView === 'dev_diagnostics') && isDeveloper && (
-              <DeveloperConsole view={activeView === 'dev_integrations' ? 'integrations' : activeView === 'dev_api' ? 'api' : 'diagnostics'} />
+          {/* Master Console - STRICTLY Restricted to Owner Email */}
+          {activeView === 'master_console' && isOwner && (
+              <DeveloperConsole />
           )}
         </div>
       </main>

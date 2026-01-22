@@ -110,7 +110,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Entre com suas credenciais corporativas.</p>
                 </div>
 
-                {/* Quick Access Buttons */}
+                {/* Quick Access Buttons (DEMO ONLY - REMOVED OWNER) */}
                 <div className="mb-6">
                     <div className="flex items-center justify-between mb-3">
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Acesso Rápido (Demo)</p>
