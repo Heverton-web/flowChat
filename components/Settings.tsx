@@ -21,6 +21,9 @@ const Settings: React.FC<SettingsProps> = ({ currentUser }) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'general' | 'notifications'>('profile');
   const [isSaving, setIsSaving] = useState(false);
   
+  // Permission Logic: Notifications hidden for Manager and Agent
+  const canViewNotifications = currentUser.role === 'super_admin' || currentUser.role === 'developer';
+  
   // Profile State
   const [profileData, setProfileData] = useState({ name: currentUser.name, email: currentUser.email, phone: '5511999999999' });
   
@@ -87,7 +90,9 @@ const Settings: React.FC<SettingsProps> = ({ currentUser }) => {
                 </div>
                 <SidebarItem id="profile" label="Meu Perfil" icon={User} />
                 <SidebarItem id="general" label={t('general')} icon={Globe} />
-                <SidebarItem id="notifications" label="Notificações" icon={Bell} />
+                {canViewNotifications && (
+                    <SidebarItem id="notifications" label="Notificações" icon={Bell} />
+                )}
             </div>
         </div>
 
@@ -171,7 +176,7 @@ const Settings: React.FC<SettingsProps> = ({ currentUser }) => {
                 </div>
             )}
 
-            {activeTab === 'notifications' && (
+            {activeTab === 'notifications' && canViewNotifications && (
                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden animate-in slide-in-from-right-4 fade-in">
                     <div className="p-6 border-b border-slate-100 dark:border-slate-700">
                         <h3 className="text-lg font-bold text-slate-800 dark:text-white">Preferências de Notificação</h3>

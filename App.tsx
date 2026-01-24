@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Smartphone, Users, Settings as SettingsIcon, LogOut, Menu, X, CreditCard, Send, MessageCircle, PieChart, DollarSign, Moon, Sun, Globe, PlayCircle, ChevronLeft, ChevronRight, HelpCircle, Loader2, Terminal, Plug, Activity, ShieldCheck, Inbox as InboxIcon, Server } from 'lucide-react';
+import { LayoutDashboard, Smartphone, Users, Settings as SettingsIcon, LogOut, Menu, X, CreditCard, Send, MessageCircle, PieChart, DollarSign, Moon, Sun, Globe, PlayCircle, ChevronLeft, ChevronRight, HelpCircle, Loader2, Terminal, Plug, Activity, ShieldCheck, Server } from 'lucide-react';
 import { ViewState, UserRole, User } from './types';
 import Dashboard from './components/Dashboard';
 import Instances from './components/Instances';
@@ -15,7 +15,6 @@ import Register from './components/Register';
 import SalesPage from './components/SalesPage';
 import Onboarding from './components/Onboarding';
 import DeveloperConsole from './components/DeveloperConsole';
-import Inbox from './components/Inbox';
 import Logo from './components/Logo';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { supabase } from './services/supabaseClient';
@@ -226,7 +225,6 @@ const FlowChatApp: React.FC = () => {
           {(isAgent || isManager) && !isOwner && (
               <>
                 <SectionHeader label="Operacional" />
-                <NavItem view="inbox" icon={InboxIcon} label="Atendimento" />
                 <NavItem view="contacts" icon={Users} label="Contatos" />
                 <NavItem view="campaigns" icon={Send} label="Campanhas" />
                 <NavItem view="instances" icon={Smartphone} label="Minha Instância" />
@@ -252,8 +250,8 @@ const FlowChatApp: React.FC = () => {
               </>
           )}
 
-          {/* SETTINGS FOR AGENTS & MANAGERS */}
-          {(isManager || isAgent) && !isOwner && (
+          {/* SETTINGS FOR AGENTS, MANAGERS & SUPER ADMIN */}
+          {(isManager || isAgent || isSuperAdmin) && !isOwner && (
               <>
                 <SectionHeader label="Sistema" />
                 <NavItem view="settings" icon={SettingsIcon} label={t('settings')} />
@@ -342,12 +340,9 @@ const FlowChatApp: React.FC = () => {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto h-full w-full pt-16 md:pt-0 bg-slate-50 dark:bg-slate-900">
-        <div className={`h-full ${activeView === 'inbox' ? 'p-0' : 'p-6 md:p-10'} max-w-screen-2xl mx-auto min-h-full flex flex-col`}>
+        <div className={`h-full p-6 md:p-10 max-w-screen-2xl mx-auto min-h-full flex flex-col`}>
           {activeView === 'dashboard' && <Dashboard role={currentUser.role} onNavigate={setActiveView} />}
           {activeView === 'onboarding' && <Onboarding onNavigate={setActiveView} currentUser={currentUser} />}
-          
-          {/* Inbox takes full height if active */}
-          {activeView === 'inbox' && <Inbox currentUser={currentUser} />}
           
           {activeView === 'instances' && <Instances currentUser={currentUser} />}
           {activeView === 'campaigns' && <Campaigns currentUser={currentUser} />}
