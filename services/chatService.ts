@@ -27,16 +27,31 @@ export const sendMessage = async (
     isPrivate: boolean = false,
     attachment?: File
 ): Promise<Message> => {
+    
+    let type: any = 'text';
+    let attachmentUrl = undefined;
+
+    if (attachment) {
+        if (attachment.type.startsWith('image/')) type = 'image';
+        else if (attachment.type.startsWith('audio/')) type = 'audio';
+        else if (attachment.type.startsWith('video/')) type = 'video';
+        else type = 'file';
+        
+        // Simulating upload
+        attachmentUrl = URL.createObjectURL(attachment);
+    }
+
     const newMessage: Message = {
         id: `msg_${Date.now()}`,
         conversationId,
-        content,
+        content: content || (attachment ? attachment.name : ''),
         sender: 'agent',
         senderName: sender.name,
-        type: 'text', // Handle attachments later
+        type: type, 
         isPrivate,
         createdAt: new Date().toISOString(),
-        status: 'sent'
+        status: 'sent',
+        attachmentUrl
     };
 
     if (mockStore.isMockMode() || true) {

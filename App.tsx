@@ -15,7 +15,7 @@ import Register from './components/Register';
 import SalesPage from './components/SalesPage';
 import Onboarding from './components/Onboarding';
 import DeveloperConsole from './components/DeveloperConsole';
-import Inbox from './components/Inbox'; // RESTORED
+import Inbox from './components/Inbox'; // Keeping import just in case, or remove if unused. I'll leave it but unused.
 import { AppProvider, useApp } from './contexts/AppContext';
 import { supabase } from './services/supabaseClient';
 import * as authService from './services/authService';
@@ -58,8 +58,6 @@ const FlowChatApp: React.FC = () => {
             
             // Redirect Owner directly to their console
             if (user.email === 'owner@flowchat.com') setActiveView('master_console');
-            // Redirect Agents directly to Inbox (Chatwoot Model)
-            else if (user.role === 'agent') setActiveView('inbox');
             else setActiveView('dashboard');
             
         } catch (e) {
@@ -105,7 +103,6 @@ const FlowChatApp: React.FC = () => {
       setCurrentUser(user);
       setIsAuthenticated(true);
       if (user.email === 'owner@flowchat.com') setActiveView('master_console');
-      else if (user.role === 'agent') setActiveView('inbox');
       else setActiveView('dashboard');
   };
 
@@ -229,8 +226,7 @@ const FlowChatApp: React.FC = () => {
           {/* AMBIENTE OPERACIONAL (Atendentes & Gestores) */}
           {(isAgent || isManager) && !isOwner && (
               <>
-                <SectionHeader label="Atendimento (Inbox)" />
-                <NavItem view="inbox" icon={InboxIcon} label="Conversas" />
+                <SectionHeader label="Operacional" />
                 <NavItem view="contacts" icon={Users} label="Contatos" />
                 <NavItem view="campaigns" icon={Send} label="Campanhas" />
                 <NavItem view="instances" icon={Smartphone} label="Minha Instância" />
@@ -350,8 +346,7 @@ const FlowChatApp: React.FC = () => {
           {activeView === 'dashboard' && <Dashboard role={currentUser.role} onNavigate={setActiveView} />}
           {activeView === 'onboarding' && <Onboarding onNavigate={setActiveView} currentUser={currentUser} />}
           
-          {/* Inbox Component Restored and Active */}
-          {activeView === 'inbox' && <Inbox currentUser={currentUser} />}
+          {/* Inbox Component Removed from View Navigation but Import Kept */}
           
           {activeView === 'instances' && <Instances currentUser={currentUser} />}
           {activeView === 'campaigns' && <Campaigns currentUser={currentUser} />}

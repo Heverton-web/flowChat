@@ -1,6 +1,10 @@
 
 import React, { useState } from 'react';
-import { MessageCircle, Mail, Lock, ArrowRight, Loader2, ShieldCheck, AlertTriangle, Crown, Briefcase, Headset, Terminal, Rocket, Sparkles, CheckCircle, Bot } from 'lucide-react';
+import { 
+    MessageCircle, Mail, Lock, ArrowRight, Loader2, ShieldCheck, AlertTriangle, 
+    Crown, Briefcase, Headset, Terminal, Rocket, Sparkles, CheckCircle, Bot,
+    Layout, Smartphone, Users
+} from 'lucide-react';
 import { User } from '../types';
 import { useApp } from '../contexts/AppContext';
 import * as authService from '../services/authService';
@@ -72,25 +76,41 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
                     <MessageCircle size={32} fill="currentColor" />
                 </div>
                 <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-4 leading-tight">
-                    FlowChat <span className="text-blue-600">Enterprise</span>
+                    FlowChat
                 </h1>
                 <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-sm">
-                    Centralize atendimento, automação e gestão do WhatsApp em uma única plataforma poderosa.
+                    Centralize atendimento, automação e gestão de Campanhas no WhatsApp em uma única plataforma poderosa.
                 </p>
             </div>
             
             <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center text-green-500 shadow-sm border border-slate-100 dark:border-slate-700"><CheckCircle size={20} /></div>
-                    <span className="font-bold text-slate-700 dark:text-slate-200">Múltiplos Atendentes</span>
+                <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center text-blue-500 shadow-sm border border-slate-100 dark:border-slate-700 shrink-0"><Layout size={20} /></div>
+                    <div>
+                        <span className="font-bold text-slate-700 dark:text-slate-200 block text-sm">Ambientes Exclusivos</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">Admin, Gestor, Atendentes e Devs.</span>
+                    </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center text-blue-500 shadow-sm border border-slate-100 dark:border-slate-700"><Rocket size={20} /></div>
-                    <span className="font-bold text-slate-700 dark:text-slate-200">Disparos em Massa</span>
+                <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center text-green-500 shadow-sm border border-slate-100 dark:border-slate-700 shrink-0"><Smartphone size={20} /></div>
+                    <div>
+                        <span className="font-bold text-slate-700 dark:text-slate-200 block text-sm">Configuração Individual</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">Instâncias isoladas por usuário.</span>
+                    </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center text-purple-500 shadow-sm border border-slate-100 dark:border-slate-700"><Bot size={20} /></div>
-                    <span className="font-bold text-slate-700 dark:text-slate-200">Chatbot Inteligente</span>
+                <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center text-purple-500 shadow-sm border border-slate-100 dark:border-slate-700 shrink-0"><Users size={20} /></div>
+                    <div>
+                        <span className="font-bold text-slate-700 dark:text-slate-200 block text-sm">Gestão Granular</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">Controle total de equipe e performance.</span>
+                    </div>
+                </div>
+                <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center text-amber-500 shadow-sm border border-slate-100 dark:border-slate-700 shrink-0"><Lock size={20} /></div>
+                    <div>
+                        <span className="font-bold text-slate-700 dark:text-slate-200 block text-sm">Gestão de Acesso</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">Segurança RBAC avançada.</span>
+                    </div>
                 </div>
             </div>
 
@@ -198,7 +218,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
         {/* COLUMN 3: PLANS CTA */}
         <div className="flex items-center justify-center animate-in slide-in-from-right-8 duration-700 order-3">
             <div 
-                className="bg-gradient-to-br from-blue-600 via-indigo-700 to-violet-800 p-1 rounded-3xl shadow-2xl w-full max-w-md h-auto lg:h-[500px] cursor-pointer group hover:scale-[1.02] transition-all duration-300 relative overflow-hidden flex flex-col"
+                className="bg-gradient-to-br from-blue-600 via-indigo-700 to-violet-800 p-1 rounded-3xl shadow-2xl w-full max-w-md h-auto lg:h-[550px] cursor-pointer group hover:scale-[1.02] transition-all duration-300 relative overflow-hidden flex flex-col"
                 onClick={onNavigateToSales}
             >
                 <div className="absolute top-0 right-0 p-0 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -208,16 +228,16 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
                 <div className="bg-white/10 backdrop-blur-md p-8 rounded-[22px] flex-1 flex flex-col justify-between relative z-10 border border-white/10">
                     <div>
                         <div className="inline-flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full text-xs font-bold text-white mb-6 backdrop-blur-md border border-white/20 shadow-sm">
-                            <Sparkles size={12} className="text-yellow-300"/> Nova Era do Atendimento
+                            <Sparkles size={12} className="text-yellow-300"/> Solução Enterprise
                         </div>
-                        <h3 className="text-3xl font-bold text-white mb-4 leading-tight">Potencialize suas Vendas</h3>
+                        <h3 className="text-3xl font-bold text-white mb-4 leading-tight">Escale sua Operação</h3>
                         <p className="text-blue-100 text-base leading-relaxed mb-6 font-medium">
-                            Planos Enterprise com API Ilimitada, Suporte Prioritário e White Label para sua marca.
+                            Infraestrutura dedicada de alta performance para empresas que não podem parar. Gestão avançada, API ilimitada e suporte prioritário.
                         </p>
                         <ul className="space-y-4 mb-8 text-blue-50 text-sm font-medium">
-                            <li className="flex gap-3 items-center"><CheckCircle size={18} className="text-green-300"/> Setup Instantâneo</li>
-                            <li className="flex gap-3 items-center"><CheckCircle size={18} className="text-green-300"/> Sem Fidelidade</li>
-                            <li className="flex gap-3 items-center"><CheckCircle size={18} className="text-green-300"/> Teste Grátis 7 Dias</li>
+                            <li className="flex gap-3 items-center"><CheckCircle size={18} className="text-green-300"/> Instâncias de Alta Disponibilidade</li>
+                            <li className="flex gap-3 items-center"><CheckCircle size={18} className="text-green-300"/> Gestão de Times e Departamentos</li>
+                            <li className="flex gap-3 items-center"><CheckCircle size={18} className="text-green-300"/> API Oficial e Webhooks Ilimitados</li>
                         </ul>
                     </div>
                     

@@ -71,6 +71,8 @@ const SEED_MESSAGES: Message[] = [
     { id: 'm4', conversationId: 'conv_3', content: 'Oi, preciso de ajuda com financeiro.', sender: 'contact', type: 'text', isPrivate: false, createdAt: new Date(Date.now() - 7300000).toISOString(), status: 'read' },
     { id: 'm5', conversationId: 'conv_3', content: 'Meu boleto venceu, pode enviar outro?', sender: 'contact', type: 'text', isPrivate: false, createdAt: new Date(Date.now() - 7200000).toISOString(), status: 'delivered' },
     { id: 'm6', conversationId: 'conv_3', content: 'Cliente solicitou boleto vencido. Verificar no sistema.', sender: 'agent', senderName: 'System', type: 'text', isPrivate: true, createdAt: new Date().toISOString(), status: 'read' }, // Private Note
+    { id: 'm7', conversationId: 'conv_1', content: 'Segue print do erro', sender: 'contact', type: 'image', isPrivate: false, attachmentUrl: 'https://placehold.co/600x400?text=Print+Erro', createdAt: new Date(Date.now() - 500000).toISOString(), status: 'read' },
+    { id: 'm8', conversationId: 'conv_1', content: '', sender: 'agent', type: 'audio', isPrivate: false, createdAt: new Date(Date.now() - 200000).toISOString(), status: 'read' },
 ];
 
 // --- HELPER FUNCTIONS ---
