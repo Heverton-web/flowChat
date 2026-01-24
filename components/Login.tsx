@@ -17,7 +17,7 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigateToSales }) => {
-  const { t, showToast } = useApp();
+  const { t, showToast, branding } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -75,7 +75,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
             <div>
                 <Logo className="h-12 mb-6" />
                 <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-sm">
-                    Centralize atendimento, automação e gestão de Campanhas no WhatsApp em uma única plataforma poderosa.
+                    {branding.landingPageSubheadline}
                 </p>
             </div>
             
@@ -101,13 +101,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
                         <span className="text-xs text-slate-500 dark:text-slate-400">Controle total de equipe e performance.</span>
                     </div>
                 </div>
-                <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center text-amber-500 shadow-sm border border-slate-100 dark:border-slate-700 shrink-0"><Lock size={20} /></div>
-                    <div>
-                        <span className="font-bold text-slate-700 dark:text-slate-200 block text-sm">Gestão de Acesso</span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400">Segurança RBAC avançada.</span>
-                    </div>
-                </div>
             </div>
 
             <div className="pt-4 flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-wider">
@@ -122,11 +115,11 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
                 
                 {/* Header Login */}
                 <div className="mb-6">
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Acessar Sistema</h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Entre com suas credenciais corporativas.</p>
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{branding.loginTitle}</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{branding.loginMessage}</p>
                 </div>
 
-                {/* Quick Access Buttons (DEMO ONLY - REMOVED OWNER) */}
+                {/* Quick Access Buttons (DEMO ONLY) */}
                 <div className="mb-6">
                     <div className="flex items-center justify-between mb-3">
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Acesso Rápido (Demo)</p>
@@ -211,38 +204,40 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
             </div>
         </div>
 
-        {/* COLUMN 3: PLANS CTA */}
-        <div className="flex items-center justify-center animate-in slide-in-from-right-8 duration-700 order-3">
-            <div 
-                className="bg-gradient-to-br from-blue-600 via-indigo-700 to-violet-800 p-1 rounded-3xl shadow-2xl w-full max-w-md h-auto lg:h-[550px] cursor-pointer group hover:scale-[1.02] transition-all duration-300 relative overflow-hidden flex flex-col"
-                onClick={onNavigateToSales}
-            >
-                <div className="absolute top-0 right-0 p-0 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <Rocket size={200} className="text-white transform rotate-12 translate-x-10 -translate-y-10"/>
-                </div>
-                
-                <div className="bg-white/10 backdrop-blur-md p-8 rounded-[22px] flex-1 flex flex-col justify-between relative z-10 border border-white/10">
-                    <div>
-                        <div className="inline-flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full text-xs font-bold text-white mb-6 backdrop-blur-md border border-white/20 shadow-sm">
-                            <Sparkles size={12} className="text-yellow-300"/> Solução Enterprise
-                        </div>
-                        <h3 className="text-3xl font-bold text-white mb-4 leading-tight">Escale sua Operação</h3>
-                        <p className="text-blue-100 text-base leading-relaxed mb-6 font-medium">
-                            Infraestrutura dedicada de alta performance para empresas que não podem parar. Gestão avançada, API ilimitada e suporte prioritário.
-                        </p>
-                        <ul className="space-y-4 mb-8 text-blue-50 text-sm font-medium">
-                            <li className="flex gap-3 items-center"><CheckCircle size={18} className="text-green-300"/> Instâncias de Alta Disponibilidade</li>
-                            <li className="flex gap-3 items-center"><CheckCircle size={18} className="text-green-300"/> Gestão de Times e Departamentos</li>
-                            <li className="flex gap-3 items-center"><CheckCircle size={18} className="text-green-300"/> API Oficial e Webhooks Ilimitados</li>
-                        </ul>
+        {/* COLUMN 3: PLANS CTA (Conditional based on WhiteLabel config) */}
+        {branding.showSalesPage && (
+            <div className="flex items-center justify-center animate-in slide-in-from-right-8 duration-700 order-3">
+                <div 
+                    className="bg-gradient-to-br from-blue-600 via-indigo-700 to-violet-800 p-1 rounded-3xl shadow-2xl w-full max-w-md h-auto lg:h-[550px] cursor-pointer group hover:scale-[1.02] transition-all duration-300 relative overflow-hidden flex flex-col"
+                    onClick={onNavigateToSales}
+                >
+                    <div className="absolute top-0 right-0 p-0 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <Rocket size={200} className="text-white transform rotate-12 translate-x-10 -translate-y-10"/>
                     </div>
                     
-                    <button onClick={(e) => { e.stopPropagation(); onNavigateToSales && onNavigateToSales(); }} className="bg-white text-blue-700 hover:bg-blue-50 px-6 py-4 rounded-xl font-bold text-base shadow-lg transition-all w-full flex items-center justify-center gap-2 group-hover:shadow-blue-900/30">
-                        Ver Planos e Preços <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform"/>
-                    </button>
+                    <div className="bg-white/10 backdrop-blur-md p-8 rounded-[22px] flex-1 flex flex-col justify-between relative z-10 border border-white/10">
+                        <div>
+                            <div className="inline-flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full text-xs font-bold text-white mb-6 backdrop-blur-md border border-white/20 shadow-sm">
+                                <Sparkles size={12} className="text-yellow-300"/> Solução Enterprise
+                            </div>
+                            <h3 className="text-3xl font-bold text-white mb-4 leading-tight">{branding.landingPageHeadline}</h3>
+                            <p className="text-blue-100 text-base leading-relaxed mb-6 font-medium">
+                                Infraestrutura dedicada de alta performance para empresas que não podem parar.
+                            </p>
+                            <ul className="space-y-4 mb-8 text-blue-50 text-sm font-medium">
+                                <li className="flex gap-3 items-center"><CheckCircle size={18} className="text-green-300"/> Instâncias de Alta Disponibilidade</li>
+                                <li className="flex gap-3 items-center"><CheckCircle size={18} className="text-green-300"/> Gestão de Times e Departamentos</li>
+                                <li className="flex gap-3 items-center"><CheckCircle size={18} className="text-green-300"/> API Oficial e Webhooks Ilimitados</li>
+                            </ul>
+                        </div>
+                        
+                        <button onClick={(e) => { e.stopPropagation(); onNavigateToSales && onNavigateToSales(); }} className="bg-white text-blue-700 hover:bg-blue-50 px-6 py-4 rounded-xl font-bold text-base shadow-lg transition-all w-full flex items-center justify-center gap-2 group-hover:shadow-blue-900/30">
+                            Ver Planos e Preços <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform"/>
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
+        )}
 
       </div>
     </div>

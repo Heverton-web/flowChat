@@ -12,6 +12,20 @@
         theme: {
           extend: {
             colors: {
+              // Mapeamos 'blue' para nossa variável primária dinâmica
+              // Isso faz com que todo 'bg-blue-600', 'text-blue-500' mude com a configuração
+              blue: {
+                50: 'rgb(var(--primary-rgb) / 0.05)',
+                100: 'rgb(var(--primary-rgb) / 0.1)',
+                200: 'rgb(var(--primary-rgb) / 0.2)',
+                300: 'rgb(var(--primary-rgb) / 0.3)',
+                400: 'rgb(var(--primary-rgb) / 0.5)',
+                500: 'rgb(var(--primary-rgb) / 0.8)',
+                600: 'rgb(var(--primary-rgb) / 1)', // Base Color
+                700: 'rgb(var(--primary-rgb) / 0.9)', // Simplificação: em prod usaríamos função de darken
+                800: 'rgb(var(--primary-rgb) / 0.95)',
+                900: 'rgb(var(--primary-rgb) / 1)',
+              },
               primary: {
                 50: '#eff6ff',
                 100: '#dbeafe',
@@ -32,6 +46,10 @@
       }
     </script>
     <style>
+      :root {
+        /* Default Primary Color (Blue-600 equivalent: 37 99 235) */
+        --primary-rgb: 37 99 235;
+      }
       body {
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
       }

@@ -4,6 +4,19 @@
 
 const VAULT_KEY = 'flowchat_vault';
 
+export interface BrandingConfig {
+    appName: string;
+    primaryColor: string; // Hex Code (ex: #3b82f6)
+    logoUrlLight: string; // URL para fundo claro
+    logoUrlDark: string;  // URL para fundo escuro
+    faviconUrl: string;
+    loginTitle: string;
+    loginMessage: string;
+    landingPageHeadline: string;
+    landingPageSubheadline: string;
+    showSalesPage: boolean;
+}
+
 export interface SystemConfig {
     // --- INFRA: API ENGINE (EVOLUTION) ---
     evolution_url: string;
@@ -29,7 +42,23 @@ export interface SystemConfig {
     system_maintenance_mode: boolean;  // Bloqueia acesso de todos exceto Owner
     allow_new_registrations: boolean;  // Permite novos cadastros
     enable_free_trial: boolean;        // Habilita teste grátis automático
+
+    // --- WHITE LABEL ---
+    branding: BrandingConfig;
 }
+
+const DEFAULT_BRANDING: BrandingConfig = {
+    appName: 'Disparai',
+    primaryColor: '#3b82f6', // Default Blue
+    logoUrlLight: '',
+    logoUrlDark: '',
+    faviconUrl: '',
+    loginTitle: 'Acessar Sistema',
+    loginMessage: 'Entre com suas credenciais corporativas.',
+    landingPageHeadline: 'Escalone seu atendimento no WhatsApp hoje.',
+    landingPageSubheadline: 'Centralize sua equipe, automatize conversas e tenha controle total da sua operação.',
+    showSalesPage: true
+};
 
 const DEFAULT_CONFIG: SystemConfig = {
     evolution_url: '',
@@ -50,14 +79,23 @@ const DEFAULT_CONFIG: SystemConfig = {
 
     system_maintenance_mode: false,
     allow_new_registrations: true,
-    enable_free_trial: true
+    enable_free_trial: true,
+
+    branding: DEFAULT_BRANDING
 };
 
 export const getSystemConfig = (): SystemConfig => {
     try {
         const stored = localStorage.getItem(VAULT_KEY);
-        // Merge stored config with default to ensure new keys exist
-        return stored ? { ...DEFAULT_CONFIG, ...JSON.parse(stored) } : DEFAULT_CONFIG;
+        if (!stored) return DEFAULT_CONFIG;
+        
+        const parsed = JSON.parse(stored);
+        // Deep merge para garantir que chaves novas (como branding) existam mesmo em configs antigas
+        return {
+            ...DEFAULT_CONFIG,
+            ...parsed,
+            branding: { ...DEFAULT_CONFIG.branding, ...(parsed.branding || {}) }
+        };
     } catch (e) {
         return DEFAULT_CONFIG;
     }
@@ -65,7 +103,8 @@ export const getSystemConfig = (): SystemConfig => {
 
 export const saveSystemConfig = (config: SystemConfig) => {
     localStorage.setItem(VAULT_KEY, JSON.stringify(config));
-    // Em produção: Disparar chamada para API para salvar no banco seguro ou Redis
+    // Notificar a aplicação que a config mudou (para atualizar cores em tempo real)
+    window.dispatchEvent(new Event('flowchat_config_updated'));
     console.log("[SystemConfig] Configurações globais atualizadas.");
 };
 

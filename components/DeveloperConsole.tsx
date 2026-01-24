@@ -4,7 +4,7 @@ import {
   Server, Plug, Activity, Save, Database, Lock, Eye, EyeOff, 
   Terminal, ShieldCheck, CreditCard, Radio, Globe, Key, AlertTriangle,
   CheckCircle, RefreshCw, Smartphone, Code, Cpu, Wifi, XCircle,
-  Webhook, ToggleLeft, ToggleRight, Layers, PlayCircle, Settings
+  Webhook, ToggleLeft, ToggleRight, Layers, PlayCircle, Settings, Palette, Image as ImageIcon, Type
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { supabase } from '../services/supabaseClient';
@@ -12,13 +12,13 @@ import { getSystemConfig, saveSystemConfig, SystemConfig } from '../services/con
 import * as webhookService from '../services/webhookService';
 
 interface DeveloperConsoleProps {
-    initialTab?: 'infrastructure' | 'webhooks' | 'system' | 'logs';
+    initialTab?: 'infrastructure' | 'webhooks' | 'system' | 'logs' | 'whitelabel';
 }
 
 const MasterConsole: React.FC<DeveloperConsoleProps> = ({ initialTab = 'infrastructure' }) => {
     const { showToast } = useApp();
     const [vault, setVault] = useState<SystemConfig>(getSystemConfig());
-    const [activeTab, setActiveTab] = useState<'infrastructure' | 'webhooks' | 'system' | 'logs'>(initialTab);
+    const [activeTab, setActiveTab] = useState<'infrastructure' | 'webhooks' | 'system' | 'logs' | 'whitelabel'>(initialTab);
     const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
     const [isSaving, setIsSaving] = useState(false);
     const [statusChecks, setStatusChecks] = useState<Record<string, 'checking' | 'ok' | 'error' | null>>({});
@@ -53,6 +53,16 @@ const MasterConsole: React.FC<DeveloperConsoleProps> = ({ initialTab = 'infrastr
 
     const updateVal = (key: keyof SystemConfig, value: any) => {
         setVault((prev) => ({ ...prev, [key]: value }));
+    };
+
+    const updateBranding = (key: keyof SystemConfig['branding'], value: any) => {
+        setVault((prev) => ({
+            ...prev,
+            branding: {
+                ...prev.branding,
+                [key]: value
+            }
+        }));
     };
 
     // --- TESTERS ---
@@ -171,13 +181,13 @@ const MasterConsole: React.FC<DeveloperConsoleProps> = ({ initialTab = 'infrastr
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    {isSaving && <span className="text-xs text-slate-500 animate-pulse">Criptografando e Salvando...</span>}
+                    {isSaving && <span className="text-xs text-slate-500 animate-pulse">Aplicando alterações...</span>}
                     <button 
                         onClick={handleSave}
                         disabled={isSaving}
                         className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-xs shadow-lg shadow-blue-900/20 flex items-center gap-2 transition-all disabled:opacity-50"
                     >
-                        <Save size={14}/> Salvar Alterações
+                        <Save size={14}/> Salvar e Aplicar
                     </button>
                 </div>
             </div>
@@ -198,6 +208,11 @@ const MasterConsole: React.FC<DeveloperConsoleProps> = ({ initialTab = 'infrastr
                     <button onClick={() => setActiveTab('system')} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${activeTab === 'system' ? 'bg-red-600/10 text-red-400 border border-red-600/20' : 'text-slate-400 hover:bg-slate-800'}`}>
                         <Settings size={16}/> System Flags
                     </button>
+                    
+                    <button onClick={() => setActiveTab('whitelabel')} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${activeTab === 'whitelabel' ? 'bg-amber-600/10 text-amber-400 border border-amber-600/20' : 'text-slate-400 hover:bg-slate-800'}`}>
+                        <Palette size={16}/> White Label
+                    </button>
+
                     <button onClick={() => setActiveTab('logs')} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${activeTab === 'logs' ? 'bg-slate-800 text-slate-200' : 'text-slate-400 hover:bg-slate-800'}`}>
                         <Terminal size={16}/> Logs de Sistema
                     </button>
@@ -313,6 +328,155 @@ const MasterConsole: React.FC<DeveloperConsoleProps> = ({ initialTab = 'infrastr
                                     checked={vault.enable_free_trial} 
                                     onChange={(v: boolean) => updateVal('enable_free_trial', v)}
                                 />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- WHITE LABEL EDITOR --- */}
+                    {activeTab === 'whitelabel' && (
+                        <div className="max-w-4xl space-y-8 animate-in fade-in">
+                            <div>
+                                <h2 className="text-lg font-bold text-white flex items-center gap-2"><Palette className="text-amber-500"/> White Label & Personalização</h2>
+                                <p className="text-xs text-slate-400 mt-1">Personalize a identidade visual e textual da plataforma.</p>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                {/* Visual Identity */}
+                                <div className="space-y-4">
+                                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                        <ImageIcon size={14}/> Identidade Visual
+                                    </h3>
+                                    
+                                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-300 block mb-1">Nome da Aplicação</label>
+                                            <input 
+                                                type="text" 
+                                                className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white outline-none focus:border-amber-500"
+                                                value={vault.branding.appName}
+                                                onChange={e => updateBranding('appName', e.target.value)}
+                                            />
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="text-xs font-bold text-slate-300 block mb-1">Cor Primária (Hex)</label>
+                                                <div className="flex gap-2">
+                                                    <input 
+                                                        type="color" 
+                                                        className="h-9 w-9 bg-transparent border-none cursor-pointer"
+                                                        value={vault.branding.primaryColor}
+                                                        onChange={e => updateBranding('primaryColor', e.target.value)}
+                                                    />
+                                                    <input 
+                                                        type="text" 
+                                                        className="flex-1 bg-slate-950 border border-slate-700 rounded px-3 py-2 text-xs font-mono text-white outline-none uppercase"
+                                                        value={vault.branding.primaryColor}
+                                                        onChange={e => updateBranding('primaryColor', e.target.value)}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="flex items-end">
+                                                <div className="w-full h-9 rounded bg-blue-600/20 border border-blue-600/50 flex items-center justify-center text-xs text-blue-400" style={{backgroundColor: `${vault.branding.primaryColor}33`, borderColor: vault.branding.primaryColor, color: vault.branding.primaryColor}}>
+                                                    Preview Cor
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-300 block mb-1">URL da Logo (Claro)</label>
+                                            <input 
+                                                type="text" 
+                                                className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-xs text-white outline-none focus:border-amber-500 placeholder:text-slate-700"
+                                                placeholder="https://sua-cdn.com/logo-light.png"
+                                                value={vault.branding.logoUrlLight}
+                                                onChange={e => updateBranding('logoUrlLight', e.target.value)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-300 block mb-1">URL da Logo (Escuro)</label>
+                                            <input 
+                                                type="text" 
+                                                className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-xs text-white outline-none focus:border-amber-500 placeholder:text-slate-700"
+                                                placeholder="https://sua-cdn.com/logo-dark.png"
+                                                value={vault.branding.logoUrlDark}
+                                                onChange={e => updateBranding('logoUrlDark', e.target.value)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-300 block mb-1">URL do Favicon</label>
+                                            <input 
+                                                type="text" 
+                                                className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-xs text-white outline-none focus:border-amber-500 placeholder:text-slate-700"
+                                                placeholder="https://sua-cdn.com/favicon.ico"
+                                                value={vault.branding.faviconUrl}
+                                                onChange={e => updateBranding('faviconUrl', e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Texts & Pages */}
+                                <div className="space-y-4">
+                                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                        <Type size={14}/> Textos e Landing Page
+                                    </h3>
+                                    
+                                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-300 block mb-1">Título do Login</label>
+                                            <input 
+                                                type="text" 
+                                                className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white outline-none focus:border-amber-500"
+                                                value={vault.branding.loginTitle}
+                                                onChange={e => updateBranding('loginTitle', e.target.value)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-300 block mb-1">Subtítulo do Login</label>
+                                            <input 
+                                                type="text" 
+                                                className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white outline-none focus:border-amber-500"
+                                                value={vault.branding.loginMessage}
+                                                onChange={e => updateBranding('loginMessage', e.target.value)}
+                                            />
+                                        </div>
+                                        
+                                        <div className="h-px bg-slate-800 my-2"></div>
+
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-xs font-bold text-slate-300">Exibir Landing Page de Vendas?</label>
+                                            <button 
+                                                onClick={() => updateBranding('showSalesPage', !vault.branding.showSalesPage)}
+                                                className={vault.branding.showSalesPage ? "text-green-500" : "text-slate-600"}
+                                            >
+                                                {vault.branding.showSalesPage ? <ToggleRight size={24}/> : <ToggleLeft size={24}/>}
+                                            </button>
+                                        </div>
+
+                                        {vault.branding.showSalesPage && (
+                                            <>
+                                                <div>
+                                                    <label className="text-xs font-bold text-slate-300 block mb-1">Headline (H1)</label>
+                                                    <input 
+                                                        type="text" 
+                                                        className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white outline-none focus:border-amber-500"
+                                                        value={vault.branding.landingPageHeadline}
+                                                        onChange={e => updateBranding('landingPageHeadline', e.target.value)}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs font-bold text-slate-300 block mb-1">Subheadline</label>
+                                                    <textarea 
+                                                        className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white outline-none focus:border-amber-500 resize-none h-20"
+                                                        value={vault.branding.landingPageSubheadline}
+                                                        onChange={e => updateBranding('landingPageSubheadline', e.target.value)}
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
