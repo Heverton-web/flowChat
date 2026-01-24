@@ -51,7 +51,7 @@ export const triggerTestWebhook = async (event: string, directUrl?: string): Pro
             data: {
                 id: 'usr_test_123',
                 name: 'Usuário de Teste',
-                email: 'test@flowchat.com',
+                email: 'test@disparai.com.br',
                 role: 'manager',
                 plan: 'TRIAL'
             }

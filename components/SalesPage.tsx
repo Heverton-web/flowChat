@@ -4,6 +4,7 @@ import { Check, X, ArrowLeft, MessageCircle, Zap, Shield, Crown, Star, Phone, Us
 import { PLAN_DEFS } from '../types';
 import StripeCheckoutModal from './StripeCheckoutModal';
 import { useApp } from '../contexts/AppContext';
+import Logo from './Logo';
 
 interface SalesPageProps {
   onBack: () => void;
@@ -30,10 +31,7 @@ const SalesPage: React.FC<SalesPageProps> = ({ onBack, onSuccess }) => {
       <div className="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
           <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
               <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
-                  <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-600/20">
-                      <MessageCircle size={18} fill="currentColor" />
-                  </div>
-                  <span className="font-bold text-xl text-slate-900 dark:text-white tracking-tight">FlowChat</span>
+                  <Logo className="h-8" />
               </div>
               <button onClick={onBack} className="text-sm font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white flex items-center gap-1 transition-colors">
                   <ArrowLeft size={16} /> Voltar para Login

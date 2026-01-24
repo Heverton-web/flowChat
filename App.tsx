@@ -15,7 +15,8 @@ import Register from './components/Register';
 import SalesPage from './components/SalesPage';
 import Onboarding from './components/Onboarding';
 import DeveloperConsole from './components/DeveloperConsole';
-import Inbox from './components/Inbox'; // Keeping import just in case, or remove if unused. I'll leave it but unused.
+import Inbox from './components/Inbox';
+import Logo from './components/Logo';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { supabase } from './services/supabaseClient';
 import * as authService from './services/authService';
@@ -36,7 +37,7 @@ const FlowChatApp: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // --- Role Constants ---
-  const isOwner = currentUser?.email === 'owner@flowchat.com'; // CRITICAL: Only this specific email sees the hidden zone
+  const isOwner = currentUser?.email === 'owner@disparai.com.br'; // CRITICAL: Only this specific email sees the hidden zone
   const isSuperAdmin = currentUser?.role === 'super_admin';
   const isManager = currentUser?.role === 'manager';
   const isAgent = currentUser?.role === 'agent';
@@ -57,7 +58,7 @@ const FlowChatApp: React.FC = () => {
             setIsAuthenticated(true);
             
             // Redirect Owner directly to their console
-            if (user.email === 'owner@flowchat.com') setActiveView('master_console');
+            if (user.email === 'owner@disparai.com.br') setActiveView('master_console');
             else setActiveView('dashboard');
             
         } catch (e) {
@@ -88,7 +89,7 @@ const FlowChatApp: React.FC = () => {
         if (user) {
           setCurrentUser(user);
           setIsAuthenticated(true);
-          if (user.email === 'owner@flowchat.com') setActiveView('master_console');
+          if (user.email === 'owner@disparai.com.br') setActiveView('master_console');
         }
     } catch (error) {
         console.error("Session check failed:", error);
@@ -102,7 +103,7 @@ const FlowChatApp: React.FC = () => {
   const handleLogin = (user: User) => {
       setCurrentUser(user);
       setIsAuthenticated(true);
-      if (user.email === 'owner@flowchat.com') setActiveView('master_console');
+      if (user.email === 'owner@disparai.com.br') setActiveView('master_console');
       else setActiveView('dashboard');
   };
 
@@ -206,14 +207,12 @@ const FlowChatApp: React.FC = () => {
 
         {/* Brand Header */}
         <div className={`p-5 border-b border-slate-100 dark:border-slate-700 flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
-            <div className={`w-9 h-9 bg-gradient-to-br ${isOwner ? 'from-red-600 to-red-900' : 'from-blue-600 to-indigo-600'} rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20 shrink-0`}>
-              {isOwner ? <ShieldCheck size={20} className="text-white"/> : <MessageCircle size={20} fill="currentColor" className="text-white" />}
-            </div>
-            {!isSidebarCollapsed && (
-                <div className="animate-in fade-in slide-in-from-left-2 duration-300 min-w-0">
-                    <h1 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight leading-none">FlowChat</h1>
-                    <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">Enterprise</span>
+            {!isSidebarCollapsed ? (
+                <div className="animate-in fade-in slide-in-from-left-2 duration-300">
+                    <Logo className="h-8" />
                 </div>
+            ) : (
+                <Logo className="h-8 w-8" showText={false} />
             )}
         </div>
 
@@ -227,6 +226,7 @@ const FlowChatApp: React.FC = () => {
           {(isAgent || isManager) && !isOwner && (
               <>
                 <SectionHeader label="Operacional" />
+                <NavItem view="inbox" icon={InboxIcon} label="Atendimento" />
                 <NavItem view="contacts" icon={Users} label="Contatos" />
                 <NavItem view="campaigns" icon={Send} label="Campanhas" />
                 <NavItem view="instances" icon={Smartphone} label="Minha Instância" />
@@ -315,7 +315,7 @@ const FlowChatApp: React.FC = () => {
               {!isSidebarCollapsed ? (
                   <div className="truncate min-w-0 flex-1 animate-in fade-in slide-in-from-left-2">
                       <p className="text-sm font-bold text-slate-800 dark:text-white truncate leading-tight">{currentUser.name}</p>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate capitalize">{currentUser.role.replace('_', ' ')}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate capitalize">{currentUser.role.replace('_', ' ')}</p>
                   </div>
               ) : null}
 
@@ -342,11 +342,12 @@ const FlowChatApp: React.FC = () => {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto h-full w-full pt-16 md:pt-0 bg-slate-50 dark:bg-slate-900">
-        <div className="p-6 md:p-10 max-w-screen-2xl mx-auto min-h-full">
+        <div className={`h-full ${activeView === 'inbox' ? 'p-0' : 'p-6 md:p-10'} max-w-screen-2xl mx-auto min-h-full flex flex-col`}>
           {activeView === 'dashboard' && <Dashboard role={currentUser.role} onNavigate={setActiveView} />}
           {activeView === 'onboarding' && <Onboarding onNavigate={setActiveView} currentUser={currentUser} />}
           
-          {/* Inbox Component Removed from View Navigation but Import Kept */}
+          {/* Inbox takes full height if active */}
+          {activeView === 'inbox' && <Inbox currentUser={currentUser} />}
           
           {activeView === 'instances' && <Instances currentUser={currentUser} />}
           {activeView === 'campaigns' && <Campaigns currentUser={currentUser} />}

@@ -8,6 +8,7 @@ import {
 import { User } from '../types';
 import { useApp } from '../contexts/AppContext';
 import * as authService from '../services/authService';
+import Logo from './Logo';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -25,10 +26,10 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
   const handleAutoFill = (role: 'super' | 'manager' | 'agent' | 'dev') => {
       setPassword('123456');
       switch(role) {
-          case 'super': setEmail('super@flowchat.com'); break;
-          case 'manager': setEmail('admin@flowchat.com'); break;
-          case 'agent': setEmail('agent@flowchat.com'); break;
-          case 'dev': setEmail('dev@flowchat.com'); break;
+          case 'super': setEmail('super@disparai.com.br'); break;
+          case 'manager': setEmail('admin@disparai.com.br'); break;
+          case 'agent': setEmail('agent@disparai.com.br'); break;
+          case 'dev': setEmail('dev@disparai.com.br'); break;
       }
   };
 
@@ -72,12 +73,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
         {/* COLUMN 1: BRAND IDENTITY */}
         <div className="flex flex-col justify-center space-y-8 p-4 lg:p-8 animate-in slide-in-from-left-8 duration-700 order-1">
             <div>
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-600/30 mb-6">
-                    <MessageCircle size={32} fill="currentColor" />
-                </div>
-                <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-4 leading-tight">
-                    FlowChat
-                </h1>
+                <Logo className="h-12 mb-6" />
                 <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-sm">
                     Centralize atendimento, automação e gestão de Campanhas no WhatsApp em uma única plataforma poderosa.
                 </p>

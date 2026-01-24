@@ -169,8 +169,8 @@ export const mockStore = {
     // --- Agents ---
     getAgents: (): AgentPlan[] => {
         const mockAgents: AgentPlan[] = [
-            { id: 'manager-1', name: 'Gestor Mock', email: 'admin@flowchat.com', status: 'active', messagesUsed: 1500, permissions: { canCreate: true, canEdit: true, canDelete: true, canCreateTags: true, canEditTags: true, canDeleteTags: true }, role: 'manager' },
-            { id: 'agent-1', name: 'Agente Mock', email: 'agent@flowchat.com', status: 'active', messagesUsed: 450, permissions: { canCreate: true, canEdit: true, canDelete: false, canCreateTags: true, canEditTags: false, canDeleteTags: false }, role: 'agent' }
+            { id: 'manager-1', name: 'Gestor Mock', email: 'admin@disparai.com.br', status: 'active', messagesUsed: 1500, permissions: { canCreate: true, canEdit: true, canDelete: true, canCreateTags: true, canEditTags: true, canDeleteTags: true }, role: 'manager' },
+            { id: 'agent-1', name: 'Agente Mock', email: 'agent@disparai.com.br', status: 'active', messagesUsed: 450, permissions: { canCreate: true, canEdit: true, canDelete: false, canCreateTags: true, canEditTags: false, canDeleteTags: false }, role: 'agent' }
         ];
         return mockAgents;
     },

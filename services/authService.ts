@@ -6,12 +6,12 @@ import { mockStore } from './mockDataStore';
 // Credenciais MOCK para Fallback (Modo Demonstração)
 const MOCK_USERS = [
     // MASTER ACCESS - Acesso "Deus" da Plataforma
-    { id: 'master-owner', email: 'owner@flowchat.com', password: 'master', name: 'Platform Owner', role: 'developer' as UserRole }, // Usamos 'developer' como role técnico interno
+    { id: 'master-owner', email: 'owner@disparai.com.br', password: 'master', name: 'Platform Owner', role: 'developer' as UserRole }, // Usamos 'developer' como role técnico interno
     
-    { id: 'mock-super', email: 'super@flowchat.com', password: '123456', name: 'Super Admin', role: 'super_admin' as UserRole },
-    { id: 'mock-manager', email: 'admin@flowchat.com', password: '123456', name: 'Gestor Mock', role: 'manager' as UserRole },
-    { id: 'mock-agent', email: 'agent@flowchat.com', password: '123456', name: 'Agente Mock', role: 'agent' as UserRole },
-    { id: 'mock-dev', email: 'dev@flowchat.com', password: '123456', name: 'Dev Mock', role: 'developer' as UserRole }
+    { id: 'mock-super', email: 'super@disparai.com.br', password: '123456', name: 'Super Admin', role: 'super_admin' as UserRole },
+    { id: 'mock-manager', email: 'admin@disparai.com.br', password: '123456', name: 'Gestor Mock', role: 'manager' as UserRole },
+    { id: 'mock-agent', email: 'agent@disparai.com.br', password: '123456', name: 'Agente Mock', role: 'agent' as UserRole },
+    { id: 'mock-dev', email: 'dev@disparai.com.br', password: '123456', name: 'Dev Mock', role: 'developer' as UserRole }
 ];
 
 export const signIn = async (email: string, password: string): Promise<User> => {
