@@ -62,6 +62,7 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
 
   const openCreateModal = () => {
       setModalMode('create');
+      setSelectedAgent(null);
       setShowPassword(false);
       setFormData({
           name: '',
@@ -70,6 +71,20 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
           role: 'agent', // Default for everyone, Managers can't change this easily
           department: 'Suporte',
           permissions: { canCreate: true, canEdit: true, canDelete: false, canCreateTags: true, canEditTags: true, canDeleteTags: false }
+      });
+  };
+
+  const openEditModal = (agent: AgentPlan) => {
+      setModalMode('edit');
+      setSelectedAgent(agent);
+      setShowPassword(false);
+      setFormData({
+          name: agent.name,
+          email: agent.email,
+          password: '', // Keep empty to not change
+          role: agent.role || 'agent',
+          department: agent.department || 'Suporte',
+          permissions: agent.permissions || { canCreate: true, canEdit: true, canDelete: false, canCreateTags: true, canEditTags: true, canDeleteTags: false }
       });
   };
 
@@ -89,25 +104,42 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
   };
 
   const handleSubmit = async () => {
-      if (!formData.name || !formData.email || !formData.password) {
-          showToast('Todos os campos são obrigatórios.', 'error');
+      if (!formData.name || !formData.email) {
+          showToast('Nome e Email são obrigatórios.', 'error');
           return;
       }
+      
+      if (modalMode === 'create' && !formData.password) {
+          showToast('Senha é obrigatória para criação.', 'error');
+          return;
+      }
+
       setIsSubmitting(true);
       try {
-          // Mock call - in real app, call endpoint to create user in Auth + Profile
-          await teamService.addAgent({
-              name: formData.name,
-              email: formData.email,
-              password: formData.password,
-              permissions: formData.permissions
-              // role: formData.role // Pass role to backend
-          });
-          showToast(`Usuário (${formData.role}) criado e credenciais geradas!`, 'success');
+          if (modalMode === 'create') {
+              // Mock call - in real app, call endpoint to create user in Auth + Profile
+              await teamService.addAgent({
+                  name: formData.name,
+                  email: formData.email,
+                  password: formData.password,
+                  permissions: formData.permissions
+                  // role: formData.role // Pass role to backend
+              });
+              showToast(`Usuário (${formData.role}) criado e credenciais geradas!`, 'success');
+          } else if (modalMode === 'edit' && selectedAgent) {
+              await teamService.updateAgent(selectedAgent.id, {
+                  name: formData.name,
+                  role: formData.role,
+                  permissions: formData.permissions,
+                  // Email usually cannot be changed easily in Auth providers without re-verification
+              });
+              showToast('Usuário atualizado com sucesso!', 'success');
+          }
+          
           closeModal();
           loadData();
       } catch (e: any) {
-          showToast('Erro ao criar usuário.', 'error');
+          showToast(e.message || 'Erro ao salvar usuário.', 'error');
       } finally {
           setIsSubmitting(false);
       }
@@ -115,6 +147,7 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
 
   const closeModal = () => {
       setModalMode(null);
+      setSelectedAgent(null);
   };
 
   const RoleCard = ({ role, label, desc, icon: Icon, disabled = false }: any) => {
@@ -254,7 +287,18 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
                           <td className="px-6 py-4"><span className="text-green-600 font-bold text-xs bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full border border-green-200 dark:border-green-800">Ativo</span></td>
                           {canManageTeam && (
                               <td className="px-6 py-4 text-right">
-                                  <button className="text-slate-400 hover:text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={16}/></button>
+                                  <div className="flex justify-end gap-1">
+                                      <button 
+                                        onClick={() => openEditModal(agent)}
+                                        className="text-slate-400 hover:text-blue-600 p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                        title="Editar Usuário"
+                                      >
+                                          <Edit2 size={16}/>
+                                      </button>
+                                      <button className="text-slate-400 hover:text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Excluir Usuário">
+                                          <Trash2 size={16}/>
+                                      </button>
+                                  </div>
                               </td>
                           )}
                       </tr>
@@ -263,8 +307,13 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
           </table>
       </div>
 
-      {/* Create User Modal */}
-      <Modal isOpen={!!modalMode} onClose={closeModal} title="Criar Credenciais de Acesso" size="lg">
+      {/* Create/Edit User Modal */}
+      <Modal 
+        isOpen={!!modalMode} 
+        onClose={closeModal} 
+        title={modalMode === 'edit' ? "Editar Acesso" : "Criar Credenciais de Acesso"} 
+        size="lg"
+      >
           <div className="space-y-5">
               
               {/* Role Selection */}
@@ -316,10 +365,11 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
                           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                           <input 
                             type="email" 
-                            className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 dark:text-white transition-all text-sm" 
+                            className={`w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 dark:text-white transition-all text-sm ${modalMode === 'edit' ? 'opacity-70 cursor-not-allowed' : ''}`}
                             value={formData.email} 
                             onChange={e => setFormData({...formData, email: e.target.value})} 
                             placeholder="email@empresa.com"
+                            disabled={modalMode === 'edit'}
                           />
                       </div>
                   </div>
@@ -327,7 +377,9 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
 
               <div className="space-y-1">
                   <div className="flex justify-between items-center">
-                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Senha</label>
+                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">
+                        {modalMode === 'edit' ? 'Redefinir Senha (Opcional)' : 'Senha'}
+                    </label>
                     <button onClick={generatePassword} className="text-[10px] text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded"><RefreshCw size={10}/> Gerar</button>
                   </div>
                   <div className="relative flex gap-2">
@@ -338,7 +390,7 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
                             className="w-full pl-9 pr-9 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 dark:text-white font-mono transition-all text-sm" 
                             value={formData.password} 
                             onChange={e => setFormData({...formData, password: e.target.value})} 
-                            placeholder="******"
+                            placeholder={modalMode === 'edit' ? "Deixe vazio para manter" : "******"}
                         />
                         <button 
                             onClick={() => setShowPassword(!showPassword)}
@@ -413,14 +465,16 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
               )}
 
               {/* Info Box */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl flex gap-3 items-center border border-blue-100 dark:border-blue-800">
-                  <div className="p-1.5 bg-blue-100 dark:bg-blue-800 rounded-full text-blue-600 dark:text-blue-200 shrink-0">
-                    <Mail size={14}/>
+              {modalMode === 'create' && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl flex gap-3 items-center border border-blue-100 dark:border-blue-800">
+                      <div className="p-1.5 bg-blue-100 dark:bg-blue-800 rounded-full text-blue-600 dark:text-blue-200 shrink-0">
+                        <Mail size={14}/>
+                      </div>
+                      <p className="text-[10px] text-blue-700/80 dark:text-blue-300/80 leading-relaxed">
+                          As credenciais serão enviadas automaticamente para o email informado e WhatsApp.
+                      </p>
                   </div>
-                  <p className="text-[10px] text-blue-700/80 dark:text-blue-300/80 leading-relaxed">
-                      As credenciais serão enviadas automaticamente para o email informado e WhatsApp.
-                  </p>
-              </div>
+              )}
 
               {/* Footer */}
               <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-700">
@@ -429,7 +483,7 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
                   </button>
                   <button onClick={handleSubmit} disabled={isSubmitting} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all disabled:opacity-70 disabled:cursor-not-allowed text-sm">
                       {isSubmitting ? <Loader2 className="animate-spin" size={16}/> : <CheckCircle size={16}/>} 
-                      {isSubmitting ? 'Criar Acesso' : 'Criar Acesso'}
+                      {isSubmitting ? 'Salvando...' : (modalMode === 'edit' ? 'Salvar Alterações' : 'Criar Acesso')}
                   </button>
               </div>
           </div>

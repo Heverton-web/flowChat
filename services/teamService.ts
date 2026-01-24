@@ -71,10 +71,18 @@ export const addAgent = async (agent: AddAgentPayload): Promise<AgentPlan> => {
 };
 
 export const updateAgent = async (id: string, updates: Partial<AgentPlan>): Promise<AgentPlan> => {
-    if (mockStore.isMockMode()) return { ...updates, id } as AgentPlan;
+    if (mockStore.isMockMode()) {
+        // Mock Implementation: Just return what came in, effectively 'success' in UI
+        return { ...updates, id } as AgentPlan;
+    }
 
+    // Real Supabase Implementation
+    // Note: Permissions might be stored in a separate column or table in a real scalable app, 
+    // but here we assume basic profile updates.
     const { data, error } = await supabase.from('profiles').update({
         name: updates.name,
+        // role: updates.role, // Only enable if RLS policies allow role updates
+        // permissions: updates.permissions // Needs JSONB column in DB
     }).eq('id', id).select().single();
 
     if (error) throw error;

@@ -59,9 +59,6 @@ const MasterConsole: React.FC<DeveloperConsoleProps> = ({ initialTab = 'dashboar
     const [statusChecks, setStatusChecks] = useState<Record<string, 'checking' | 'ok' | 'error' | null>>({});
     const [logs, setLogs] = useState<string[]>([]);
     
-    // Preview Mode State
-    const [previewMode, setPreviewMode] = useState<'login' | 'dashboard'>('login');
-
     // --- EVOLUTION PLAYGROUND STATE ---
     const [testInstance, setTestInstance] = useState('');
     const [testPhone, setTestPhone] = useState(''); // 5511...
@@ -883,262 +880,176 @@ const MasterConsole: React.FC<DeveloperConsoleProps> = ({ initialTab = 'dashboar
                         </div>
                     )}
 
-                    {/* --- WHITELABEL (ENHANCED SPLIT VIEW) --- */}
+                    {/* --- WHITELABEL (REFACTORED) --- */}
                     {activeTab === 'whitelabel' && (
-                        <div className="h-full flex flex-col animate-in fade-in">
-                            <div className="flex justify-between items-center mb-6">
+                        <div className="max-w-5xl mx-auto w-full h-full flex flex-col animate-in fade-in pb-20">
+                            <div className="flex justify-between items-center mb-6 shrink-0">
                                 <h2 className="text-xl font-bold text-white flex items-center gap-3"><Palette className="text-amber-500"/> Personalização</h2>
-                                
-                                {/* Preview Switcher */}
-                                <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
-                                    <button 
-                                        onClick={() => setPreviewMode('login')} 
-                                        className={`px-3 py-1.5 text-xs font-bold rounded-md flex items-center gap-2 transition-all ${previewMode === 'login' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
-                                    >
-                                        <LayoutTemplate size={14}/> Tela de Login
-                                    </button>
-                                    <button 
-                                        onClick={() => setPreviewMode('dashboard')} 
-                                        className={`px-3 py-1.5 text-xs font-bold rounded-md flex items-center gap-2 transition-all ${previewMode === 'dashboard' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
-                                    >
-                                        <Monitor size={14}/> Dashboard
-                                    </button>
-                                </div>
                             </div>
 
-                            <div className="flex-1 flex gap-6 min-h-0">
-                                {/* Editor (Left) */}
-                                <div className="w-1/2 overflow-y-auto custom-scrollbar pr-2 space-y-6">
-                                    {/* Brand Identity */}
-                                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-                                        <h3 className="text-xs font-bold text-slate-400 uppercase mb-4">Identidade Visual</h3>
+                            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-6 pb-10">
+                                {/* Brand Identity */}
+                                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                                    <h3 className="text-sm font-bold text-slate-400 uppercase mb-6 border-b border-slate-800 pb-2">Identidade Visual</h3>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
-                                            <label className="text-xs font-bold text-slate-300 block mb-1">Nome da Aplicação</label>
-                                            <input type="text" className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-amber-500 outline-none" value={vault.branding.appName} onChange={e => updateBranding('appName', e.target.value)} />
+                                            <label className="text-xs font-bold text-slate-300 block mb-2">Nome da Aplicação</label>
+                                            <input type="text" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none transition-colors" value={vault.branding.appName} onChange={e => updateBranding('appName', e.target.value)} />
                                         </div>
                                         
                                         {/* Color Picker & Presets */}
                                         <div>
                                             <label className="text-xs font-bold text-slate-300 block mb-2">Cor Primária (Tema)</label>
-                                            <div className="flex gap-2 mb-3 overflow-x-auto pb-2">
+                                            <div className="flex gap-2">
+                                                <div className="relative">
+                                                    <input type="color" className="h-10 w-10 bg-transparent border-none cursor-pointer rounded-lg overflow-hidden p-0" value={vault.branding.primaryColor} onChange={e => updateBranding('primaryColor', e.target.value)} />
+                                                </div>
+                                                <input type="text" className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-sm font-mono text-white outline-none uppercase" value={vault.branding.primaryColor} onChange={e => updateBranding('primaryColor', e.target.value)} />
+                                            </div>
+                                            <div className="flex gap-2 mt-2">
                                                 {PRESET_COLORS.map(c => (
                                                     <button 
                                                         key={c.name} 
                                                         onClick={() => updateBranding('primaryColor', c.hex)}
-                                                        className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${vault.branding.primaryColor === c.hex ? 'border-white' : 'border-transparent'}`}
+                                                        className={`w-5 h-5 rounded-full border border-slate-700 transition-transform hover:scale-110 ${vault.branding.primaryColor === c.hex ? 'ring-2 ring-white' : ''}`}
                                                         style={{ backgroundColor: c.hex }}
                                                         title={c.name}
                                                     />
                                                 ))}
                                             </div>
-                                            <div className="flex gap-2">
-                                                <input type="color" className="h-9 w-9 bg-transparent border-none cursor-pointer rounded overflow-hidden" value={vault.branding.primaryColor} onChange={e => updateBranding('primaryColor', e.target.value)} />
-                                                <input type="text" className="flex-1 bg-slate-950 border border-slate-700 rounded px-3 py-2 text-xs font-mono text-white outline-none uppercase" value={vault.branding.primaryColor} onChange={e => updateBranding('primaryColor', e.target.value)} />
-                                            </div>
                                         </div>
 
-                                        <div>
-                                            <label className="text-xs font-bold text-slate-300 block mb-1">URL da Logo (Claro)</label>
-                                            <input type="text" className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-xs text-white focus:border-amber-500 outline-none" value={vault.branding.logoUrlLight} onChange={e => updateBranding('logoUrlLight', e.target.value)} />
-                                        </div>
-                                    </div>
-
-                                    {/* Layout & Login Text */}
-                                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-                                        <h3 className="text-xs font-bold text-slate-400 uppercase mb-4">Tela de Login</h3>
-                                        
-                                        {/* Layout Selector */}
-                                        <div className="grid grid-cols-2 gap-3 mb-4">
-                                            <button 
-                                                onClick={() => updateBranding('loginLayout', 'split')}
-                                                className={`p-3 rounded-lg border-2 flex flex-col items-center gap-2 transition-all ${vault.branding.loginLayout === 'split' ? 'border-blue-500 bg-blue-900/20' : 'border-slate-700 bg-slate-950 hover:border-slate-600'}`}
-                                            >
-                                                <div className="flex w-12 h-8 rounded border border-slate-600 overflow-hidden">
-                                                    <div className="w-1/2 bg-slate-700"></div>
-                                                    <div className="w-1/2 bg-slate-800"></div>
-                                                </div>
-                                                <span className="text-[10px] font-bold text-slate-300">Split (Clássico)</span>
-                                            </button>
-                                            <button 
-                                                onClick={() => updateBranding('loginLayout', 'center')}
-                                                className={`p-3 rounded-lg border-2 flex flex-col items-center gap-2 transition-all ${vault.branding.loginLayout === 'center' ? 'border-blue-500 bg-blue-900/20' : 'border-slate-700 bg-slate-950 hover:border-slate-600'}`}
-                                            >
-                                                <div className="w-12 h-8 rounded border border-slate-600 bg-slate-800 flex items-center justify-center">
-                                                    <div className="w-6 h-4 bg-slate-700 rounded-sm"></div>
-                                                </div>
-                                                <span className="text-[10px] font-bold text-slate-300">Centralizado</span>
-                                            </button>
-                                        </div>
-
-                                        <div>
-                                            <label className="text-xs font-bold text-slate-300 block mb-1">Título</label>
-                                            <input type="text" className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white" value={vault.branding.loginTitle} onChange={e => updateBranding('loginTitle', e.target.value)} />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs font-bold text-slate-300 block mb-1">Subtítulo</label>
-                                            <input type="text" className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white" value={vault.branding.loginMessage} onChange={e => updateBranding('loginMessage', e.target.value)} />
-                                        </div>
-                                    </div>
-
-                                    {/* Landing Page & Plans Configuration */}
-                                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-6">
-                                        <div className="flex items-center justify-between">
-                                            <h3 className="text-xs font-bold text-slate-400 uppercase">Landing Page & Precificação</h3>
-                                            <ToggleCard 
-                                                label="" 
-                                                desc="" 
-                                                checked={vault.branding.showSalesPage} 
-                                                onChange={(v: boolean) => updateBranding('showSalesPage', v)} 
-                                            />
-                                        </div>
-
-                                        <div className="space-y-4">
-                                            <div>
-                                                <label className="text-xs font-bold text-slate-300 block mb-1">Headline Principal</label>
-                                                <input type="text" className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white" value={vault.branding.landingPageHeadline} onChange={e => updateBranding('landingPageHeadline', e.target.value)} />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-bold text-slate-300 block mb-1">Subtítulo de Apoio</label>
-                                                <textarea rows={2} className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white" value={vault.branding.landingPageSubheadline} onChange={e => updateBranding('landingPageSubheadline', e.target.value)} />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-bold text-slate-300 block mb-1">Tag Promocional</label>
-                                                <input type="text" className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-white" value={vault.branding.landingTag} onChange={e => updateBranding('landingTag', e.target.value)} />
-                                            </div>
-                                        </div>
-
-                                        <div className="border-t border-slate-800 pt-4">
-                                            <h4 className="text-xs font-bold text-blue-400 uppercase mb-3 flex items-center gap-2"><DollarSign size={12}/> Configuração de Planos (Preço & Recursos)</h4>
-                                            
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                                {(['START', 'GROWTH', 'SCALE'] as const).map(planKey => (
-                                                    <div key={planKey} className="bg-slate-950 border border-slate-700 rounded-lg p-3 space-y-3">
-                                                        <div className="flex justify-between items-center">
-                                                            <label className="text-[10px] font-bold text-slate-500 uppercase">{planKey} (R$/mês)</label>
-                                                        </div>
-                                                        <input 
-                                                            type="number" 
-                                                            className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white focus:border-blue-500 outline-none" 
-                                                            value={vault.plans[planKey].price} 
-                                                            onChange={e => updatePlan(planKey, 'price', Number(e.target.value))} 
-                                                        />
-                                                        
-                                                        <div>
-                                                            <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Incluso (1 por linha)</label>
-                                                            <textarea 
-                                                                rows={6}
-                                                                className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[10px] text-slate-300 focus:border-blue-500 outline-none resize-none leading-relaxed"
-                                                                value={vault.plans[planKey].features.join('\n')}
-                                                                onChange={e => updatePlan(planKey, 'features', e.target.value.split('\n'))}
-                                                            />
-                                                        </div>
+                                        <div className="md:col-span-2">
+                                            <label className="text-xs font-bold text-slate-300 block mb-2">URL da Logo (Modo Claro)</label>
+                                            <div className="flex gap-4 items-center">
+                                                <input type="text" className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none" placeholder="https://..." value={vault.branding.logoUrlLight} onChange={e => updateBranding('logoUrlLight', e.target.value)} />
+                                                {vault.branding.logoUrlLight && (
+                                                    <div className="h-10 w-10 bg-slate-800 rounded-lg border border-slate-700 flex items-center justify-center p-1">
+                                                        <img src={vault.branding.logoUrlLight} className="max-h-full max-w-full object-contain" alt="Logo"/>
                                                     </div>
-                                                ))}
-                                            </div>
-
-                                            <div>
-                                                <label className="text-[10px] font-bold text-slate-500 block mb-1 flex items-center gap-1">Desconto Anual (%) <span className="text-green-500 text-[9px]">Aplicado automaticamente</span></label>
-                                                <div className="flex items-center gap-2">
-                                                    <input type="range" min="0" max="50" step="5" className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer" value={vault.annualDiscountPercentage} onChange={e => updateVal('annualDiscountPercentage', Number(e.target.value))} />
-                                                    <span className="text-xs font-bold text-white w-8 text-right">{vault.annualDiscountPercentage}%</span>
-                                                </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Live Preview (Right) */}
-                                <div className="w-1/2 bg-slate-900 rounded-2xl border-[10px] border-slate-800 shadow-2xl overflow-hidden relative flex flex-col">
-                                    <div className="bg-slate-800 h-6 w-full flex items-center justify-center gap-1">
-                                        <div className="w-1 h-1 rounded-full bg-slate-600"></div>
-                                        <div className="w-12 h-1 rounded-full bg-slate-700"></div>
-                                    </div>
+                                {/* Layout & Login Text */}
+                                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                                    <h3 className="text-sm font-bold text-slate-400 uppercase mb-6 border-b border-slate-800 pb-2">Tela de Login</h3>
                                     
-                                    {previewMode === 'login' ? (
-                                        <div className="flex-1 bg-white relative overflow-hidden flex transition-all">
-                                            {/* Preview: SPLIT LAYOUT */}
-                                            {vault.branding.loginLayout === 'split' && (
-                                                <>
-                                                    <div className="w-1/2 bg-slate-50 p-6 flex flex-col justify-center gap-4 relative z-10">
-                                                        <div>
-                                                            <div className="h-8 w-8 mb-4 object-contain" style={{backgroundImage: `url(${vault.branding.logoUrlLight || 'https://via.placeholder.com/32'})`, backgroundSize: 'contain', backgroundRepeat: 'no-repeat'}}></div>
-                                                            <h3 className="text-lg font-bold text-slate-800 leading-tight">{vault.branding.landingPageSubheadline}</h3>
-                                                        </div>
-                                                        <div className="space-y-3">
-                                                            {vault.branding.loginBenefits.map((item, idx) => (
-                                                                <div key={idx} className="flex gap-2">
-                                                                    <div className="w-6 h-6 rounded bg-white shadow-sm flex items-center justify-center shrink-0 text-blue-500" style={{color: vault.branding.primaryColor}}><Layout size={12}/></div>
-                                                                    <div>
-                                                                        <p className="text-xs font-bold text-slate-700">{item.title}</p>
-                                                                        <p className="text-[10px] text-slate-500">{item.description}</p>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        {/* Layout Selector */}
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-300 block mb-3">Layout</label>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <button 
+                                                    onClick={() => updateBranding('loginLayout', 'split')}
+                                                    className={`p-3 rounded-lg border-2 flex flex-col items-center gap-2 transition-all ${vault.branding.loginLayout === 'split' ? 'border-blue-500 bg-blue-900/20' : 'border-slate-700 bg-slate-950 hover:border-slate-600'}`}
+                                                >
+                                                    <div className="flex w-12 h-8 rounded border border-slate-600 overflow-hidden">
+                                                        <div className="w-1/2 bg-slate-700"></div>
+                                                        <div className="w-1/2 bg-slate-800"></div>
                                                     </div>
-                                                    <div className="w-1/2 flex items-center justify-center p-4 bg-white">
-                                                        <div className="w-full bg-white rounded-xl shadow-lg p-4 border border-slate-100">
-                                                            <h4 className="text-lg font-bold text-slate-900 mb-1">{vault.branding.loginTitle}</h4>
-                                                            <p className="text-xs text-slate-500 mb-4">{vault.branding.loginMessage}</p>
-                                                            <div className="space-y-2">
-                                                                <div className="h-8 bg-slate-100 rounded"></div>
-                                                                <div className="h-8 bg-slate-100 rounded"></div>
-                                                                <div className="h-8 rounded text-white text-xs font-bold flex items-center justify-center" style={{backgroundColor: vault.branding.primaryColor}}>Entrar</div>
-                                                            </div>
-                                                        </div>
+                                                    <span className="text-[10px] font-bold text-slate-300">Split (Clássico)</span>
+                                                </button>
+                                                <button 
+                                                    onClick={() => updateBranding('loginLayout', 'center')}
+                                                    className={`p-3 rounded-lg border-2 flex flex-col items-center gap-2 transition-all ${vault.branding.loginLayout === 'center' ? 'border-blue-500 bg-blue-900/20' : 'border-slate-700 bg-slate-950 hover:border-slate-600'}`}
+                                                >
+                                                    <div className="w-12 h-8 rounded border border-slate-600 bg-slate-800 flex items-center justify-center">
+                                                        <div className="w-6 h-4 bg-slate-700 rounded-sm"></div>
                                                     </div>
-                                                </>
-                                            )}
-
-                                            {/* Preview: CENTER LAYOUT */}
-                                            {vault.branding.loginLayout === 'center' && (
-                                                <div className="w-full h-full flex items-center justify-center bg-slate-50 relative">
-                                                    <div className="absolute inset-0 opacity-10" style={{backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px'}}></div>
-                                                    <div className="w-72 bg-white rounded-xl shadow-xl p-6 border border-slate-100 relative z-10 text-center">
-                                                        <div className="h-10 w-10 mx-auto mb-4 bg-contain bg-no-repeat bg-center" style={{backgroundImage: `url(${vault.branding.logoUrlLight || 'https://via.placeholder.com/32'})`}}></div>
-                                                        <h4 className="text-lg font-bold text-slate-900 mb-1">{vault.branding.loginTitle}</h4>
-                                                        <p className="text-xs text-slate-500 mb-6">{vault.branding.loginMessage}</p>
-                                                        <div className="space-y-3 text-left">
-                                                            <div className="h-8 bg-slate-50 border border-slate-200 rounded"></div>
-                                                            <div className="h-8 bg-slate-50 border border-slate-200 rounded"></div>
-                                                            <div className="h-9 rounded text-white text-xs font-bold flex items-center justify-center shadow-md" style={{backgroundColor: vault.branding.primaryColor}}>Acessar Painel</div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        // Preview: DASHBOARD MINIATURE
-                                        <div className="flex-1 bg-slate-100 flex overflow-hidden">
-                                            {/* Sidebar Mini */}
-                                            <div className="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-3 gap-2">
-                                                <div className="w-8 h-8 rounded-lg bg-slate-100 mb-2"></div>
-                                                <div className="w-8 h-8 rounded-lg" style={{backgroundColor: vault.branding.primaryColor, opacity: 0.1, color: vault.branding.primaryColor}}><div className="w-full h-full flex items-center justify-center"><Layout size={14}/></div></div>
-                                                <div className="w-8 h-8 rounded-lg text-slate-400 flex items-center justify-center"><Smartphone size={14}/></div>
-                                                <div className="w-8 h-8 rounded-lg text-slate-400 flex items-center justify-center"><Settings size={14}/></div>
+                                                    <span className="text-[10px] font-bold text-slate-300">Centralizado</span>
+                                                </button>
                                             </div>
-                                            {/* Content Mini */}
-                                            <div className="flex-1 p-4">
-                                                <div className="flex justify-between mb-4">
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="text-xs font-bold text-slate-300 block mb-2">Título de Boas-vindas</label>
+                                                <input type="text" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none" value={vault.branding.loginTitle} onChange={e => updateBranding('loginTitle', e.target.value)} />
+                                            </div>
+                                            <div>
+                                                <label className="text-xs font-bold text-slate-300 block mb-2">Subtítulo / Mensagem</label>
+                                                <input type="text" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none" value={vault.branding.loginMessage} onChange={e => updateBranding('loginMessage', e.target.value)} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Landing Page & Plans Configuration */}
+                                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                                    <div className="flex items-center justify-between mb-6 border-b border-slate-800 pb-2">
+                                        <h3 className="text-sm font-bold text-slate-400 uppercase">Landing Page & Precificação</h3>
+                                        <ToggleCard 
+                                            label="Ativar Página de Vendas" 
+                                            desc="" 
+                                            checked={vault.branding.showSalesPage} 
+                                            onChange={(v: boolean) => updateBranding('showSalesPage', v)} 
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                        <div className="md:col-span-2">
+                                            <label className="text-xs font-bold text-slate-300 block mb-2">Headline Principal (H1)</label>
+                                            <input type="text" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none" value={vault.branding.landingPageHeadline} onChange={e => updateBranding('landingPageHeadline', e.target.value)} />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-300 block mb-2">Tag Promocional (Badge)</label>
+                                            <input type="text" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none" value={vault.branding.landingTag} onChange={e => updateBranding('landingTag', e.target.value)} />
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <label className="text-xs font-bold text-slate-300 block mb-2">Subtítulo de Apoio</label>
+                                            <textarea rows={2} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none resize-none" value={vault.branding.landingPageSubheadline} onChange={e => updateBranding('landingPageSubheadline', e.target.value)} />
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-slate-950 border border-slate-800 rounded-xl p-6">
+                                        <h4 className="text-xs font-bold text-blue-400 uppercase mb-4 flex items-center gap-2"><DollarSign size={14}/> Configuração de Planos (Preço & Recursos)</h4>
+                                        
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                                            {(['START', 'GROWTH', 'SCALE'] as const).map(planKey => (
+                                                <div key={planKey} className="bg-slate-900 border border-slate-700 rounded-xl p-4 space-y-4 hover:border-blue-500/50 transition-colors">
+                                                    <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                                                        <label className="text-xs font-bold text-white uppercase tracking-wider">{planKey}</label>
+                                                    </div>
                                                     <div>
-                                                        <div className="h-3 w-24 bg-slate-300 rounded mb-1"></div>
-                                                        <div className="h-2 w-16 bg-slate-200 rounded"></div>
+                                                        <label className="text-[10px] text-slate-500 uppercase block mb-1">Preço Mensal (R$)</label>
+                                                        <input 
+                                                            type="number" 
+                                                            className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm font-bold text-white focus:border-blue-500 outline-none" 
+                                                            value={vault.plans[planKey].price} 
+                                                            onChange={e => updatePlan(planKey, 'price', Number(e.target.value))} 
+                                                        />
                                                     </div>
-                                                    <div className="h-6 w-20 rounded shadow-sm text-[8px] text-white flex items-center justify-center font-bold" style={{backgroundColor: vault.branding.primaryColor}}>Novo Item</div>
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <div className="h-20 bg-white rounded-lg border border-slate-200 p-2">
-                                                        <div className="h-6 w-6 rounded-full mb-2 bg-opacity-20 flex items-center justify-center" style={{backgroundColor: vault.branding.primaryColor + '33', color: vault.branding.primaryColor}}><Activity size={12}/></div>
-                                                        <div className="h-2 w-10 bg-slate-200 rounded"></div>
+                                                    
+                                                    <div>
+                                                        <label className="text-[10px] text-slate-500 uppercase block mb-1">Recursos (1 por linha)</label>
+                                                        <textarea 
+                                                            rows={5}
+                                                            className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-xs text-slate-300 focus:border-blue-500 outline-none resize-none leading-relaxed"
+                                                            value={vault.plans[planKey].features.join('\n')}
+                                                            onChange={e => updatePlan(planKey, 'features', e.target.value.split('\n'))}
+                                                        />
                                                     </div>
-                                                    <div className="h-20 bg-white rounded-lg border border-slate-200 p-2"></div>
                                                 </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="flex items-center gap-4 bg-slate-900 p-4 rounded-xl border border-slate-700">
+                                            <div className="flex-1">
+                                                <label className="text-sm font-bold text-white block mb-1 flex items-center gap-2">
+                                                    Desconto para Plano Anual
+                                                    <span className="text-[10px] bg-green-900/30 text-green-400 px-2 py-0.5 rounded border border-green-900/50">Aplicado Automaticamente</span>
+                                                </label>
+                                                <p className="text-xs text-slate-500">Porcentagem de desconto oferecida para pagamentos anuais.</p>
+                                            </div>
+                                            <div className="flex items-center gap-3 w-48">
+                                                <input type="range" min="0" max="50" step="5" className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500" value={vault.annualDiscountPercentage} onChange={e => updateVal('annualDiscountPercentage', Number(e.target.value))} />
+                                                <span className="text-lg font-bold text-white w-12 text-right">{vault.annualDiscountPercentage}%</span>
                                             </div>
                                         </div>
-                                    )}
-
-                                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-3 py-1 rounded-full shadow-lg opacity-80 pointer-events-none">
-                                        Live Preview: {previewMode === 'login' ? `Login (${vault.branding.loginLayout})` : 'Dashboard'}
                                     </div>
                                 </div>
                             </div>
