@@ -5,18 +5,20 @@ import { PLAN_DEFS } from '../types';
 import * as authService from '../services/authService';
 import * as financialService from '../services/financialService';
 import { useApp } from '../contexts/AppContext';
+import { getSystemConfig } from '../services/configService';
 
 interface StripeCheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
-  selectedPlanId: keyof typeof PLAN_DEFS;
+  selectedPlanId: 'START' | 'GROWTH' | 'SCALE'; // Using generic keys
   billingCycle: 'monthly' | 'yearly';
   onSuccess: (user: any) => void;
 }
 
 const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({ isOpen, onClose, selectedPlanId, billingCycle, onSuccess }) => {
   const { showToast } = useApp();
-  const plan = PLAN_DEFS[selectedPlanId];
+  const config = getSystemConfig();
+  const plan = config.plans[selectedPlanId]; // Get from dynamic config
   const [step, setStep] = useState<'register' | 'payment'>('register');
   const [isLoading, setIsLoading] = useState(false);
   
@@ -52,6 +54,8 @@ const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({ isOpen, onClo
   const handleRedirectToStripe = async () => {
       setIsLoading(true);
       try {
+          // Using PLAN_DEFS keys mapping for backend compatibility if needed, 
+          // but here selectedPlanId aligns with config keys
           const { url } = await financialService.createCheckoutSession(selectedPlanId, billingCycle);
           
           if (url) {
@@ -80,7 +84,7 @@ const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({ isOpen, onClo
         <div className="w-full md:w-5/12 bg-slate-50 dark:bg-slate-800 p-8 border-r border-slate-200 dark:border-slate-700 flex flex-col">
             <div className="mb-8">
                 <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                    <ShieldCheck className="text-blue-600" /> FlowChat Secure
+                    <ShieldCheck className="text-blue-600" /> {config.branding.appName} Secure
                 </h3>
             </div>
 

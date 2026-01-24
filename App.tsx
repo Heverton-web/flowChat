@@ -357,7 +357,7 @@ const FlowChatApp: React.FC = () => {
           
           {/* Master Console - STRICTLY Restricted to Owner Email */}
           {activeView === 'master_console' && isOwner && (
-              <DeveloperConsole />
+              <DeveloperConsole onLogout={handleLogout} />
           )}
         </div>
       </main>

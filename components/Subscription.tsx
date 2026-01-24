@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Crown, Check, X as XIcon, HelpCircle, Shield, Zap, Star, Layout, Users, Smartphone, 
   ArrowRight, Loader2, CreditCard, Plus, Minus, CheckCircle, Server, MessageSquare, ShieldCheck, 
-  Package, LayoutList, Layers
+  Package, LayoutList, Layers, ShoppingBag
 } from 'lucide-react';
 import { LicenseStatus } from '../types';
 import * as financialService from '../services/financialService';
@@ -11,7 +11,7 @@ import { useApp } from '../contexts/AppContext';
 import Modal from './Modal';
 
 const Subscription: React.FC = () => {
-  const { showToast } = useApp();
+  const { showToast, config } = useApp();
   const [licenseStatus, setLicenseStatus] = useState<LicenseStatus | null>(null);
   const [loading, setLoading] = useState(true);
   
@@ -32,6 +32,9 @@ const Subscription: React.FC = () => {
       seat: 0,
       contacts: 0
   });
+
+  // Use config from context for realtime updates
+  // const config = getSystemConfig(); // Removed: now using useApp() context
 
   useEffect(() => {
     loadLicense();
@@ -80,43 +83,27 @@ const Subscription: React.FC = () => {
 
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-blue-600" size={32} /></div>;
 
-  const currentTier = licenseStatus?.license.tier || 'STANDARD';
-  const getPrice = (monthly: number) => billingCycle === 'monthly' ? monthly : Math.round(monthly * 0.8);
+  const currentTier = licenseStatus?.license.tier || 'START';
+  
+  // Dynamic Discount Calculation based on Admin Setting
+  const getPrice = (monthly: number) => {
+      if (billingCycle === 'monthly') return monthly;
+      const discount = config.annualDiscountPercentage || 20; // fallback default
+      return Math.round(monthly * (1 - discount / 100));
+  };
 
-  // --- DATA ---
+  // --- DATA FROM CONFIG ---
+  // Map standard tiers to current logic
   const plans = [
-      {
-          id: 'STANDARD', name: 'Standard', price: getPrice(297), originalPrice: 297, description: 'Essencial para pequenas operações.',
-          features: [ { name: '1 Usuário (Seat)', included: true }, { name: '1 Conexão WhatsApp', included: true }, { name: 'Gestão de Contatos', included: true }, { name: 'API de Integração', included: false } ],
-          highlight: false
-      },
-      {
-          id: 'PROFESSIONAL', name: 'Professional', price: getPrice(497), originalPrice: 497, description: 'Para times em crescimento que precisam de escala.',
-          features: [ { name: '5 Usuários (Seats)', included: true }, { name: '5 Conexões WhatsApp', included: true }, { name: 'Gestão de Contatos', included: true }, { name: 'API de Integração', included: true } ],
-          highlight: true
-      },
-      {
-          id: 'ENTERPRISE', name: 'Enterprise', price: getPrice(997), originalPrice: 997, description: 'Potência máxima e controle total da marca.',
-          features: [ { name: '15 Usuários (Seats)', included: true }, { name: '15 Conexões WhatsApp', included: true }, { name: 'Gestor Dedicado', included: true }, { name: 'API & White Label', included: true } ],
-          highlight: false
-      }
+      { id: 'START', ...config.plans.START },
+      { id: 'GROWTH', ...config.plans.GROWTH },
+      { id: 'SCALE', ...config.plans.SCALE }
   ];
 
   const addons = [
       { id: 'whatsapp', name: 'Conexão Extra', icon: Smartphone, price: 97, desc: 'Adicione mais um número de WhatsApp.', key: 'whatsapp' },
       { id: 'seat', name: 'Usuário Extra', icon: Users, price: 47, desc: 'Acesso para mais um atendente.', key: 'seat' },
       { id: 'contacts', name: 'Pack Contatos', icon: Users, price: 29, desc: '+1.000 contatos na sua base.', key: 'contacts' },
-  ];
-
-  const comparisonFeatures = [
-      { name: 'Conexões WhatsApp', standard: '1', pro: '5', ent: '15' },
-      { name: 'Usuários (Seats)', standard: '1', pro: '5', ent: '15' },
-      { name: 'Disparos Mensais', standard: 'Ilimitado', pro: 'Ilimitado', ent: 'Ilimitado' },
-      { name: 'Chatbot Builder', standard: 'Básico', pro: 'Avançado', ent: 'Ilimitado' },
-      { name: 'API REST', standard: false, pro: true, ent: true },
-      { name: 'Webhooks', standard: false, pro: true, ent: true },
-      { name: 'White Label', standard: false, pro: false, ent: true },
-      { name: 'Suporte', standard: 'Email', pro: 'Chat', ent: 'Gerente Dedicado' },
   ];
 
   return (
@@ -135,7 +122,6 @@ const Subscription: React.FC = () => {
               {[
                   { id: 'upgrades', label: 'Upgrades', icon: Zap },
                   { id: 'extras', label: 'Extras e Adicionais', icon: Plus },
-                  { id: 'comparison', label: 'Compare os Recursos', icon: LayoutList },
                   { id: 'faq', label: 'Perguntas Frequentes', icon: HelpCircle },
               ].map((tab) => (
                   <button 
@@ -162,7 +148,7 @@ const Subscription: React.FC = () => {
                   <div className="inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl relative">
                       <button onClick={() => setBillingCycle('monthly')} className={`px-6 py-2 rounded-lg text-sm font-bold transition-all relative z-10 ${billingCycle === 'monthly' ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}>Mensal</button>
                       <button onClick={() => setBillingCycle('yearly')} className={`px-6 py-2 rounded-lg text-sm font-bold transition-all relative z-10 ${billingCycle === 'yearly' ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}>Anual</button>
-                      <div className="absolute -right-24 top-1/2 -translate-y-1/2 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 text-[10px] font-bold px-2 py-1 rounded-full border border-green-200 dark:border-green-700 animate-pulse">Economize 20%</div>
+                      <div className="absolute -right-24 top-1/2 -translate-y-1/2 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 text-[10px] font-bold px-2 py-1 rounded-full border border-green-200 dark:border-green-700 animate-pulse">Economize {config.annualDiscountPercentage}%</div>
                   </div>
               </div>
 
@@ -175,18 +161,29 @@ const Subscription: React.FC = () => {
                               <p className="text-slate-500 dark:text-slate-400 text-sm h-10">{plan.description}</p>
                           </div>
                           <div className="mb-6">
-                              {billingCycle === 'yearly' && <span className="text-sm text-slate-400 line-through font-medium block">R$ {plan.originalPrice}/mês</span>}
-                              <div className="flex items-end gap-1"><span className="text-4xl font-black text-slate-900 dark:text-white">R$ {plan.price}</span><span className="text-slate-400 mb-1 font-medium">/mês</span></div>
+                              {billingCycle === 'yearly' && <span className="text-sm text-slate-400 line-through font-medium block">R$ {plan.price}/mês</span>}
+                              <div className="flex items-end gap-1"><span className="text-4xl font-black text-slate-900 dark:text-white">R$ {getPrice(plan.price)}</span><span className="text-slate-400 mb-1 font-medium">/mês</span></div>
                           </div>
                           <button onClick={() => handleSelectPlan(plan)} disabled={currentTier === plan.id} className={`w-full py-3 rounded-xl font-bold mb-8 transition-all flex items-center justify-center gap-2 ${currentTier === plan.id ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 cursor-default' : plan.highlight ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-600/20' : 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-white'}`}>
                               {currentTier === plan.id ? <><CheckCircle size={18}/> Plano Atual</> : <>Começar Agora <ArrowRight size={18} /></>}
                           </button>
+                          
                           <div className="space-y-4 flex-1">
                               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Recursos Inclusos:</p>
-                              {plan.features.map((feature, idx) => (
+                              
+                              <div className="flex items-start gap-3">
+                                  <div className="mt-0.5 p-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"><Check size={12} strokeWidth={3} /></div>
+                                  <span className="text-sm text-slate-600 dark:text-slate-300"><strong>{plan.seats}</strong> Usuários (Seats)</span>
+                              </div>
+                              <div className="flex items-start gap-3">
+                                  <div className="mt-0.5 p-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"><Check size={12} strokeWidth={3} /></div>
+                                  <span className="text-sm text-slate-600 dark:text-slate-300"><strong>{plan.connections}</strong> Conexões WhatsApp</span>
+                              </div>
+
+                              {plan.features.map((feature: string, idx: number) => (
                                   <div key={idx} className="flex items-start gap-3">
-                                      <div className={`mt-0.5 p-0.5 rounded-full ${feature.included ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'}`}>{feature.included ? <Check size={12} strokeWidth={3} /> : <XIcon size={12} strokeWidth={3} />}</div>
-                                      <span className={`text-sm ${feature.included ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400 line-through'}`}>{feature.name}</span>
+                                      <div className="mt-0.5 p-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"><Check size={12} strokeWidth={3} /></div>
+                                      <span className="text-sm text-slate-600 dark:text-slate-300">{feature}</span>
                                   </div>
                               ))}
                           </div>
@@ -220,53 +217,14 @@ const Subscription: React.FC = () => {
                           <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 flex-1">{addon.desc}</p>
                           <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
                               <div className="flex items-center gap-3 px-2">
-                                  <button onClick={() => setAddonQuantities({...addonQuantities, [addon.key]: Math.max(0, addonQuantities[addon.key as keyof typeof addonQuantities] - 1)})} className="w-8 h-8 flex items-center justify-center rounded-md bg-white dark:bg-slate-700 shadow-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100"><Minus size={14}/></button>
-                                  <span className="font-bold text-slate-800 dark:text-white w-4 text-center">{addonQuantities[addon.key as keyof typeof addonQuantities]}</span>
-                                  <button onClick={() => setAddonQuantities({...addonQuantities, [addon.key]: addonQuantities[addon.key as keyof typeof addonQuantities] + 1})} className="w-8 h-8 flex items-center justify-center rounded-md bg-white dark:bg-slate-700 shadow-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100"><Plus size={14}/></button>
+                                  <button onClick={() => setAddonQuantities({...addonQuantities, [addon.key]: Math.max(0, (addonQuantities as any)[addon.key] - 1)})} className="w-8 h-8 flex items-center justify-center rounded-md bg-white dark:bg-slate-700 shadow-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100"><Minus size={14}/></button>
+                                  <span className="font-bold text-slate-800 dark:text-white w-4 text-center">{(addonQuantities as any)[addon.key]}</span>
+                                  <button onClick={() => setAddonQuantities({...addonQuantities, [addon.key]: (addonQuantities as any)[addon.key] + 1})} className="w-8 h-8 flex items-center justify-center rounded-md bg-white dark:bg-slate-700 shadow-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100"><Plus size={14}/></button>
                               </div>
-                              <button onClick={() => handleBuyAddon(addon.name, addon.price, addonQuantities[addon.key as keyof typeof addonQuantities])} disabled={addonQuantities[addon.key as keyof typeof addonQuantities] === 0} className="bg-slate-900 dark:bg-slate-600 text-white px-4 py-1.5 rounded-md text-xs font-bold disabled:opacity-50 hover:bg-slate-800 transition-colors">Contratar</button>
+                              <button onClick={() => handleBuyAddon(addon.name, addon.price, (addonQuantities as any)[addon.key])} disabled={(addonQuantities as any)[addon.key] === 0} className="bg-slate-900 dark:bg-slate-600 text-white px-4 py-1.5 rounded-md text-xs font-bold disabled:opacity-50 hover:bg-slate-800 transition-colors">Contratar</button>
                           </div>
                       </div>
                   ))}
-              </div>
-          </div>
-      )}
-
-      {/* --- CONTENT: COMPARISON --- */}
-      {activeTab === 'comparison' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 max-w-5xl mx-auto">
-              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                  <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-                      <h3 className="text-lg font-bold text-slate-800 dark:text-white text-center">Matriz Completa de Recursos</h3>
-                  </div>
-                  <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                          <thead>
-                              <tr className="bg-slate-50/50 dark:bg-slate-800">
-                                  <th className="p-4 text-left font-medium text-slate-500 dark:text-slate-400 w-1/3">Funcionalidade</th>
-                                  <th className="p-4 text-center font-bold text-slate-700 dark:text-slate-300 w-1/5">Standard</th>
-                                  <th className="p-4 text-center font-bold text-indigo-600 dark:text-indigo-400 w-1/5 bg-indigo-50/50 dark:bg-indigo-900/10">Professional</th>
-                                  <th className="p-4 text-center font-bold text-slate-800 dark:text-white w-1/5">Enterprise</th>
-                              </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                              {comparisonFeatures.map((row, idx) => (
-                                  <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                                      <td className="p-4 text-slate-600 dark:text-slate-300 font-medium">{row.name}</td>
-                                      <td className="p-4 text-center text-slate-500 dark:text-slate-400">
-                                          {typeof row.standard === 'boolean' ? (row.standard ? <Check size={18} className="mx-auto text-green-500"/> : <XIcon size={18} className="mx-auto text-slate-300"/>) : row.standard}
-                                      </td>
-                                      <td className="p-4 text-center text-slate-700 dark:text-slate-200 bg-indigo-50/30 dark:bg-indigo-900/5 font-medium">
-                                          {typeof row.pro === 'boolean' ? (row.pro ? <Check size={18} className="mx-auto text-green-500"/> : <XIcon size={18} className="mx-auto text-slate-300"/>) : row.pro}
-                                      </td>
-                                      <td className="p-4 text-center text-slate-800 dark:text-white font-bold">
-                                          {typeof row.ent === 'boolean' ? (row.ent ? <Check size={18} className="mx-auto text-green-500"/> : <XIcon size={18} className="mx-auto text-slate-300"/>) : row.ent}
-                                      </td>
-                                  </tr>
-                              ))}
-                          </tbody>
-                      </table>
-                  </div>
               </div>
           </div>
       )}

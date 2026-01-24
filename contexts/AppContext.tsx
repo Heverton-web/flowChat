@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { CheckCircle, AlertCircle, X, Info } from 'lucide-react';
 import { Language, translations } from '../translations';
-import { getSystemConfig, BrandingConfig } from '../services/configService';
+import { getSystemConfig, BrandingConfig, SystemConfig } from '../services/configService';
 
 type Theme = 'light' | 'dark';
 type ToastType = 'success' | 'error' | 'info';
@@ -17,6 +17,7 @@ interface AppContextType {
   theme: Theme;
   language: Language;
   branding: BrandingConfig;
+  config: SystemConfig; // Configuração completa exposta para a app
   toggleTheme: () => void;
   setLanguage: (lang: Language) => void;
   t: (key: keyof typeof translations['pt-BR']) => string;
@@ -41,22 +42,10 @@ const hexToRgb = (hex: string) => {
 }
 
 // Helper para gerar paleta (simplificada)
-// Na prática, apenas mudamos a matiz principal, mantendo a luminosidade padrão do Tailwind
 const applyThemeColors = (primaryHex: string) => {
     const root = document.documentElement;
     const rgb = hexToRgb(primaryHex);
-    
-    // Define a cor primária base (usada pelo Tailwind configurado no index.html)
-    // Estamos sobrescrevendo o que seria o "blue-600" padrão
     root.style.setProperty('--color-primary-500', rgb);
-    
-    // Para simplificar, usamos a mesma base RGB para todos, mas em um sistema real
-    // calcularíamos a luminosidade para 50, 100, etc.
-    // Aqui confiamos que o Tailwind usará a opacidade ou o mix-blend se configurado,
-    // ou simplesmente aceitamos que o White Label muda o tom principal.
-    // Uma abordagem melhor é setar variáveis específicas se tivermos o algoritmo de lighten/darken.
-    
-    // Fallback simples: setar a variável global que o index.html vai ler
     root.style.setProperty('--primary-rgb', rgb);
 };
 
@@ -75,7 +64,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return 'pt-BR';
   });
 
-  // Branding State
+  // System Config State (Single Source of Truth)
+  const [config, setConfig] = useState<SystemConfig>(getSystemConfig());
   const [branding, setBranding] = useState<BrandingConfig>(getSystemConfig().branding);
 
   // Toast State
@@ -117,14 +107,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Listen for config changes from God Mode
   useEffect(() => {
       const handleConfigUpdate = () => {
-          setBranding(getSystemConfig().branding);
+          const newConfig = getSystemConfig();
+          setConfig(newConfig);
+          setBranding(newConfig.branding);
       };
       window.addEventListener('flowchat_config_updated', handleConfigUpdate);
       return () => window.removeEventListener('flowchat_config_updated', handleConfigUpdate);
   }, []);
 
   const refreshBranding = () => {
-      setBranding(getSystemConfig().branding);
+      const newConfig = getSystemConfig();
+      setConfig(newConfig);
+      setBranding(newConfig.branding);
   };
 
   const toggleTheme = () => {
@@ -152,7 +146,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   return (
-    <AppContext.Provider value={{ theme, language, branding, toggleTheme, setLanguage, t, showToast, refreshBranding }}>
+    <AppContext.Provider value={{ theme, language, branding, config, toggleTheme, setLanguage, t, showToast, refreshBranding }}>
       {children}
       
       {/* Toast Container */}
@@ -163,10 +157,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border animate-in slide-in-from-right-full transition-all max-w-sm ${
               toast.type === 'success' ? 'bg-white dark:bg-slate-800 border-green-500 text-green-700 dark:text-green-400' :
               toast.type === 'error' ? 'bg-white dark:bg-slate-800 border-red-500 text-red-700 dark:text-red-400' :
-              'bg-white dark:bg-slate-800 border-blue-500 text-blue-700 dark:text-blue-400' // Dynamic blue handled by CSS variables implicitly if using primary class, but here hardcoded classes might need check.
+              'bg-white dark:bg-slate-800 border-blue-500 text-blue-700 dark:text-blue-400'
             }`}
-            // Note: For toast specifically, we kept hardcoded colors for semantic meaning (green=success, red=error). 
-            // The default info toast uses blue, which will naturally align if we change blue definition in index.html.
           >
             {toast.type === 'success' && <CheckCircle size={20} className="shrink-0" />}
             {toast.type === 'error' && <AlertCircle size={20} className="shrink-0" />}

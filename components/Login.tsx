@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { 
     MessageCircle, Mail, Lock, ArrowRight, Loader2, ShieldCheck, AlertTriangle, 
     Crown, Briefcase, Headset, Terminal, Rocket, Sparkles, CheckCircle, Bot,
-    Layout, Smartphone, Users
+    Layout, Smartphone, Users, Zap, Play
 } from 'lucide-react';
 import { User } from '../types';
 import { useApp } from '../contexts/AppContext';
@@ -15,6 +15,80 @@ interface LoginProps {
   onNavigateToRegister: () => void;
   onNavigateToSales?: () => void;
 }
+
+const SalesPromoCard = ({ branding, onNavigate }: { branding: any, onNavigate: () => void }) => (
+    <div 
+        className="relative group cursor-pointer w-full max-w-md h-full min-h-[550px] lg:h-[650px] flex flex-col perspective-1000"
+        onClick={(e) => { e.stopPropagation(); onNavigate(); }}
+    >
+        {/* Animated Background Blur - Glow Effect */}
+        <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 rounded-[2.5rem] blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200 will-change-transform"></div>
+        
+        <div className="relative h-full bg-slate-950 rounded-[2.4rem] overflow-hidden border border-white/10 shadow-2xl flex flex-col transform transition-all duration-300 group-hover:-translate-y-2 group-hover:shadow-indigo-500/20">
+            
+            {/* Background Elements */}
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 z-0"></div>
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
+            <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-blue-600/20 rounded-full blur-[100px] translate-y-1/3 -translate-x-1/3"></div>
+            
+            {/* Pattern Overlay */}
+            <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] z-0 pointer-events-none"></div>
+
+            <div className="relative z-10 p-10 flex flex-col h-full justify-between">
+                <div>
+                    {/* Badge */}
+                    <div className="flex justify-start mb-8">
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md shadow-sm group-hover:bg-white/10 transition-all">
+                            <Sparkles size={12} className="text-yellow-400 fill-yellow-400" />
+                            <span className="text-[10px] font-bold text-slate-200 tracking-widest uppercase">{branding.landingTag || 'Enterprise'}</span>
+                        </div>
+                    </div>
+
+                    {/* Text Content */}
+                    <h3 className="text-3xl lg:text-4xl font-extrabold text-white mb-6 leading-tight drop-shadow-sm">
+                        {branding.landingPageHeadline}
+                    </h3>
+                    <p className="text-indigo-200/80 text-base leading-relaxed mb-8">
+                        {branding.landingPageSubheadline}
+                    </p>
+                    
+                    {/* Features List as Cards */}
+                    <div className="space-y-3 mt-4">
+                        {branding.landingFeatures.slice(0, 3).map((feat: any, i: number) => (
+                            <div key={i} className="flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all group/item backdrop-blur-sm">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white shadow-lg shrink-0 group-hover/item:scale-110 transition-transform">
+                                    <CheckCircle size={18} className="text-white" strokeWidth={2.5} />
+                                </div>
+                                <div>
+                                    <h4 className="text-white font-bold text-sm tracking-wide group-hover/item:text-indigo-200 transition-colors">{feat.title}</h4>
+                                    {feat.description && (
+                                        <p className="text-slate-400 text-xs mt-0.5 line-clamp-1">{feat.description}</p>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Footer CTA */}
+                <div className="mt-8 pt-6 border-t border-white/5">
+                    <button className="w-full group/btn relative overflow-hidden bg-white text-slate-900 py-4 px-6 rounded-2xl font-bold text-sm shadow-[0_0_25px_rgba(255,255,255,0.15)] transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-between">
+                        <span className="relative z-10 flex items-center gap-2">
+                            Ver Planos e Preços
+                        </span>
+                        <div className="bg-slate-100 p-2 rounded-full group-hover/btn:bg-indigo-50 transition-colors relative z-10">
+                            <ArrowRight size={16} className="text-slate-900 group-hover/btn:translate-x-1 transition-transform"/>
+                        </div>
+                        <div className="absolute inset-0 bg-gradient-to-r from-white via-indigo-50 to-white opacity-0 group-hover/btn:opacity-100 transition-opacity z-0"></div>
+                    </button>
+                    <p className="text-center text-[10px] text-slate-500 mt-4 opacity-60">
+                        Clique para conhecer todas as funcionalidades
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+);
 
 const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigateToSales }) => {
   const { t, showToast, branding } = useApp();
@@ -59,6 +133,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
     }
   };
 
+  // Helper icons for dynamic benefits
+  const icons = [Layout, Smartphone, Users];
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col justify-center p-4 lg:p-8 transition-colors duration-300 relative overflow-hidden">
       
@@ -68,93 +145,108 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
           <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/20 rounded-full blur-[120px]"></div>
       </div>
 
-      <div className="w-full max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch relative z-10">
+      <div className="w-full max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 items-center relative z-10">
         
-        {/* COLUMN 1: BRAND IDENTITY */}
-        <div className="flex flex-col justify-center space-y-8 p-4 lg:p-8 animate-in slide-in-from-left-8 duration-700 order-1">
-            <div>
-                <Logo className="h-12 mb-6" />
-                <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-sm">
+        {/* COLUMN 1: BRAND IDENTITY & BENEFITS */}
+        <div className="hidden lg:flex flex-col justify-center h-full p-8 relative z-10 order-1 animate-in slide-in-from-left-10 duration-700">
+            
+            {/* Decorative blur */}
+            <div className="absolute top-1/3 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px] pointer-events-none"></div>
+
+            <div className="mb-12">
+                <div className="flex items-center gap-4 mb-6">
+                    <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-600/20 text-white">
+                       <Logo className="h-8 w-8" showText={false} /> 
+                    </div>
+                    <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{branding.appName}</span>
+                </div>
+                
+                <p className="text-xl text-slate-600 dark:text-slate-300 leading-relaxed font-medium max-w-sm">
                     {branding.landingPageSubheadline}
                 </p>
             </div>
-            
-            <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center text-blue-500 shadow-sm border border-slate-100 dark:border-slate-700 shrink-0"><Layout size={20} /></div>
-                    <div>
-                        <span className="font-bold text-slate-700 dark:text-slate-200 block text-sm">Ambientes Exclusivos</span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400">Admin, Gestor, Atendentes e Devs.</span>
-                    </div>
-                </div>
-                <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center text-green-500 shadow-sm border border-slate-100 dark:border-slate-700 shrink-0"><Smartphone size={20} /></div>
-                    <div>
-                        <span className="font-bold text-slate-700 dark:text-slate-200 block text-sm">Configuração Individual</span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400">Instâncias isoladas por usuário.</span>
-                    </div>
-                </div>
-                <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center text-purple-500 shadow-sm border border-slate-100 dark:border-slate-700 shrink-0"><Users size={20} /></div>
-                    <div>
-                        <span className="font-bold text-slate-700 dark:text-slate-200 block text-sm">Gestão Granular</span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400">Controle total de equipe e performance.</span>
-                    </div>
-                </div>
+
+            <div className="space-y-8">
+                {branding.loginBenefits.map((item, idx) => {
+                    const Icon = icons[idx % icons.length];
+                    return (
+                        <div key={idx} className="flex gap-5 group">
+                            <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:border-blue-200 dark:group-hover:border-blue-900/50 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/10 shadow-sm transition-all duration-300 shrink-0 transform group-hover:scale-105">
+                                <Icon size={26} strokeWidth={1.5} />
+                            </div>
+                            <div className="flex flex-col justify-center">
+                                <h4 className="font-bold text-slate-900 dark:text-white text-lg mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{item.title}</h4>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 leading-snug font-medium opacity-90">{item.description}</p>
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
 
-            <div className="pt-4 flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-wider">
-                <ShieldCheck size={16} />
-                <span>Ambiente Criptografado</span>
+            <div className="mt-16 flex items-center gap-3 text-slate-400 text-[10px] font-bold uppercase tracking-widest opacity-80 pl-1">
+                <ShieldCheck size={16} className="text-slate-500 dark:text-slate-400"/>
+                <span>Ambiente 100% Criptografado</span>
             </div>
         </div>
 
         {/* COLUMN 2: LOGIN FORM */}
-        <div className="flex items-center justify-center order-2">
-            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 p-8 w-full max-w-md animate-in fade-in zoom-in-95 duration-500 relative">
+        <div className="flex items-center justify-center order-2 relative z-20">
+            {/* Glow effect behind the card */}
+            <div className="absolute inset-0 bg-blue-600/20 blur-[100px] rounded-full pointer-events-none"></div>
+            
+            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2.5rem] shadow-2xl border border-white/20 dark:border-slate-700 p-8 w-full max-w-[420px] animate-in fade-in zoom-in-95 duration-500 relative overflow-hidden">
                 
+                {/* Decorator top line */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/3 h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent"></div>
+
                 {/* Header Login */}
-                <div className="mb-6">
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{branding.loginTitle}</h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{branding.loginMessage}</p>
+                <div className="mb-8 text-center">
+                    <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{branding.loginTitle}</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium">{branding.loginMessage}</p>
                 </div>
 
                 {/* Quick Access Buttons (DEMO ONLY) */}
-                <div className="mb-6">
-                    <div className="flex items-center justify-between mb-3">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Acesso Rápido (Demo)</p>
+                <div className="mb-8 bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+                    <div className="flex items-center justify-between px-2 mb-1.5">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Acesso Rápido (Demo)</p>
                     </div>
-                    <div className="grid grid-cols-4 gap-2">
-                        <button onClick={() => handleAutoFill('super')} className="flex flex-col items-center justify-center gap-1 p-2 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-lg text-[10px] font-bold hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors border border-purple-100 dark:border-purple-800" title="Super Admin">
-                            <Crown size={14} /> SUPER
+                    <div className="grid grid-cols-4 gap-1">
+                        <button onClick={() => handleAutoFill('super')} className="flex flex-col items-center justify-center py-2 rounded-xl text-[10px] font-bold transition-all hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-slate-600 dark:text-slate-300" title="Super Admin">
+                            <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-1"><Crown size={14} /></div>
+                            SUPER
                         </button>
-                        <button onClick={() => handleAutoFill('manager')} className="flex flex-col items-center justify-center gap-1 p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-[10px] font-bold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors border border-blue-100 dark:border-blue-800" title="Gestor">
-                            <Briefcase size={14} /> GESTOR
+                        <button onClick={() => handleAutoFill('manager')} className="flex flex-col items-center justify-center py-2 rounded-xl text-[10px] font-bold transition-all hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-slate-600 dark:text-slate-300" title="Gestor">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-1"><Briefcase size={14} /></div>
+                            GESTOR
                         </button>
-                        <button onClick={() => handleAutoFill('agent')} className="flex flex-col items-center justify-center gap-1 p-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg text-[10px] font-bold hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors border border-green-100 dark:border-green-800" title="Atendente">
-                            <Headset size={14} /> AGENT
+                        <button onClick={() => handleAutoFill('agent')} className="flex flex-col items-center justify-center py-2 rounded-xl text-[10px] font-bold transition-all hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-slate-600 dark:text-slate-300" title="Atendente">
+                            <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center mb-1"><Headset size={14} /></div>
+                            AGENT
                         </button>
-                        <button onClick={() => handleAutoFill('dev')} className="flex flex-col items-center justify-center gap-1 p-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-[10px] font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors border border-slate-200 dark:border-slate-600" title="Desenvolvedor">
-                            <Terminal size={14} /> DEV
+                        <button onClick={() => handleAutoFill('dev')} className="flex flex-col items-center justify-center py-2 rounded-xl text-[10px] font-bold transition-all hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-slate-600 dark:text-slate-300" title="Desenvolvedor">
+                            <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 flex items-center justify-center mb-1"><Terminal size={14} /></div>
+                            DEV
                         </button>
                     </div>
                 </div>
                 
                 {error && (
-                  <div className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm p-3 rounded-lg mb-4 flex items-start gap-2">
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold p-3 rounded-xl mb-6 flex items-start gap-2 animate-in slide-in-from-top-2">
                     <AlertTriangle size={16} className="mt-0.5 shrink-0"/>
                     <span>{error}</span>
                   </div>
                 )}
 
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('email_label')}</label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <form onSubmit={handleLogin} className="space-y-5">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1">{t('email_label')}</label>
+                    <div className="relative group">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none">
+                          <Mail size={18} />
+                      </div>
                       <input 
                         type="email" 
-                        className="w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                        className="w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:text-white transition-all placeholder:text-slate-400 text-sm font-medium"
                         placeholder="nome@empresa.com"
                         value={email}
                         onChange={e => setEmail(e.target.value)}
@@ -162,13 +254,15 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
                     </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('password_label')}</label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1">{t('password_label')}</label>
+                    <div className="relative group">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none">
+                          <Lock size={18} />
+                      </div>
                       <input 
                         type="password" 
-                        className="w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                        className="w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:text-white transition-all placeholder:text-slate-400 text-sm font-medium"
                         placeholder="••••••••"
                         value={password}
                         onChange={e => setPassword(e.target.value)}
@@ -176,24 +270,24 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-sm">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
-                      <span className="text-slate-600 dark:text-slate-400">Lembrar</span>
+                  <div className="flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400 pt-1">
+                    <label className="flex items-center gap-2 cursor-pointer hover:text-slate-700 dark:hover:text-slate-300 transition-colors">
+                      <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 bg-slate-100 dark:bg-slate-700 border-none" />
+                      <span>Lembrar-me</span>
                     </label>
-                    <a href="#" className="text-blue-600 hover:underline font-medium">Esqueceu?</a>
+                    <a href="#" className="text-blue-600 hover:text-blue-500 hover:underline">Esqueceu a senha?</a>
                   </div>
 
                   <button 
                     type="submit" 
                     disabled={loading}
-                    className="w-full bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed transform active:scale-[0.98]"
                   >
                     {loading ? <Loader2 className="animate-spin" /> : <>{t('enter_button')} <ArrowRight size={18} /></>}
                   </button>
                 </form>
 
-                <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-700 text-center">
+                <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700/50 text-center">
                   <p className="text-slate-500 dark:text-slate-400 text-sm">
                     Primeiro acesso?{' '}
                     <button onClick={onNavigateToRegister} className="text-blue-600 font-bold hover:underline">
@@ -204,38 +298,10 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
             </div>
         </div>
 
-        {/* COLUMN 3: PLANS CTA (Conditional based on WhiteLabel config) */}
+        {/* COLUMN 3: PLANS CTA (Enhanced Card) */}
         {branding.showSalesPage && (
             <div className="flex items-center justify-center animate-in slide-in-from-right-8 duration-700 order-3">
-                <div 
-                    className="bg-gradient-to-br from-blue-600 via-indigo-700 to-violet-800 p-1 rounded-3xl shadow-2xl w-full max-w-md h-auto lg:h-[550px] cursor-pointer group hover:scale-[1.02] transition-all duration-300 relative overflow-hidden flex flex-col"
-                    onClick={onNavigateToSales}
-                >
-                    <div className="absolute top-0 right-0 p-0 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <Rocket size={200} className="text-white transform rotate-12 translate-x-10 -translate-y-10"/>
-                    </div>
-                    
-                    <div className="bg-white/10 backdrop-blur-md p-8 rounded-[22px] flex-1 flex flex-col justify-between relative z-10 border border-white/10">
-                        <div>
-                            <div className="inline-flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full text-xs font-bold text-white mb-6 backdrop-blur-md border border-white/20 shadow-sm">
-                                <Sparkles size={12} className="text-yellow-300"/> Solução Enterprise
-                            </div>
-                            <h3 className="text-3xl font-bold text-white mb-4 leading-tight">{branding.landingPageHeadline}</h3>
-                            <p className="text-blue-100 text-base leading-relaxed mb-6 font-medium">
-                                Infraestrutura dedicada de alta performance para empresas que não podem parar.
-                            </p>
-                            <ul className="space-y-4 mb-8 text-blue-50 text-sm font-medium">
-                                <li className="flex gap-3 items-center"><CheckCircle size={18} className="text-green-300"/> Instâncias de Alta Disponibilidade</li>
-                                <li className="flex gap-3 items-center"><CheckCircle size={18} className="text-green-300"/> Gestão de Times e Departamentos</li>
-                                <li className="flex gap-3 items-center"><CheckCircle size={18} className="text-green-300"/> API Oficial e Webhooks Ilimitados</li>
-                            </ul>
-                        </div>
-                        
-                        <button onClick={(e) => { e.stopPropagation(); onNavigateToSales && onNavigateToSales(); }} className="bg-white text-blue-700 hover:bg-blue-50 px-6 py-4 rounded-xl font-bold text-base shadow-lg transition-all w-full flex items-center justify-center gap-2 group-hover:shadow-blue-900/30">
-                            Ver Planos e Preços <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform"/>
-                        </button>
-                    </div>
-                </div>
+                <SalesPromoCard branding={branding} onNavigate={onNavigateToSales || (() => {})} />
             </div>
         )}
 
