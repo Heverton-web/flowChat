@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Smartphone, Users, Settings as SettingsIcon, LogOut, Menu, X, CreditCard, Send, MessageCircle, PieChart, DollarSign, Moon, Sun, Globe, PlayCircle, ChevronLeft, ChevronRight, HelpCircle, Loader2, Terminal, Plug, Activity, ShieldCheck, Server, Layers } from 'lucide-react';
+import { LayoutDashboard, Smartphone, Users, Settings as SettingsIcon, LogOut, Menu, X, CreditCard, Send, MessageCircle, PieChart, DollarSign, Moon, Sun, Globe, PlayCircle, ChevronLeft, ChevronRight, HelpCircle, Loader2, Terminal, Plug, Activity, ShieldCheck, Server, Layers, Tag } from 'lucide-react';
 import { ViewState, UserRole, User } from './types';
 import Dashboard from './components/Dashboard';
 import Instances from './components/Instances';
 import Contacts from './components/Contacts';
+import Tags from './components/Tags';
 import Team from './components/Team'; 
 import Campaigns from './components/Campaigns';
 import Settings from './components/Settings';
@@ -234,6 +235,7 @@ const FlowChatApp: React.FC = () => {
               <>
                 <SectionHeader label="Operacional" />
                 {checkVisibility('contacts') && <NavItem view="contacts" icon={Users} label="Contatos" />}
+                {checkVisibility('tags') && <NavItem view="tags" icon={Tag} label={t('nav_tags')} />}
                 {checkVisibility('campaigns') && <NavItem view="campaigns" icon={Send} label="Campanhas" />}
                 {checkVisibility('instances') && <NavItem view="instances" icon={Smartphone} label="Minha Instância" />}
               </>
@@ -356,6 +358,7 @@ const FlowChatApp: React.FC = () => {
           {activeView === 'instances' && <Instances currentUser={currentUser} />}
           {activeView === 'campaigns' && <Campaigns currentUser={currentUser} />}
           {activeView === 'contacts' && <Contacts currentUser={currentUser} />}
+          {activeView === 'tags' && <Tags currentUser={currentUser} />}
           
           {/* Financial Restrict to Super Admin */}
           {(activeView === 'financial' && isSuperAdmin) && <Financial currentUser={currentUser} />}

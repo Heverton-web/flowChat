@@ -97,6 +97,11 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Fallback defaults if new config keys don't exist yet
+  const showBrand = branding.layoutVisibility?.showBrandContainer ?? true;
+  const showLogin = branding.layoutVisibility?.showLoginContainer ?? true;
+  const showLanding = branding.layoutVisibility?.showLandingContainer ?? true;
+
   const handleAutoFill = (role: 'super' | 'manager' | 'agent') => {
       setPassword('123456');
       switch(role) {
@@ -147,154 +152,158 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
       <div className="w-full max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 items-center relative z-10">
         
         {/* COLUMN 1: BRAND IDENTITY & BENEFITS */}
-        <div className="hidden lg:flex flex-col justify-center h-full p-8 relative z-10 order-1 animate-in slide-in-from-left-10 duration-700">
-            
-            {/* Decorative blur */}
-            <div className="absolute top-1/3 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px] pointer-events-none"></div>
-
-            <div className="mb-12">
-                <div className="flex items-center gap-4 mb-6">
-                    <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-600/20 text-white">
-                       <Logo className="h-8 w-8" showText={false} /> 
-                    </div>
-                    <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{branding.appName}</span>
-                </div>
+        {showBrand && (
+            <div className="hidden lg:flex flex-col justify-center h-full p-8 relative z-10 order-1 animate-in slide-in-from-left-10 duration-700">
                 
-                <p className="text-xl text-slate-600 dark:text-slate-300 leading-relaxed font-medium max-w-sm">
-                    {branding.landingPageSubheadline}
-                </p>
-            </div>
+                {/* Decorative blur */}
+                <div className="absolute top-1/3 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px] pointer-events-none"></div>
 
-            <div className="space-y-8">
-                {branding.loginBenefits.map((item, idx) => {
-                    const Icon = icons[idx % icons.length];
-                    return (
-                        <div key={idx} className="flex gap-5 group">
-                            <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:border-blue-200 dark:group-hover:border-blue-900/50 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/10 shadow-sm transition-all duration-300 shrink-0 transform group-hover:scale-105">
-                                <Icon size={26} strokeWidth={1.5} />
-                            </div>
-                            <div className="flex flex-col justify-center">
-                                <h4 className="font-bold text-slate-900 dark:text-white text-lg mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{item.title}</h4>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 leading-snug font-medium opacity-90">{item.description}</p>
-                            </div>
+                <div className="mb-12">
+                    <div className="flex items-center gap-4 mb-6">
+                        <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-600/20 text-white">
+                        <Logo className="h-8 w-8" showText={false} /> 
                         </div>
-                    );
-                })}
-            </div>
+                        <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{branding.appName}</span>
+                    </div>
+                    
+                    <p className="text-xl text-slate-600 dark:text-slate-300 leading-relaxed font-medium max-w-sm">
+                        {branding.landingPageSubheadline}
+                    </p>
+                </div>
 
-            <div className="mt-16 flex items-center gap-3 text-slate-400 text-[10px] font-bold uppercase tracking-widest opacity-80 pl-1">
-                <ShieldCheck size={16} className="text-slate-500 dark:text-slate-400"/>
-                <span>Ambiente 100% Criptografado</span>
+                <div className="space-y-8">
+                    {branding.loginBenefits.map((item, idx) => {
+                        const Icon = icons[idx % icons.length];
+                        return (
+                            <div key={idx} className="flex gap-5 group">
+                                <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:border-blue-200 dark:group-hover:border-blue-900/50 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/10 shadow-sm transition-all duration-300 shrink-0 transform group-hover:scale-105">
+                                    <Icon size={26} strokeWidth={1.5} />
+                                </div>
+                                <div className="flex flex-col justify-center">
+                                    <h4 className="font-bold text-slate-900 dark:text-white text-lg mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{item.title}</h4>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 leading-snug font-medium opacity-90">{item.description}</p>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                <div className="mt-16 flex items-center gap-3 text-slate-400 text-[10px] font-bold uppercase tracking-widest opacity-80 pl-1">
+                    <ShieldCheck size={16} className="text-slate-500 dark:text-slate-400"/>
+                    <span>Ambiente 100% Criptografado</span>
+                </div>
             </div>
-        </div>
+        )}
 
         {/* COLUMN 2: LOGIN FORM */}
-        <div className="flex items-center justify-center order-2 relative z-20">
-            {/* Glow effect behind the card */}
-            <div className="absolute inset-0 bg-blue-600/20 blur-[100px] rounded-full pointer-events-none"></div>
-            
-            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2.5rem] shadow-2xl border border-white/20 dark:border-slate-700 p-8 w-full max-w-[420px] animate-in fade-in zoom-in-95 duration-500 relative overflow-hidden">
+        {showLogin && (
+            <div className={`flex items-center justify-center order-2 relative z-20 ${(!showBrand && !showLanding) ? 'col-span-1 lg:col-span-3' : ''}`}>
+                {/* Glow effect behind the card */}
+                <div className="absolute inset-0 bg-blue-600/20 blur-[100px] rounded-full pointer-events-none"></div>
                 
-                {/* Decorator top line */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/3 h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent"></div>
+                <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2.5rem] shadow-2xl border border-white/20 dark:border-slate-700 p-8 w-full max-w-[420px] animate-in fade-in zoom-in-95 duration-500 relative overflow-hidden">
+                    
+                    {/* Decorator top line */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/3 h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent"></div>
 
-                {/* Header Login */}
-                <div className="mb-8 text-center">
-                    <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{branding.loginTitle}</h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium">{branding.loginMessage}</p>
-                </div>
-
-                {/* Quick Access Buttons (DEMO ONLY) */}
-                <div className="mb-8 bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-2xl border border-slate-100 dark:border-slate-700/50">
-                    <div className="flex items-center justify-between px-2 mb-1.5">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Acesso Rápido (Demo)</p>
+                    {/* Header Login */}
+                    <div className="mb-8 text-center">
+                        <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{branding.loginTitle}</h2>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium">{branding.loginMessage}</p>
                     </div>
-                    <div className="grid grid-cols-3 gap-1">
-                        <button onClick={() => handleAutoFill('super')} className="flex flex-col items-center justify-center py-2 rounded-xl text-[10px] font-bold transition-all hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-slate-600 dark:text-slate-300" title="Super Admin">
-                            <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-1"><Crown size={14} /></div>
-                            SUPER
-                        </button>
-                        <button onClick={() => handleAutoFill('manager')} className="flex flex-col items-center justify-center py-2 rounded-xl text-[10px] font-bold transition-all hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-slate-600 dark:text-slate-300" title="Gestor">
-                            <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-1"><Briefcase size={14} /></div>
-                            GESTOR
-                        </button>
-                        <button onClick={() => handleAutoFill('agent')} className="flex flex-col items-center justify-center py-2 rounded-xl text-[10px] font-bold transition-all hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-slate-600 dark:text-slate-300" title="Atendente">
-                            <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center mb-1"><Headset size={14} /></div>
-                            AGENT
-                        </button>
+
+                    {/* Quick Access Buttons (DEMO ONLY) */}
+                    <div className="mb-8 bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+                        <div className="flex items-center justify-between px-2 mb-1.5">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Acesso Rápido (Demo)</p>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1">
+                            <button onClick={() => handleAutoFill('super')} className="flex flex-col items-center justify-center py-2 rounded-xl text-[10px] font-bold transition-all hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-slate-600 dark:text-slate-300" title="Super Admin">
+                                <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-1"><Crown size={14} /></div>
+                                SUPER
+                            </button>
+                            <button onClick={() => handleAutoFill('manager')} className="flex flex-col items-center justify-center py-2 rounded-xl text-[10px] font-bold transition-all hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-slate-600 dark:text-slate-300" title="Gestor">
+                                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-1"><Briefcase size={14} /></div>
+                                GESTOR
+                            </button>
+                            <button onClick={() => handleAutoFill('agent')} className="flex flex-col items-center justify-center py-2 rounded-xl text-[10px] font-bold transition-all hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-slate-600 dark:text-slate-300" title="Atendente">
+                                <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center mb-1"><Headset size={14} /></div>
+                                AGENT
+                            </button>
+                        </div>
                     </div>
-                </div>
-                
-                {error && (
-                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold p-3 rounded-xl mb-6 flex items-start gap-2 animate-in slide-in-from-top-2">
-                    <AlertTriangle size={16} className="mt-0.5 shrink-0"/>
-                    <span>{error}</span>
-                  </div>
-                )}
-
-                <form onSubmit={handleLogin} className="space-y-5">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1">{t('email_label')}</label>
-                    <div className="relative group">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none">
-                          <Mail size={18} />
-                      </div>
-                      <input 
-                        type="email" 
-                        className="w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:text-white transition-all placeholder:text-slate-400 text-sm font-medium"
-                        placeholder="nome@empresa.com"
-                        value={email}
-                        onChange={e => setEmail(e.target.value)}
-                      />
+                    
+                    {error && (
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold p-3 rounded-xl mb-6 flex items-start gap-2 animate-in slide-in-from-top-2">
+                        <AlertTriangle size={16} className="mt-0.5 shrink-0"/>
+                        <span>{error}</span>
                     </div>
-                  </div>
+                    )}
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1">{t('password_label')}</label>
-                    <div className="relative group">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none">
-                          <Lock size={18} />
-                      </div>
-                      <input 
-                        type="password" 
-                        className="w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:text-white transition-all placeholder:text-slate-400 text-sm font-medium"
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                      />
+                    <form onSubmit={handleLogin} className="space-y-5">
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1">{t('email_label')}</label>
+                        <div className="relative group">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none">
+                            <Mail size={18} />
+                        </div>
+                        <input 
+                            type="email" 
+                            className="w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:text-white transition-all placeholder:text-slate-400 text-sm font-medium"
+                            placeholder="nome@empresa.com"
+                            value={email}
+                            onChange={e => setEmail(e.target.value)}
+                        />
+                        </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400 pt-1">
-                    <label className="flex items-center gap-2 cursor-pointer hover:text-slate-700 dark:hover:text-slate-300 transition-colors">
-                      <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 bg-slate-100 dark:bg-slate-700 border-none" />
-                      <span>Lembrar-me</span>
-                    </label>
-                    <a href="#" className="text-blue-600 hover:text-blue-500 hover:underline">Esqueceu a senha?</a>
-                  </div>
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1">{t('password_label')}</label>
+                        <div className="relative group">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none">
+                            <Lock size={18} />
+                        </div>
+                        <input 
+                            type="password" 
+                            className="w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:text-white transition-all placeholder:text-slate-400 text-sm font-medium"
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={e => setPassword(e.target.value)}
+                        />
+                        </div>
+                    </div>
 
-                  <button 
-                    type="submit" 
-                    disabled={loading}
-                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed transform active:scale-[0.98]"
-                  >
-                    {loading ? <Loader2 className="animate-spin" /> : <>{t('enter_button')} <ArrowRight size={18} /></>}
-                  </button>
-                </form>
+                    <div className="flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400 pt-1">
+                        <label className="flex items-center gap-2 cursor-pointer hover:text-slate-700 dark:hover:text-slate-300 transition-colors">
+                        <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 bg-slate-100 dark:bg-slate-700 border-none" />
+                        <span>Lembrar-me</span>
+                        </label>
+                        <a href="#" className="text-blue-600 hover:text-blue-500 hover:underline">Esqueceu a senha?</a>
+                    </div>
 
-                <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700/50 text-center">
-                  <p className="text-slate-500 dark:text-slate-400 text-sm">
-                    Primeiro acesso?{' '}
-                    <button onClick={onNavigateToRegister} className="text-blue-600 font-bold hover:underline">
-                      Setup Admin
+                    <button 
+                        type="submit" 
+                        disabled={loading}
+                        className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed transform active:scale-[0.98]"
+                    >
+                        {loading ? <Loader2 className="animate-spin" /> : <>{t('enter_button')} <ArrowRight size={18} /></>}
                     </button>
-                  </p>
+                    </form>
+
+                    <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700/50 text-center">
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">
+                        Primeiro acesso?{' '}
+                        <button onClick={onNavigateToRegister} className="text-blue-600 font-bold hover:underline">
+                        Setup Admin
+                        </button>
+                    </p>
+                    </div>
                 </div>
             </div>
-        </div>
+        )}
 
         {/* COLUMN 3: PLANS CTA (Enhanced Card) */}
-        {branding.showSalesPage && (
+        {branding.showSalesPage && showLanding && (
             <div className="flex items-center justify-center animate-in slide-in-from-right-8 duration-700 order-3">
                 <SalesPromoCard branding={branding} onNavigate={onNavigateToSales || (() => {})} />
             </div>

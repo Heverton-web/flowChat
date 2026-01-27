@@ -9,6 +9,7 @@ const ptBase = {
   campaigns: 'Campanhas',
   instances: 'Instâncias',
   contacts: 'Contatos',
+  nav_tags: 'Gestão de Tags',
   financial: 'Assinatura e Cobrança',
   reports: 'Relatórios',
   subscription: 'Planos',

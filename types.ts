@@ -234,7 +234,7 @@ export interface Transaction {
   invoiceUrl?: string;
 }
 
-export type ViewState = 'dashboard' | 'inbox' | 'instances' | 'campaigns' | 'contacts' | 'base_assignment' | 'financial' | 'reports' | 'team' | 'settings' | 'onboarding' | 'master_console';
+export type ViewState = 'dashboard' | 'inbox' | 'instances' | 'campaigns' | 'contacts' | 'tags' | 'base_assignment' | 'financial' | 'reports' | 'team' | 'settings' | 'onboarding' | 'master_console';
 
 export interface WebhookConfig {
   event: string;

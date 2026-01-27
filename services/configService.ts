@@ -23,9 +23,16 @@ export interface BrandingConfig {
     loginMessage: string;
     loginBenefits: FeatureItem[]; // Os 3 itens à esquerda do login
     loginLayout: 'split' | 'center'; // Layout da tela de login
+    
+    // NEW: Visibility Control for Login Page Containers
+    layoutVisibility: {
+        showBrandContainer: boolean; // Container Disparai (Left)
+        showLoginContainer: boolean; // Container Login (Middle)
+        showLandingContainer: boolean; // Container Landing Page (Right)
+    };
 
     // Landing Page
-    showSalesPage: boolean;
+    showSalesPage: boolean; // Legacy flag (synced logic)
     landingPageHeadline: string;
     landingPageSubheadline: string;
     landingTag: string; // Ex: Enterprise Edition
@@ -54,6 +61,7 @@ export interface ModuleVisibility {
         dashboard: boolean;
         reports: boolean;
         team: boolean;
+        base_assignment: boolean; // Explicitly added
         financial: boolean; // Parent Module
         financial_overview: boolean;
         financial_plans: boolean;
@@ -72,7 +80,8 @@ export interface ModuleVisibility {
         reports: boolean;
         team: boolean;
         contacts: boolean;
-        base_assignment: boolean; // NEW MODULE
+        tags: boolean; // NEW MODULE
+        base_assignment: boolean;
         campaigns: boolean;
         instances: boolean;
         settings: boolean;
@@ -82,6 +91,7 @@ export interface ModuleVisibility {
         onboarding: boolean;
         dashboard: boolean; // Agent Dashboard ("Meu Desempenho")
         contacts: boolean;
+        tags: boolean; // NEW MODULE
         campaigns: boolean;
         instances: boolean;
         settings: boolean;
@@ -149,6 +159,13 @@ const DEFAULT_BRANDING: BrandingConfig = {
         { title: 'Gestão Granular', description: 'Controle total de equipe e performance.' }
     ],
     loginLayout: 'split',
+    
+    // Default: All Visible
+    layoutVisibility: {
+        showBrandContainer: true,
+        showLoginContainer: true,
+        showLandingContainer: true
+    },
 
     showSalesPage: true,
     landingPageHeadline: 'Escalone seu atendimento no WhatsApp hoje.',
@@ -177,6 +194,7 @@ const DEFAULT_VISIBILITY: ModuleVisibility = {
         dashboard: true,
         reports: true,
         team: true,
+        base_assignment: true, // Added
         financial: true,
         financial_overview: true,
         financial_plans: true,
@@ -194,6 +212,7 @@ const DEFAULT_VISIBILITY: ModuleVisibility = {
         reports: true,
         team: true,
         contacts: true,
+        tags: true, // NEW
         base_assignment: true,
         campaigns: true,
         instances: true,
@@ -203,6 +222,7 @@ const DEFAULT_VISIBILITY: ModuleVisibility = {
         onboarding: true,
         dashboard: true,
         contacts: true,
+        tags: true, // NEW
         campaigns: true,
         instances: true,
         settings: true
@@ -266,6 +286,7 @@ export const getSystemConfig = (): SystemConfig => {
             branding: { 
                 ...DEFAULT_CONFIG.branding, 
                 ...(parsed.branding || {}),
+                layoutVisibility: { ...DEFAULT_CONFIG.branding.layoutVisibility, ...(parsed.branding?.layoutVisibility || {}) },
                 loginBenefits: parsed.branding?.loginBenefits || DEFAULT_BRANDING.loginBenefits,
                 landingFeatures: parsed.branding?.landingFeatures || DEFAULT_BRANDING.landingFeatures,
                 loginLayout: parsed.branding?.loginLayout || DEFAULT_BRANDING.loginLayout

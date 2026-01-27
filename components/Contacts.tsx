@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Search, Plus, Filter, Tag, Trash2, Edit2, Mail, 
-  MessageSquare, Save, X, Database, CheckCircle, AlertCircle, Loader2, Download, Upload, UserPlus, ArrowRight, FileDown, ShieldCheck, Lock, Phone, User as UserIcon, FileText, Briefcase, Settings, Copy, Calendar, MoreHorizontal, Layers, CheckSquare, Square, Globe, User, ToggleLeft, ToggleRight
+  MessageSquare, Save, X, Database, CheckCircle, AlertCircle, Loader2, Download, Upload, UserPlus, ArrowRight, FileDown, ShieldCheck, Lock, Phone, User as UserIcon, FileText, Briefcase, Settings, Copy, Calendar, MoreHorizontal, Layers, CheckSquare, Square, Globe, User
 } from 'lucide-react';
 import { Contact, User as UserType, AgentPermissions, Tag as TagType } from '../types';
 import * as contactService from '../services/contactService';
@@ -36,15 +36,8 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
   const [modalMode, setModalMode] = useState<'create' | 'import'>('create');
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   
-  // Tag Manager Modal State
-  const [isTagManagerOpen, setIsTagManagerOpen] = useState(false);
+  // Tag Data (Read Only for Selection)
   const [allSystemTags, setAllSystemTags] = useState<TagType[]>([]);
-  const [tagSearch, setTagSearch] = useState('');
-  const [newTagInput, setNewTagInput] = useState('');
-  const [newTagIsGlobal, setNewTagIsGlobal] = useState(true); // Default true for managers
-  const [editingTag, setEditingTag] = useState<{old: TagType, newName: string} | null>(null);
-  const [tagToDelete, setTagToDelete] = useState<TagType | null>(null);
-  const [tagTab, setTagTab] = useState<'global' | 'personal'>('global');
 
   // Delete Modal
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
@@ -91,14 +84,11 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
         if (currentUser.role !== 'manager') {
             const myAgentProfile = await teamService.getAgentById(currentUser.id);
             if (myAgentProfile && myAgentProfile.permissions) setUserPermissions(myAgentProfile.permissions);
-            setNewTagIsGlobal(false); // Agents defaults to false
-            setTagTab('personal'); // Agents view personal by default
         } else {
             setUserPermissions({ 
                 canCreate: true, canEdit: true, canDelete: true,
                 canCreateTags: true, canEditTags: true, canDeleteTags: true
             });
-            setNewTagIsGlobal(true); // Managers defaults to true
         }
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
@@ -153,58 +143,11 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
     }
   };
 
-  // ... (Tag Management functions UPDATED) ...
-  const handleCreateTag = async () => {
-      if (!newTagInput.trim()) return;
-      try {
-          // Pass newTagIsGlobal flag to service
-          await contactService.createTag(newTagInput.trim(), currentUser.id, currentUser.role, newTagIsGlobal);
-          setNewTagInput('');
-          setAllSystemTags(await contactService.getTags(currentUser.id, currentUser.role));
-          showToast('Tag criada!', 'success');
-      } catch (e: any) { showToast(e.message, 'error'); }
-  };
-  const handleRenameTag = async () => {
-      if (!editingTag || !editingTag.newName.trim()) return;
-      try {
-          await contactService.updateTag(editingTag.old.id, editingTag.newName.trim(), currentUser.id, currentUser.role);
-          setEditingTag(null);
-          loadData();
-          showToast('Tag renomeada!', 'success');
-      } catch (e: any) { showToast(e.message, 'error'); }
-  };
-  const confirmDeleteTag = async () => {
-      if (!tagToDelete) return;
-      try {
-          setAllSystemTags(await contactService.deleteTag(tagToDelete.id, currentUser.id, currentUser.role));
-          setContacts(await contactService.getContacts(currentUser.id, currentUser.role));
-          showToast('Tag excluída!', 'success');
-          setTagToDelete(null);
-      } catch (e: any) { showToast(e.message, 'error'); }
-  };
   const toggleTagSelection = (tag: string) => {
     const currentTags = formData.tags.split(',').map(t => t.trim()).filter(Boolean);
     const newTags = currentTags.includes(tag) ? currentTags.filter(t => t !== tag) : [...currentTags, tag];
     setFormData({ ...formData, tags: newTags.join(', ') });
   };
-
-  // Check if current user can edit/delete a tag
-  const canModifyTag = (tag: TagType) => {
-      // Manager can edit any tag (Global or Private)
-      if (isManagerOrAdmin) return true;
-      // Agents can only edit their own private tags
-      return tag.ownerId === currentUser.id;
-  };
-
-  // Filter Tags for Modal List
-  const filteredTags = allSystemTags.filter(t => {
-      const matchSearch = t.name.toLowerCase().includes(tagSearch.toLowerCase());
-      const isGlobal = t.ownerId === 'GLOBAL';
-      const matchTab = tagTab === 'global' ? isGlobal : !isGlobal;
-      // Managers see everything in "Personal" tab? No, "Personal" usually means theirs.
-      // But here "Personal" for manager means their private tags.
-      return matchSearch && matchTab;
-  });
 
   // Actions
   const handleDeleteClick = (contact: Contact) => {
@@ -390,9 +333,6 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
                     <option value="all">Todas as Tags</option>
                     {allSystemTags.map(tag => <option key={tag.id} value={tag.name}>{tag.name}</option>)}
                 </select>
-                <button onClick={() => setIsTagManagerOpen(true)} className="p-2 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors" title="Gerenciar Tags">
-                    <Settings size={18} />
-                </button>
             </div>
         </div>
         
@@ -577,104 +517,6 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
                   <button onClick={confirmTransfer} disabled={!targetAgentId} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold disabled:opacity-50">Transferir Agora</button>
               </div>
           </div>
-      </Modal>
-
-      <Modal isOpen={isTagManagerOpen} onClose={() => setIsTagManagerOpen(false)} title="Gestão de Tags" footer={<button onClick={() => setIsTagManagerOpen(false)} className="px-4 py-2 bg-slate-100 dark:bg-slate-700 rounded-lg">Fechar</button>}>
-          <div className="space-y-4">
-              {/* Creation Area */}
-              <div className="flex flex-col gap-2 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
-                  <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Nova Tag</h4>
-                  <div className="flex gap-2">
-                      <input 
-                          type="text" 
-                          placeholder="Nome da tag..." 
-                          className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg outline-none text-sm" 
-                          value={newTagInput} 
-                          onChange={e => setNewTagInput(e.target.value)} 
-                          onKeyDown={e => e.key === 'Enter' && handleCreateTag()} 
-                      />
-                      <button onClick={handleCreateTag} className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"><Plus/></button>
-                  </div>
-                  
-                  {/* Manager Option: Global vs Private */}
-                  {isManagerOrAdmin && (
-                      <div className="flex items-center gap-2 mt-1">
-                          <button 
-                            onClick={() => setNewTagIsGlobal(!newTagIsGlobal)}
-                            className="flex items-center gap-2 cursor-pointer group"
-                          >
-                              {newTagIsGlobal ? <ToggleRight size={24} className="text-blue-600"/> : <ToggleLeft size={24} className="text-slate-400"/>}
-                              <span className={`text-xs font-medium ${newTagIsGlobal ? 'text-blue-700 dark:text-blue-300' : 'text-slate-500'}`}>
-                                  {newTagIsGlobal ? 'Tag Global (Visível para todos)' : 'Tag Privada (Apenas para mim)'}
-                              </span>
-                          </button>
-                      </div>
-                  )}
-                  {!isManagerOrAdmin && (
-                      <p className="text-[10px] text-slate-400 flex items-center gap-1"><Lock size={10}/> Sua tag será privada (visível apenas para você).</p>
-                  )}
-              </div>
-
-              {/* Tag Tabs & Search */}
-              <div className="space-y-2">
-                  <div className="flex gap-2 border-b border-slate-200 dark:border-slate-700 pb-2">
-                      <button onClick={() => setTagTab('global')} className={`text-sm font-bold px-3 py-1.5 rounded-lg transition-colors ${tagTab === 'global' ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
-                          Globais
-                      </button>
-                      <button onClick={() => setTagTab('personal')} className={`text-sm font-bold px-3 py-1.5 rounded-lg transition-colors ${tagTab === 'personal' ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
-                          Pessoais
-                      </button>
-                  </div>
-                  
-                  <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14}/>
-                      <input 
-                        type="text" 
-                        placeholder="Buscar tags..." 
-                        className="w-full pl-9 pr-4 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none"
-                        value={tagSearch}
-                        onChange={e => setTagSearch(e.target.value)}
-                      />
-                  </div>
-              </div>
-
-              {/* Tag List */}
-              <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
-                  {filteredTags.length === 0 ? (
-                      <div className="text-center py-8 text-slate-400 text-xs">
-                          Nenhuma tag encontrada neste filtro.
-                      </div>
-                  ) : (
-                      filteredTags.map(tag => {
-                          const isOwner = canModifyTag(tag);
-                          const isGlobal = tag.ownerId === 'GLOBAL';
-                          
-                          return (
-                          <div key={tag.id} className="flex justify-between items-center p-2.5 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors group">
-                              {editingTag?.old.id === tag.id ? (
-                                  <div className="flex flex-1 gap-2"><input autoFocus value={editingTag.newName} onChange={e => setEditingTag({...editingTag, newName: e.target.value})} className="flex-1 text-sm bg-white dark:bg-slate-600 border rounded px-2 outline-none"/><button onClick={handleRenameTag} className="text-green-500 hover:bg-green-100 p-1 rounded"><CheckCircle size={14}/></button></div>
-                              ) : (
-                                  <div className="flex items-center gap-3">
-                                      <div className={`p-1.5 rounded-md ${isGlobal ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600' : 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300'}`}>
-                                          {isGlobal ? <Globe size={14}/> : <UserIcon size={14}/>}
-                                      </div>
-                                      <span className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 font-bold">{tag.name}</span>
-                                  </div>
-                              )}
-                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  {isOwner && !editingTag && <button onClick={() => setEditingTag({old: tag, newName: tag.name})} className="p-1.5 text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded" title="Renomear"><Edit2 size={14}/></button>}
-                                  {isOwner && !editingTag && <button onClick={() => setTagToDelete(tag)} className="p-1.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded" title="Excluir"><Trash2 size={14}/></button>}
-                                  {!isOwner && <Lock size={12} className="text-slate-300 mx-2" title="Gerenciado pelo Gestor"/>}
-                              </div>
-                          </div>
-                      )})
-                  )}
-              </div>
-          </div>
-      </Modal>
-
-      <Modal isOpen={!!tagToDelete} onClose={() => setTagToDelete(null)} title="Excluir Tag?" type="danger" zIndex={60} footer={<><button onClick={() => setTagToDelete(null)} className="px-4 py-2 bg-slate-100 dark:bg-slate-700 rounded-lg">Cancelar</button><button onClick={confirmDeleteTag} className="px-4 py-2 bg-red-600 text-white rounded-lg">Excluir</button></>}>
-          Tem certeza? A tag <strong>{tagToDelete?.name}</strong> será removida de todos os contatos.
       </Modal>
 
       <Modal isOpen={!!contactToDelete} onClose={() => setContactToDelete(null)} title="Excluir Contato" type="danger" footer={<><button onClick={() => setContactToDelete(null)} className="px-4 py-2 bg-slate-100 dark:bg-slate-700 rounded-lg">Cancelar</button><button onClick={confirmDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg">Excluir Definitivamente</button></>}>
