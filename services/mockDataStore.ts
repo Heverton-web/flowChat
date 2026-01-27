@@ -1,5 +1,5 @@
 
-import { AgentPlan, Campaign, Contact, Instance, Transaction, Conversation, Message, WebhookConfig } from '../types';
+import { AgentPlan, Campaign, Contact, Instance, Transaction, Conversation, Message, WebhookConfig, Tag } from '../types';
 
 // Chaves do LocalStorage
 const KEYS = {
@@ -10,7 +10,8 @@ const KEYS = {
     TRANSACTIONS: 'mock_transactions',
     WEBHOOKS: 'mock_webhooks',
     CONVERSATIONS: 'mock_conversations',
-    MESSAGES: 'mock_messages'
+    MESSAGES: 'mock_messages',
+    TAGS: 'mock_tags_v3' // Changed key to force migration
 };
 
 export type { WebhookConfig };
@@ -44,7 +45,20 @@ const SEED_WEBHOOKS: WebhookConfig[] = [
     { event: 'campaign.completed', url: '', active: false }
 ];
 
-// --- SEED CHAT DATA (CHATWOOT MODEL) ---
+const SEED_TAGS: Tag[] = [
+    { id: 't1', name: 'Lead', ownerId: 'GLOBAL' },
+    { id: 't2', name: 'Vip', ownerId: 'GLOBAL' },
+    { id: 't3', name: 'Novo', ownerId: 'GLOBAL' },
+    { id: 't4', name: 'Boleto', ownerId: 'GLOBAL' },
+    { id: 't5', name: 'Suporte', ownerId: 'GLOBAL' },
+    { id: 't6', name: 'Frio', ownerId: 'GLOBAL' },
+    { id: 't7', name: 'Lead Quente', ownerId: 'GLOBAL' },
+    { id: 't8', name: 'Parceiro', ownerId: 'GLOBAL' },
+    { id: 't9', name: 'Boleto Pendente', ownerId: 'GLOBAL' },
+    { id: 't10', name: 'Retorno Agendado', ownerId: 'agent-1' } // Exemplo de tag privada
+];
+
+// --- SEED CHAT DATA ---
 const SEED_CONVERSATIONS: Conversation[] = [
     { 
         id: 'conv_1', contactId: 'c1', contactName: 'Roberto Almeida', contactPhone: '5511999991111', 
@@ -67,12 +81,6 @@ const SEED_MESSAGES: Message[] = [
     { id: 'm1', conversationId: 'conv_1', content: 'Olá, bom dia!', sender: 'contact', type: 'text', isPrivate: false, createdAt: new Date(Date.now() - 8000000).toISOString(), status: 'read' },
     { id: 'm2', conversationId: 'conv_1', content: 'Olá Roberto, como posso ajudar?', sender: 'agent', senderName: 'Agente Mock', type: 'text', isPrivate: false, createdAt: new Date(Date.now() - 7900000).toISOString(), status: 'read' },
     { id: 'm3', conversationId: 'conv_1', content: 'Gostaria de saber mais sobre a API.', sender: 'contact', type: 'text', isPrivate: false, createdAt: new Date().toISOString(), status: 'delivered' },
-    
-    { id: 'm4', conversationId: 'conv_3', content: 'Oi, preciso de ajuda com financeiro.', sender: 'contact', type: 'text', isPrivate: false, createdAt: new Date(Date.now() - 7300000).toISOString(), status: 'read' },
-    { id: 'm5', conversationId: 'conv_3', content: 'Meu boleto venceu, pode enviar outro?', sender: 'contact', type: 'text', isPrivate: false, createdAt: new Date(Date.now() - 7200000).toISOString(), status: 'delivered' },
-    { id: 'm6', conversationId: 'conv_3', content: 'Cliente solicitou boleto vencido. Verificar no sistema.', sender: 'agent', senderName: 'System', type: 'text', isPrivate: true, createdAt: new Date().toISOString(), status: 'read' }, // Private Note
-    { id: 'm7', conversationId: 'conv_1', content: 'Segue print do erro', sender: 'contact', type: 'image', isPrivate: false, attachmentUrl: 'https://placehold.co/600x400?text=Print+Erro', createdAt: new Date(Date.now() - 500000).toISOString(), status: 'read' },
-    { id: 'm8', conversationId: 'conv_1', content: '', sender: 'agent', type: 'audio', isPrivate: false, createdAt: new Date(Date.now() - 200000).toISOString(), status: 'read' },
 ];
 
 // --- HELPER FUNCTIONS ---
@@ -96,7 +104,6 @@ export const mockStore = {
     // Flag de Controle
     isMockMode: () => {
         const stored = localStorage.getItem('flowchat_mock_mode');
-        // Default to false if not set, but if services explicitly call it, check if we have mock session
         return stored === 'true';
     },
     setMockMode: (enabled: boolean) => {
@@ -166,6 +173,57 @@ export const mockStore = {
         set(KEYS.CONTACTS, all.filter(c => c.id !== id));
     },
 
+    // --- Tags (Com suporte a OwnerId) ---
+    getTags: (userId: string, role: string): Tag[] => {
+        const all = get<Tag>(KEYS.TAGS, SEED_TAGS);
+        // Retorna tags globais + tags privadas do usuário
+        return all.filter(t => t.ownerId === 'GLOBAL' || t.ownerId === userId);
+    },
+    addTag: (tagName: string, ownerId: string) => {
+        const all = get<Tag>(KEYS.TAGS, SEED_TAGS);
+        if (all.some(t => t.name.toLowerCase() === tagName.toLowerCase() && (t.ownerId === 'GLOBAL' || t.ownerId === ownerId))) {
+            return; // Evita duplicatas no mesmo escopo
+        }
+        const newTag: Tag = {
+            id: `tag_${Date.now()}`,
+            name: tagName,
+            ownerId: ownerId
+        };
+        set(KEYS.TAGS, [...all, newTag]);
+    },
+    updateTag: (id: string, newName: string) => {
+        const all = get<Tag>(KEYS.TAGS, SEED_TAGS);
+        const index = all.findIndex(t => t.id === id);
+        if (index !== -1) {
+            const oldName = all[index].name;
+            all[index].name = newName;
+            set(KEYS.TAGS, all);
+            
+            // Cascata para atualizar contatos que usam a tag antiga (Nome)
+            const contacts = get<Contact>(KEYS.CONTACTS, SEED_CONTACTS);
+            const updatedContacts = contacts.map(c => ({
+                ...c,
+                tags: c.tags.map(t => t === oldName ? newName : t)
+            }));
+            set(KEYS.CONTACTS, updatedContacts);
+        }
+    },
+    deleteTag: (id: string) => {
+        const all = get<Tag>(KEYS.TAGS, SEED_TAGS);
+        const tag = all.find(t => t.id === id);
+        if (!tag) return;
+
+        set(KEYS.TAGS, all.filter(t => t.id !== id));
+        
+        // Cascata para remover tag dos contatos
+        const contacts = get<Contact>(KEYS.CONTACTS, SEED_CONTACTS);
+        const updatedContacts = contacts.map(c => ({
+            ...c,
+            tags: c.tags.filter(t => t !== tag.name)
+        }));
+        set(KEYS.CONTACTS, updatedContacts);
+    },
+
     // --- Agents ---
     getAgents: (): AgentPlan[] => {
         const mockAgents: AgentPlan[] = [
@@ -222,18 +280,6 @@ export const mockStore = {
     sendMessage: (message: Message): Message => {
         const all = get<Message>(KEYS.MESSAGES, SEED_MESSAGES);
         set(KEYS.MESSAGES, [...all, message]);
-        
-        const convs = get<Conversation>(KEYS.CONVERSATIONS, SEED_CONVERSATIONS);
-        const idx = convs.findIndex(c => c.id === message.conversationId);
-        if (idx >= 0) {
-            convs[idx] = { 
-                ...convs[idx], 
-                lastMessage: message.content, 
-                lastMessageAt: message.createdAt,
-                status: 'open' 
-            };
-            set(KEYS.CONVERSATIONS, convs);
-        }
         return message;
     },
     updateConversation: (id: string, updates: Partial<Conversation>) => {

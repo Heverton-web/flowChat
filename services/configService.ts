@@ -47,6 +47,47 @@ export interface PlanConfig {
     highlight?: boolean;
 }
 
+export interface ModuleVisibility {
+    // Super Admin Modules
+    super_admin: {
+        onboarding: boolean;
+        dashboard: boolean;
+        reports: boolean;
+        team: boolean;
+        financial: boolean; // Parent Module
+        financial_overview: boolean;
+        financial_plans: boolean;
+        financial_invoices: boolean;
+        financial_wallet: boolean;
+        instances: boolean;
+        settings: boolean; // Parent Module
+        settings_profile: boolean;
+        settings_general: boolean;
+        settings_notifications: boolean;
+    };
+    // Manager Modules
+    manager: {
+        onboarding: boolean;
+        dashboard: boolean;
+        reports: boolean;
+        team: boolean;
+        contacts: boolean;
+        base_assignment: boolean; // NEW MODULE
+        campaigns: boolean;
+        instances: boolean;
+        settings: boolean;
+    };
+    // Agent Modules
+    agent: {
+        onboarding: boolean;
+        dashboard: boolean; // Agent Dashboard ("Meu Desempenho")
+        contacts: boolean;
+        campaigns: boolean;
+        instances: boolean;
+        settings: boolean;
+    };
+}
+
 export interface SystemConfig {
     // --- INFRA: DOMAINS & ROUTING ---
     domains: {
@@ -80,6 +121,9 @@ export interface SystemConfig {
     system_maintenance_mode: boolean;  // Bloqueia acesso de todos exceto Owner
     allow_new_registrations: boolean;  // Permite novos cadastros
     enable_free_trial: boolean;        // Habilita teste grátis automático
+
+    // --- MODULE VISIBILITY ---
+    visibility: ModuleVisibility;
 
     // --- WHITE LABEL ---
     branding: BrandingConfig;
@@ -127,6 +171,44 @@ const DEFAULT_PLANS = {
     SCALE: { ...PLAN_DEFS.SCALE, highlight: false }
 };
 
+const DEFAULT_VISIBILITY: ModuleVisibility = {
+    super_admin: {
+        onboarding: true,
+        dashboard: true,
+        reports: true,
+        team: true,
+        financial: true,
+        financial_overview: true,
+        financial_plans: true,
+        financial_invoices: true,
+        financial_wallet: true,
+        instances: true,
+        settings: true,
+        settings_profile: true,
+        settings_general: true,
+        settings_notifications: true
+    },
+    manager: {
+        onboarding: true,
+        dashboard: true,
+        reports: true,
+        team: true,
+        contacts: true,
+        base_assignment: true,
+        campaigns: true,
+        instances: true,
+        settings: true
+    },
+    agent: {
+        onboarding: true,
+        dashboard: true,
+        contacts: true,
+        campaigns: true,
+        instances: true,
+        settings: true
+    }
+};
+
 const DEFAULT_CONFIG: SystemConfig = {
     domains: {
         frontend: 'app.disparai.com.br',
@@ -155,6 +237,8 @@ const DEFAULT_CONFIG: SystemConfig = {
     allow_new_registrations: true,
     enable_free_trial: true,
 
+    visibility: DEFAULT_VISIBILITY,
+
     branding: DEFAULT_BRANDING,
     plans: DEFAULT_PLANS
 };
@@ -171,10 +255,17 @@ export const getSystemConfig = (): SystemConfig => {
             ...DEFAULT_CONFIG,
             ...parsed,
             domains: { ...DEFAULT_CONFIG.domains, ...(parsed.domains || {}) },
+            visibility: { 
+                ...DEFAULT_CONFIG.visibility, 
+                ...(parsed.visibility || {}),
+                // Ensure deep merge for roles
+                super_admin: { ...DEFAULT_CONFIG.visibility.super_admin, ...(parsed.visibility?.super_admin || {}) },
+                manager: { ...DEFAULT_CONFIG.visibility.manager, ...(parsed.visibility?.manager || {}) },
+                agent: { ...DEFAULT_CONFIG.visibility.agent, ...(parsed.visibility?.agent || {}) },
+            },
             branding: { 
                 ...DEFAULT_CONFIG.branding, 
                 ...(parsed.branding || {}),
-                // Garante que arrays e novos campos existam mesmo se o JSON antigo não tiver
                 loginBenefits: parsed.branding?.loginBenefits || DEFAULT_BRANDING.loginBenefits,
                 landingFeatures: parsed.branding?.landingFeatures || DEFAULT_BRANDING.landingFeatures,
                 loginLayout: parsed.branding?.loginLayout || DEFAULT_BRANDING.loginLayout

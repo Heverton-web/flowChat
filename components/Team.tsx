@@ -205,8 +205,6 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
             return <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-xs font-bold w-fit"><Crown size={14}/> Super Admin</div>;
           case 'manager':
             return <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-xs font-bold w-fit"><Briefcase size={14}/> Gestor</div>;
-          case 'developer':
-            return <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 dark:bg-slate-700 text-white border border-slate-600 text-xs font-bold w-fit"><Terminal size={14}/> Dev</div>;
           default:
             return <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold w-fit"><Headset size={14}/> Atendente</div>;
       }
@@ -268,8 +266,7 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
                   {/* Decorative Left Border for Role */}
                   <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${
                       agent.role === 'super_admin' ? 'bg-purple-500' : 
-                      agent.role === 'manager' ? 'bg-blue-500' : 
-                      agent.role === 'developer' ? 'bg-slate-500' : 'bg-emerald-500'
+                      agent.role === 'manager' ? 'bg-blue-500' : 'bg-emerald-500'
                   }`}></div>
 
                   {/* 1. User Info */}
@@ -300,7 +297,7 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
                   {/* 3. Permissions Visualizer */}
                   <div className="w-full lg:w-auto flex flex-col gap-2 min-w-[200px] pl-2 lg:pl-0">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Nível de Acesso</span>
-                      {agent.role === 'super_admin' || agent.role === 'manager' || agent.role === 'developer' ? (
+                      {agent.role === 'super_admin' || agent.role === 'manager' ? (
                           <div className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/50 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-600 w-fit">
                               <Shield size={14} className="text-blue-500"/>
                               Acesso Administrativo Total
@@ -364,7 +361,7 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
               {/* Role Selection */}
               <div>
                   <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 block">Defina o Ambiente</label>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       <RoleCard 
                         role="manager" 
                         label="Gestor" 
@@ -377,13 +374,6 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
                         label="Atendente" 
                         desc="Foco em chats/contatos." 
                         icon={Headset} 
-                      />
-                      <RoleCard 
-                        role="developer" 
-                        label="Dev" 
-                        desc="Acesso API/Webhooks." 
-                        icon={Terminal}
-                        disabled={!isSuperAdmin}
                       />
                   </div>
               </div>

@@ -16,13 +16,16 @@ interface SettingsProps {
 }
 
 const Settings: React.FC<SettingsProps> = ({ currentUser }) => {
-  const { t, theme, toggleTheme, language, setLanguage, showToast } = useApp();
+  const { t, theme, toggleTheme, language, setLanguage, showToast, config } = useApp();
   // Default tab standard for non-devs
   const [activeTab, setActiveTab] = useState<'profile' | 'general' | 'notifications'>('profile');
   const [isSaving, setIsSaving] = useState(false);
   
-  // Permission Logic: Notifications hidden for Manager and Agent
-  const canViewNotifications = currentUser.role === 'super_admin' || currentUser.role === 'developer';
+  // Permission Logic: Check visibility config based on role
+  const roleVis = (config.visibility as any)[currentUser.role] || config.visibility.super_admin;
+  
+  // Also check developer flag for notifications specifically (legacy) but allow config override
+  const canViewNotifications = (currentUser.role === 'super_admin') && (roleVis.settings_notifications !== false);
   
   // Profile State
   const [profileData, setProfileData] = useState({ name: currentUser.name, email: currentUser.email, phone: '5511999999999' });
@@ -88,8 +91,9 @@ const Settings: React.FC<SettingsProps> = ({ currentUser }) => {
                 <div className="px-4 py-3 mb-2">
                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Conta</h3>
                 </div>
-                <SidebarItem id="profile" label="Meu Perfil" icon={User} />
-                <SidebarItem id="general" label={t('general')} icon={Globe} />
+                {/* Fallback to check if specific settings sub-modules are allowed */}
+                {(roleVis.settings_profile !== false) && <SidebarItem id="profile" label="Meu Perfil" icon={User} />}
+                {(roleVis.settings_general !== false) && <SidebarItem id="general" label={t('general')} icon={Globe} />}
                 {canViewNotifications && (
                     <SidebarItem id="notifications" label="Notificações" icon={Bell} />
                 )}
@@ -98,7 +102,7 @@ const Settings: React.FC<SettingsProps> = ({ currentUser }) => {
 
         {/* Content Area */}
         <div className="flex-1 min-w-0">
-            {activeTab === 'profile' && (
+            {activeTab === 'profile' && (roleVis.settings_profile !== false) && (
                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-8 space-y-6 animate-in slide-in-from-right-4 fade-in">
                     <div className="flex items-center gap-6 pb-6 border-b border-slate-100 dark:border-slate-700">
                         <div className="relative group cursor-pointer">
@@ -132,7 +136,7 @@ const Settings: React.FC<SettingsProps> = ({ currentUser }) => {
                 </div>
             )}
 
-            {activeTab === 'general' && (
+            {activeTab === 'general' && (roleVis.settings_general !== false) && (
                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-8 space-y-6 animate-in slide-in-from-right-4 fade-in">
                     <h3 className="text-lg font-bold text-slate-800 dark:text-white">Preferências do Sistema</h3>
                     

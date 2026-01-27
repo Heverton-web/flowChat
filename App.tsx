@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Smartphone, Users, Settings as SettingsIcon, LogOut, Menu, X, CreditCard, Send, MessageCircle, PieChart, DollarSign, Moon, Sun, Globe, PlayCircle, ChevronLeft, ChevronRight, HelpCircle, Loader2, Terminal, Plug, Activity, ShieldCheck, Server } from 'lucide-react';
+import { LayoutDashboard, Smartphone, Users, Settings as SettingsIcon, LogOut, Menu, X, CreditCard, Send, MessageCircle, PieChart, DollarSign, Moon, Sun, Globe, PlayCircle, ChevronLeft, ChevronRight, HelpCircle, Loader2, Terminal, Plug, Activity, ShieldCheck, Server, Layers } from 'lucide-react';
 import { ViewState, UserRole, User } from './types';
 import Dashboard from './components/Dashboard';
 import Instances from './components/Instances';
@@ -15,6 +15,7 @@ import Register from './components/Register';
 import SalesPage from './components/SalesPage';
 import Onboarding from './components/Onboarding';
 import DeveloperConsole from './components/DeveloperConsole';
+import BaseAssignment from './components/BaseAssignment';
 import Logo from './components/Logo';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { supabase } from './services/supabaseClient';
@@ -22,7 +23,7 @@ import * as authService from './services/authService';
 
 // Inner App Component to use the Context
 const FlowChatApp: React.FC = () => {
-  const { t, theme, toggleTheme, language, setLanguage } = useApp();
+  const { t, theme, toggleTheme, language, setLanguage, config } = useApp();
   
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -40,7 +41,14 @@ const FlowChatApp: React.FC = () => {
   const isSuperAdmin = currentUser?.role === 'super_admin';
   const isManager = currentUser?.role === 'manager';
   const isAgent = currentUser?.role === 'agent';
-  const isDeveloper = currentUser?.role === 'developer'; // Keeping this for role structure but restricting view
+  
+  // Helper to check visibility from config based on role
+  const checkVisibility = (module: string) => {
+      if (isOwner) return true; // Owner always sees standard menu (though they have Master Console)
+      if (!currentUser) return false;
+      const roleKey = currentUser.role; // Removed developer ternary
+      return (config.visibility as any)[roleKey]?.[module] !== false; // Default true if undefined
+  };
 
   // --- Auth & Session Handling ---
   useEffect(() => {
@@ -219,15 +227,15 @@ const FlowChatApp: React.FC = () => {
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
           
           {/* COMMON FOR EVERYONE EXCEPT OWNER (Owner needs clean nav) */}
-          {!isOwner && <NavItem view="onboarding" icon={PlayCircle} label={t('onboarding')} />}
+          {!isOwner && checkVisibility('onboarding') && <NavItem view="onboarding" icon={PlayCircle} label={t('onboarding')} />}
 
           {/* AMBIENTE OPERACIONAL (Atendentes & Gestores) */}
           {(isAgent || isManager) && !isOwner && (
               <>
                 <SectionHeader label="Operacional" />
-                <NavItem view="contacts" icon={Users} label="Contatos" />
-                <NavItem view="campaigns" icon={Send} label="Campanhas" />
-                <NavItem view="instances" icon={Smartphone} label="Minha Instância" />
+                {checkVisibility('contacts') && <NavItem view="contacts" icon={Users} label="Contatos" />}
+                {checkVisibility('campaigns') && <NavItem view="campaigns" icon={Send} label="Campanhas" />}
+                {checkVisibility('instances') && <NavItem view="instances" icon={Smartphone} label="Minha Instância" />}
               </>
           )}
 
@@ -235,9 +243,10 @@ const FlowChatApp: React.FC = () => {
           {(isManager || isSuperAdmin) && !isOwner && (
               <>
                 <SectionHeader label="Gestão da Operação" />
-                <NavItem view="dashboard" icon={LayoutDashboard} label="Painel de Controle" />
-                <NavItem view="reports" icon={PieChart} label="Relatórios" />
-                <NavItem view="team" icon={Users} label="Gestão de Equipe" />
+                {checkVisibility('dashboard') && <NavItem view="dashboard" icon={LayoutDashboard} label="Painel de Controle" />}
+                {checkVisibility('reports') && <NavItem view="reports" icon={PieChart} label="Relatórios" />}
+                {checkVisibility('team') && <NavItem view="team" icon={Users} label="Gestão de Equipe" />}
+                {checkVisibility('base_assignment') && <NavItem view="base_assignment" icon={Layers} label="Atribuição de Bases" />}
               </>
           )}
 
@@ -245,13 +254,13 @@ const FlowChatApp: React.FC = () => {
           {isSuperAdmin && !isOwner && (
               <>
                 <SectionHeader label="Admin Global" />
-                <NavItem view="financial" icon={DollarSign} label="Assinatura & Custos" />
-                <NavItem view="instances" icon={Server} label="Todas Instâncias" />
+                {checkVisibility('financial') && <NavItem view="financial" icon={DollarSign} label="Assinatura & Custos" />}
+                {checkVisibility('instances') && <NavItem view="instances" icon={Server} label="Todas Instâncias" />}
               </>
           )}
 
           {/* SETTINGS FOR AGENTS, MANAGERS & SUPER ADMIN */}
-          {(isManager || isAgent || isSuperAdmin) && !isOwner && (
+          {(isManager || isAgent || isSuperAdmin) && !isOwner && checkVisibility('settings') && (
               <>
                 <SectionHeader label="Sistema" />
                 <NavItem view="settings" icon={SettingsIcon} label={t('settings')} />
@@ -352,6 +361,10 @@ const FlowChatApp: React.FC = () => {
           {(activeView === 'financial' && isSuperAdmin) && <Financial currentUser={currentUser} />}
           
           {activeView === 'team' && (isSuperAdmin || isManager) && <Team onNavigate={setActiveView} currentUser={currentUser} />}
+          
+          {/* New Module: Base Assignment */}
+          {activeView === 'base_assignment' && (isSuperAdmin || isManager) && <BaseAssignment currentUser={currentUser} />}
+
           {activeView === 'settings' && <Settings currentUser={currentUser} />}
           {activeView === 'reports' && (isSuperAdmin || isManager) && <Reports />}
           

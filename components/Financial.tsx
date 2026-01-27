@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   DollarSign, CreditCard, Calendar, Download, Search, TrendingUp, TrendingDown,
@@ -38,13 +39,16 @@ const CHART_DATA = [
 ];
 
 const Financial: React.FC<FinancialProps> = ({ currentUser }) => {
-  const { theme, showToast } = useApp();
+  const { theme, showToast, config } = useApp();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [licenseStatus, setLicenseStatus] = useState<LicenseStatus | null>(null);
   const [loading, setLoading] = useState(true);
   
   // Navigation
   const [activeTab, setActiveTab] = useState<'overview' | 'plans_addons' | 'invoices' | 'wallet'>('overview');
+
+  // Check visibility for current user role (defaults to Super Admin logic as this is admin component)
+  const roleVis = (config.visibility as any)[currentUser.role === 'developer' ? 'super_admin' : currentUser.role] || config.visibility.super_admin;
 
   // Plan Display State
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
@@ -291,23 +295,31 @@ const Financial: React.FC<FinancialProps> = ({ currentUser }) => {
         </div>
         
         <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl overflow-x-auto max-w-full">
-            <button onClick={() => setActiveTab('overview')} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'overview' ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>
-                <BarChart2 size={16}/> Visão Geral
-            </button>
-            <button onClick={() => setActiveTab('plans_addons')} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'plans_addons' ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>
-                <ShoppingBag size={16}/> Planos e Recursos
-            </button>
-            <button onClick={() => setActiveTab('invoices')} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'invoices' ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>
-                <FileText size={16}/> Faturas
-            </button>
-            <button onClick={() => setActiveTab('wallet')} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'wallet' ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>
-                <Wallet size={16}/> Carteira
-            </button>
+            {roleVis.financial_overview && (
+                <button onClick={() => setActiveTab('overview')} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'overview' ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>
+                    <BarChart2 size={16}/> Visão Geral
+                </button>
+            )}
+            {roleVis.financial_plans && (
+                <button onClick={() => setActiveTab('plans_addons')} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'plans_addons' ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>
+                    <ShoppingBag size={16}/> Planos e Recursos
+                </button>
+            )}
+            {roleVis.financial_invoices && (
+                <button onClick={() => setActiveTab('invoices')} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'invoices' ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>
+                    <FileText size={16}/> Faturas
+                </button>
+            )}
+            {roleVis.financial_wallet && (
+                <button onClick={() => setActiveTab('wallet')} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'wallet' ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>
+                    <Wallet size={16}/> Carteira
+                </button>
+            )}
         </div>
       </div>
 
       {/* --- CONTENT: OVERVIEW --- */}
-      {activeTab === 'overview' && (
+      {activeTab === 'overview' && roleVis.financial_overview && (
           <div className="space-y-6 animate-in slide-in-from-bottom-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Cost Card */}
@@ -368,10 +380,9 @@ const Financial: React.FC<FinancialProps> = ({ currentUser }) => {
       )}
 
       {/* --- CONTENT: PLANS & ADDONS (STORE) --- */}
-      {activeTab === 'plans_addons' && (
+      {activeTab === 'plans_addons' && roleVis.financial_plans && (
           <div className="space-y-10 animate-in slide-in-from-bottom-4 mb-24">
-              
-              {/* Plans Section */}
+              {/* Plans Section... (Rest of content kept as is) */}
               <div className="space-y-6">
                   <div className="text-center space-y-4 max-w-2xl mx-auto">
                       <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Planos e Upgrades</h3>
@@ -481,7 +492,7 @@ const Financial: React.FC<FinancialProps> = ({ currentUser }) => {
       )}
 
       {/* --- CONTENT: INVOICES --- */}
-      {activeTab === 'invoices' && (
+      {activeTab === 'invoices' && roleVis.financial_invoices && (
           <div className="animate-in slide-in-from-bottom-4 space-y-4">
               <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                   <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-700/30">
@@ -534,7 +545,7 @@ const Financial: React.FC<FinancialProps> = ({ currentUser }) => {
       )}
 
       {/* --- CONTENT: WALLET --- */}
-      {activeTab === 'wallet' && (
+      {activeTab === 'wallet' && roleVis.financial_wallet && (
           <div className="animate-in slide-in-from-bottom-4">
               <div className="flex justify-between items-center mb-6">
                   <h3 className="text-lg font-bold text-slate-800 dark:text-white">Seus Cartões</h3>

@@ -1,5 +1,5 @@
 
-export type UserRole = 'super_admin' | 'manager' | 'agent' | 'developer';
+export type UserRole = 'super_admin' | 'manager' | 'agent';
 
 export interface User {
   id: string;
@@ -30,6 +30,14 @@ export interface AgentPlan {
   tempPassword?: string;
   extraContactPacks?: number;
   department?: string; // Optional for UI display
+}
+
+// --- TAG SYSTEM ---
+export interface Tag {
+  id: string;
+  name: string;
+  ownerId: string | 'GLOBAL'; // 'GLOBAL' for managers, UUID for agents
+  color?: string;
 }
 
 // --- ENTERPRISE LICENSE TYPES ---
@@ -226,7 +234,7 @@ export interface Transaction {
   invoiceUrl?: string;
 }
 
-export type ViewState = 'dashboard' | 'inbox' | 'instances' | 'campaigns' | 'contacts' | 'financial' | 'reports' | 'team' | 'settings' | 'onboarding' | 'master_console';
+export type ViewState = 'dashboard' | 'inbox' | 'instances' | 'campaigns' | 'contacts' | 'base_assignment' | 'financial' | 'reports' | 'team' | 'settings' | 'onboarding' | 'master_console';
 
 export interface WebhookConfig {
   event: string;

@@ -97,13 +97,12 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleAutoFill = (role: 'super' | 'manager' | 'agent' | 'dev') => {
+  const handleAutoFill = (role: 'super' | 'manager' | 'agent') => {
       setPassword('123456');
       switch(role) {
           case 'super': setEmail('super@disparai.com.br'); break;
           case 'manager': setEmail('admin@disparai.com.br'); break;
           case 'agent': setEmail('agent@disparai.com.br'); break;
-          case 'dev': setEmail('dev@disparai.com.br'); break;
       }
   };
 
@@ -210,7 +209,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
                     <div className="flex items-center justify-between px-2 mb-1.5">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Acesso Rápido (Demo)</p>
                     </div>
-                    <div className="grid grid-cols-4 gap-1">
+                    <div className="grid grid-cols-3 gap-1">
                         <button onClick={() => handleAutoFill('super')} className="flex flex-col items-center justify-center py-2 rounded-xl text-[10px] font-bold transition-all hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-slate-600 dark:text-slate-300" title="Super Admin">
                             <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-1"><Crown size={14} /></div>
                             SUPER
@@ -222,10 +221,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
                         <button onClick={() => handleAutoFill('agent')} className="flex flex-col items-center justify-center py-2 rounded-xl text-[10px] font-bold transition-all hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-slate-600 dark:text-slate-300" title="Atendente">
                             <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center mb-1"><Headset size={14} /></div>
                             AGENT
-                        </button>
-                        <button onClick={() => handleAutoFill('dev')} className="flex flex-col items-center justify-center py-2 rounded-xl text-[10px] font-bold transition-all hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-slate-600 dark:text-slate-300" title="Desenvolvedor">
-                            <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 flex items-center justify-center mb-1"><Terminal size={14} /></div>
-                            DEV
                         </button>
                     </div>
                 </div>

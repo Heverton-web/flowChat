@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS instances (
 CREATE TABLE IF NOT EXISTS tags (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   name TEXT NOT NULL,
-  owner_id UUID REFERENCES auth.users(id),
+  owner_id UUID REFERENCES auth.users(id), -- NULL = Global
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -116,7 +116,7 @@ ALTER TABLE campaigns ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 
--- REMOÇÃO DE POLÍTICAS ANTIGAS (Para evitar erro 42710)
+-- REMOÇÃO DE POLÍTICAS ANTIGAS
 DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
 DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
 
@@ -137,6 +137,7 @@ DROP POLICY IF EXISTS "Users can update own campaigns" ON campaigns;
 DROP POLICY IF EXISTS "Users can view own tags" ON tags;
 DROP POLICY IF EXISTS "Users can insert own tags" ON tags;
 DROP POLICY IF EXISTS "Users can delete own tags" ON tags;
+DROP POLICY IF EXISTS "Users can update own tags" ON tags;
 
 -- CRIAÇÃO DAS NOVAS POLÍTICAS
 
@@ -150,11 +151,30 @@ CREATE POLICY "Users can insert own instances" ON instances FOR INSERT WITH CHEC
 CREATE POLICY "Users can update own instances" ON instances FOR UPDATE USING (auth.uid() = owner_id);
 CREATE POLICY "Users can delete own instances" ON instances FOR DELETE USING (auth.uid() = owner_id);
 
--- CONTACTS
-CREATE POLICY "Users can view own contacts" ON contacts FOR SELECT USING (auth.uid() = owner_id);
-CREATE POLICY "Users can insert own contacts" ON contacts FOR INSERT WITH CHECK (auth.uid() = owner_id);
-CREATE POLICY "Users can update own contacts" ON contacts FOR UPDATE USING (auth.uid() = owner_id);
-CREATE POLICY "Users can delete own contacts" ON contacts FOR DELETE USING (auth.uid() = owner_id);
+-- CONTACTS (ATUALIZADO: Gestores podem ver/editar tudo)
+-- Select: Gestor vê tudo, Agente vê o seu
+CREATE POLICY "Users can view own contacts" ON contacts FOR SELECT USING (
+  auth.uid() = owner_id OR 
+  EXISTS(SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'manager' OR role = 'super_admin'))
+);
+
+-- Insert: Qualquer um logado (mas tipicamente atribuem a si mesmos)
+CREATE POLICY "Users can insert own contacts" ON contacts FOR INSERT WITH CHECK (
+  auth.uid() = owner_id OR 
+  EXISTS(SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'manager' OR role = 'super_admin'))
+);
+
+-- Update: Gestor edita qualquer um, Agente edita o seu
+CREATE POLICY "Users can update own contacts" ON contacts FOR UPDATE USING (
+  auth.uid() = owner_id OR 
+  EXISTS(SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'manager' OR role = 'super_admin'))
+);
+
+-- Delete: Gestor deleta qualquer um, Agente deleta o seu
+CREATE POLICY "Users can delete own contacts" ON contacts FOR DELETE USING (
+  auth.uid() = owner_id OR 
+  EXISTS(SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'manager' OR role = 'super_admin'))
+);
 
 -- CAMPAIGNS
 CREATE POLICY "Users can view own campaigns" ON campaigns FOR SELECT USING (auth.uid() = owner_id);
@@ -162,9 +182,22 @@ CREATE POLICY "Users can insert own campaigns" ON campaigns FOR INSERT WITH CHEC
 CREATE POLICY "Users can update own campaigns" ON campaigns FOR UPDATE USING (auth.uid() = owner_id);
 
 -- TAGS
-CREATE POLICY "Users can view own tags" ON tags FOR SELECT USING (auth.uid() = owner_id);
-CREATE POLICY "Users can insert own tags" ON tags FOR INSERT WITH CHECK (auth.uid() = owner_id);
-CREATE POLICY "Users can delete own tags" ON tags FOR DELETE USING (auth.uid() = owner_id);
+CREATE POLICY "Users can view own tags" ON tags FOR SELECT USING (auth.uid() = owner_id OR owner_id IS NULL);
+
+CREATE POLICY "Users can insert own tags" ON tags FOR INSERT WITH CHECK (
+  auth.uid() = owner_id OR 
+  (owner_id IS NULL AND EXISTS(SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'manager' OR role = 'super_admin')))
+);
+
+CREATE POLICY "Users can delete own tags" ON tags FOR DELETE USING (
+  auth.uid() = owner_id OR 
+  (owner_id IS NULL AND EXISTS(SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'manager' OR role = 'super_admin')))
+);
+
+CREATE POLICY "Users can update own tags" ON tags FOR UPDATE USING (
+  auth.uid() = owner_id OR 
+  (owner_id IS NULL AND EXISTS(SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'manager' OR role = 'super_admin')))
+);
 
 -- =============================================
 -- TRIGGERS E FUNÇÕES

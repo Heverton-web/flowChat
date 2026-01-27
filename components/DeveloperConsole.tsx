@@ -7,7 +7,7 @@ import {
   PlayCircle, Settings, Palette, Image as ImageIcon, Type, ShoppingBag, 
   BarChart2, Cpu, Wifi, Zap, Layout, RefreshCw, LayoutTemplate, Monitor,
   MessageSquare, Mic, FileText, ListChecks, Radio, Upload, Link as LinkIcon,
-  DollarSign, LogOut, TableProperties, Code, Trash2, Edit, Plus, X
+  DollarSign, LogOut, TableProperties, Code, Trash2, Edit, Plus, X, Eye as EyeIcon, Layers
 } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip } from 'recharts';
 import { useApp } from '../contexts/AppContext';
@@ -46,7 +46,7 @@ const AVAILABLE_TABLES = [
 ];
 
 interface DeveloperConsoleProps {
-    initialTab?: 'dashboard' | 'infrastructure' | 'webhooks' | 'system' | 'whitelabel' | 'logs' | 'evolution_api' | 'supabase';
+    initialTab?: 'dashboard' | 'infrastructure' | 'webhooks' | 'system' | 'whitelabel' | 'logs' | 'evolution_api' | 'supabase' | 'visibility';
     onLogout?: () => void;
 }
 
@@ -146,6 +146,19 @@ const MasterConsole: React.FC<DeveloperConsoleProps> = ({ initialTab = 'dashboar
                 [planKey]: {
                     ...prev.plans[planKey],
                     [field]: value
+                }
+            }
+        }));
+    };
+
+    const updateVisibility = (role: 'super_admin' | 'manager' | 'agent', key: string, value: boolean) => {
+        setVault(prev => ({
+            ...prev,
+            visibility: {
+                ...prev.visibility,
+                [role]: {
+                    ...prev.visibility[role],
+                    [key]: value
                 }
             }
         }));
@@ -414,6 +427,15 @@ const MasterConsole: React.FC<DeveloperConsoleProps> = ({ initialTab = 'dashboar
         </div>
     );
 
+    const ToggleRow = ({ label, checked, onChange, subItem = false }: any) => (
+        <div className={`flex items-center justify-between py-2 ${subItem ? 'pl-6 border-l border-slate-800' : ''}`}>
+            <span className={`text-sm ${subItem ? 'text-slate-400' : 'text-slate-200 font-bold'}`}>{label}</span>
+            <button onClick={() => onChange(!checked)} className={`transition-colors ${checked ? 'text-green-500' : 'text-slate-600'}`}>
+                {checked ? <ToggleRight size={28} fill="currentColor" className="opacity-20"/> : <ToggleLeft size={28} />}
+            </button>
+        </div>
+    );
+
     const WebhookRow = ({ event, label, objKey }: { event: string, label: string, objKey: keyof SystemConfig }) => (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row gap-4 items-center">
             <div className="flex-1 w-full">
@@ -508,6 +530,7 @@ const MasterConsole: React.FC<DeveloperConsoleProps> = ({ initialTab = 'dashboar
                     <div className="px-6 py-2 mt-4 text-[10px] font-bold text-slate-600 uppercase tracking-widest">Negócio</div>
                     <NavItem id="system" label="Feature Flags" icon={Cpu} />
                     <NavItem id="whitelabel" label="White Label" icon={Palette} />
+                    <NavItem id="visibility" label="Visibilidade" icon={EyeIcon} />
                 </div>
 
                 {/* Main Viewport */}
@@ -567,14 +590,103 @@ const MasterConsole: React.FC<DeveloperConsoleProps> = ({ initialTab = 'dashboar
                         </div>
                     )}
 
-                    {/* --- INFRASTRUCTURE --- */}
+                    {/* --- VISIBILITY CONTROL (NEW) --- */}
+                    {activeTab === 'visibility' && (
+                        <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in">
+                            <h2 className="text-xl font-bold text-white flex items-center gap-3">
+                                <EyeIcon className="text-blue-500"/> Personalização de Visibilidade
+                            </h2>
+                            <p className="text-slate-400 text-sm">Controle quais módulos aparecem para cada perfil de usuário.</p>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                
+                                {/* SUPER ADMIN */}
+                                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+                                    <div className="flex items-center gap-2 border-b border-slate-800 pb-3 mb-2">
+                                        <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                                        <h3 className="text-sm font-bold text-white uppercase tracking-widest">Super Admin</h3>
+                                    </div>
+                                    
+                                    <div className="space-y-1">
+                                        <ToggleRow label="Guia Inicial" checked={vault.visibility.super_admin.onboarding} onChange={(v: boolean) => updateVisibility('super_admin', 'onboarding', v)} />
+                                        <ToggleRow label="Painel de Controle" checked={vault.visibility.super_admin.dashboard} onChange={(v: boolean) => updateVisibility('super_admin', 'dashboard', v)} />
+                                        <ToggleRow label="Relatórios" checked={vault.visibility.super_admin.reports} onChange={(v: boolean) => updateVisibility('super_admin', 'reports', v)} />
+                                        <ToggleRow label="Gestão de Equipe" checked={vault.visibility.super_admin.team} onChange={(v: boolean) => updateVisibility('super_admin', 'team', v)} />
+                                        
+                                        <div className="py-2">
+                                            <ToggleRow label="Assinatura e Custos (Menu)" checked={vault.visibility.super_admin.financial} onChange={(v: boolean) => updateVisibility('super_admin', 'financial', v)} />
+                                            {vault.visibility.super_admin.financial && (
+                                                <div className="mt-1 space-y-1">
+                                                    <ToggleRow label="Visão Geral" checked={vault.visibility.super_admin.financial_overview} onChange={(v: boolean) => updateVisibility('super_admin', 'financial_overview', v)} subItem />
+                                                    <ToggleRow label="Planos" checked={vault.visibility.super_admin.financial_plans} onChange={(v: boolean) => updateVisibility('super_admin', 'financial_plans', v)} subItem />
+                                                    <ToggleRow label="Faturas" checked={vault.visibility.super_admin.financial_invoices} onChange={(v: boolean) => updateVisibility('super_admin', 'financial_invoices', v)} subItem />
+                                                    <ToggleRow label="Carteira" checked={vault.visibility.super_admin.financial_wallet} onChange={(v: boolean) => updateVisibility('super_admin', 'financial_wallet', v)} subItem />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <ToggleRow label="Todas Instâncias" checked={vault.visibility.super_admin.instances} onChange={(v: boolean) => updateVisibility('super_admin', 'instances', v)} />
+                                        
+                                        <div className="py-2">
+                                            <ToggleRow label="Configurações (Menu)" checked={vault.visibility.super_admin.settings} onChange={(v: boolean) => updateVisibility('super_admin', 'settings', v)} />
+                                            {vault.visibility.super_admin.settings && (
+                                                <div className="mt-1 space-y-1">
+                                                    <ToggleRow label="Meu Perfil" checked={vault.visibility.super_admin.settings_profile} onChange={(v: boolean) => updateVisibility('super_admin', 'settings_profile', v)} subItem />
+                                                    <ToggleRow label="Geral" checked={vault.visibility.super_admin.settings_general} onChange={(v: boolean) => updateVisibility('super_admin', 'settings_general', v)} subItem />
+                                                    <ToggleRow label="Notificações" checked={vault.visibility.super_admin.settings_notifications} onChange={(v: boolean) => updateVisibility('super_admin', 'settings_notifications', v)} subItem />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* MANAGER */}
+                                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+                                    <div className="flex items-center gap-2 border-b border-slate-800 pb-3 mb-2">
+                                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                        <h3 className="text-sm font-bold text-white uppercase tracking-widest">Gestor</h3>
+                                    </div>
+                                    
+                                    <div className="space-y-1">
+                                        <ToggleRow label="Guia Inicial" checked={vault.visibility.manager.onboarding} onChange={(v: boolean) => updateVisibility('manager', 'onboarding', v)} />
+                                        <ToggleRow label="Painel de Controle" checked={vault.visibility.manager.dashboard} onChange={(v: boolean) => updateVisibility('manager', 'dashboard', v)} />
+                                        <ToggleRow label="Contatos" checked={vault.visibility.manager.contacts} onChange={(v: boolean) => updateVisibility('manager', 'contacts', v)} />
+                                        <ToggleRow label="Campanhas" checked={vault.visibility.manager.campaigns} onChange={(v: boolean) => updateVisibility('manager', 'campaigns', v)} />
+                                        <ToggleRow label="Relatórios" checked={vault.visibility.manager.reports} onChange={(v: boolean) => updateVisibility('manager', 'reports', v)} />
+                                        <ToggleRow label="Gestão de Equipe" checked={vault.visibility.manager.team} onChange={(v: boolean) => updateVisibility('manager', 'team', v)} />
+                                        <ToggleRow label="Minha Instância" checked={vault.visibility.manager.instances} onChange={(v: boolean) => updateVisibility('manager', 'instances', v)} />
+                                        <ToggleRow label="Configurações" checked={vault.visibility.manager.settings} onChange={(v: boolean) => updateVisibility('manager', 'settings', v)} />
+                                    </div>
+                                </div>
+
+                                {/* AGENT */}
+                                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+                                    <div className="flex items-center gap-2 border-b border-slate-800 pb-3 mb-2">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                        <h3 className="text-sm font-bold text-white uppercase tracking-widest">Atendente</h3>
+                                    </div>
+                                    
+                                    <div className="space-y-1">
+                                        <ToggleRow label="Guia Inicial" checked={vault.visibility.agent.onboarding} onChange={(v: boolean) => updateVisibility('agent', 'onboarding', v)} />
+                                        <ToggleRow label="Meu Desempenho (Dash)" checked={vault.visibility.agent.dashboard} onChange={(v: boolean) => updateVisibility('agent', 'dashboard', v)} />
+                                        <ToggleRow label="Contatos" checked={vault.visibility.agent.contacts} onChange={(v: boolean) => updateVisibility('agent', 'contacts', v)} />
+                                        <ToggleRow label="Campanhas" checked={vault.visibility.agent.campaigns} onChange={(v: boolean) => updateVisibility('agent', 'campaigns', v)} />
+                                        <ToggleRow label="Minha Instância" checked={vault.visibility.agent.instances} onChange={(v: boolean) => updateVisibility('agent', 'instances', v)} />
+                                        <ToggleRow label="Configurações" checked={vault.visibility.agent.settings} onChange={(v: boolean) => updateVisibility('agent', 'settings', v)} />
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- OTHER EXISTING TABS (INFRA, WHITELABEL, ETC) KEPT AS IS --- */}
                     {activeTab === 'infrastructure' && (
                         <div className="max-w-4xl space-y-8 animate-in fade-in">
                             <h2 className="text-xl font-bold text-white flex items-center gap-3">
                                 <Server className="text-blue-500"/> Infraestrutura
                             </h2>
-                            
-                            {/* --- DOMAINS CONFIG CONTAINER --- */}
+                            {/* ... Content of Infrastructure ... */}
                             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
                                 <div className="border-b border-slate-800 pb-4">
                                     <h3 className="text-sm font-bold text-white flex items-center gap-2"><Globe size={16}/> Domínios e Subdomínios</h3>

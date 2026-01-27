@@ -2,19 +2,19 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Search, Plus, Filter, Tag, Trash2, Edit2, Mail, 
-  MessageSquare, Save, X, Database, CheckCircle, AlertCircle, Loader2, Download, Upload, UserPlus, ArrowRight, FileDown, ShieldCheck, Lock, Phone, User as UserIcon, FileText, Briefcase, Settings, Copy, Calendar, MoreHorizontal, Layers
+  MessageSquare, Save, X, Database, CheckCircle, AlertCircle, Loader2, Download, Upload, UserPlus, ArrowRight, FileDown, ShieldCheck, Lock, Phone, User as UserIcon, FileText, Briefcase, Settings, Copy, Calendar, MoreHorizontal, Layers, CheckSquare, Square, Globe, User, ToggleLeft, ToggleRight
 } from 'lucide-react';
-import { Contact, User, CampaignObjective, AgentPermissions } from '../types';
+import { Contact, User as UserType, AgentPermissions, Tag as TagType } from '../types';
 import * as contactService from '../services/contactService';
 import * as teamService from '../services/teamService';
 import { useApp } from '../contexts/AppContext';
 import Modal from './Modal';
 
 interface ContactsProps {
-    currentUser?: User;
+    currentUser?: UserType;
 }
 
-const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 'agent' } as User }) => {
+const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 'agent' } as UserType }) => {
   const { t, showToast } = useApp();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,10 +38,13 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
   
   // Tag Manager Modal State
   const [isTagManagerOpen, setIsTagManagerOpen] = useState(false);
-  const [allSystemTags, setAllSystemTags] = useState<string[]>([]);
+  const [allSystemTags, setAllSystemTags] = useState<TagType[]>([]);
+  const [tagSearch, setTagSearch] = useState('');
   const [newTagInput, setNewTagInput] = useState('');
-  const [editingTag, setEditingTag] = useState<{old: string, new: string} | null>(null);
-  const [tagToDelete, setTagToDelete] = useState<string | null>(null);
+  const [newTagIsGlobal, setNewTagIsGlobal] = useState(true); // Default true for managers
+  const [editingTag, setEditingTag] = useState<{old: TagType, newName: string} | null>(null);
+  const [tagToDelete, setTagToDelete] = useState<TagType | null>(null);
+  const [tagTab, setTagTab] = useState<'global' | 'personal'>('global');
 
   // Delete Modal
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
@@ -61,6 +64,9 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
   const [importFile, setImportFile] = useState<File | null>(null);
   const [isProcessingImport, setIsProcessingImport] = useState(false);
 
+  // Permission Checks (Hard Rules)
+  const isManagerOrAdmin = currentUser.role === 'manager' || currentUser.role === 'super_admin';
+
   useEffect(() => {
     loadData();
   }, [currentUser]);
@@ -71,7 +77,7 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
         const [contactsData, agentsData, tagsData] = await Promise.all([
             contactService.getContacts(currentUser.id, currentUser.role),
             teamService.getAgents(),
-            contactService.getTags()
+            contactService.getTags(currentUser.id, currentUser.role)
         ]);
         setContacts(contactsData);
         setAllSystemTags(tagsData);
@@ -85,11 +91,14 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
         if (currentUser.role !== 'manager') {
             const myAgentProfile = await teamService.getAgentById(currentUser.id);
             if (myAgentProfile && myAgentProfile.permissions) setUserPermissions(myAgentProfile.permissions);
+            setNewTagIsGlobal(false); // Agents defaults to false
+            setTagTab('personal'); // Agents view personal by default
         } else {
             setUserPermissions({ 
                 canCreate: true, canEdit: true, canDelete: true,
                 canCreateTags: true, canEditTags: true, canDeleteTags: true
             });
+            setNewTagIsGlobal(true); // Managers defaults to true
         }
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
@@ -114,19 +123,24 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
   });
 
   const handleSave = async () => {
+    // Security check
+    if (!editingContact && !isManagerOrAdmin) {
+        showToast('Permissão negada. Apenas gestores podem criar contatos.', 'error');
+        return;
+    }
+
     setIsSubmitting(true);
     try {
       const tagsArray = formData.tags.split(',').map(t => t.trim()).filter(t => t);
       
       if (editingContact) {
-        if (currentUser.role !== 'manager') {
-            if (!userPermissions.canEdit) throw new Error('Você não tem permissão global para editar contatos.');
+        if (!isManagerOrAdmin) {
+            if (!userPermissions.canEdit) throw new Error('Você não tem permissão para editar contatos.');
             if (editingContact.lockEdit) throw new Error('A edição deste contato foi bloqueada pelo gestor.');
         }
         await contactService.updateContact(editingContact.id, { ...formData, tags: tagsArray });
         showToast('Contato atualizado com sucesso!', 'success');
       } else {
-        if (currentUser.role !== 'manager' && !userPermissions.canCreate) throw new Error('Você não tem permissão para criar contatos.');
         await contactService.saveContact({ ...formData, tags: tagsArray }, formData.ownerId);
         showToast('Contato salvo na base!', 'success');
       }
@@ -139,20 +153,21 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
     }
   };
 
-  // ... (Tag Management functions preserved) ...
+  // ... (Tag Management functions UPDATED) ...
   const handleCreateTag = async () => {
       if (!newTagInput.trim()) return;
       try {
-          await contactService.createTag(newTagInput.trim());
+          // Pass newTagIsGlobal flag to service
+          await contactService.createTag(newTagInput.trim(), currentUser.id, currentUser.role, newTagIsGlobal);
           setNewTagInput('');
-          setAllSystemTags(await contactService.getTags());
+          setAllSystemTags(await contactService.getTags(currentUser.id, currentUser.role));
           showToast('Tag criada!', 'success');
       } catch (e: any) { showToast(e.message, 'error'); }
   };
   const handleRenameTag = async () => {
-      if (!editingTag || !editingTag.new.trim()) return;
+      if (!editingTag || !editingTag.newName.trim()) return;
       try {
-          await contactService.updateTag(editingTag.old, editingTag.new.trim());
+          await contactService.updateTag(editingTag.old.id, editingTag.newName.trim(), currentUser.id, currentUser.role);
           setEditingTag(null);
           loadData();
           showToast('Tag renomeada!', 'success');
@@ -161,7 +176,7 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
   const confirmDeleteTag = async () => {
       if (!tagToDelete) return;
       try {
-          setAllSystemTags(await contactService.deleteTag(tagToDelete));
+          setAllSystemTags(await contactService.deleteTag(tagToDelete.id, currentUser.id, currentUser.role));
           setContacts(await contactService.getContacts(currentUser.id, currentUser.role));
           showToast('Tag excluída!', 'success');
           setTagToDelete(null);
@@ -173,15 +188,33 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
     setFormData({ ...formData, tags: newTags.join(', ') });
   };
 
+  // Check if current user can edit/delete a tag
+  const canModifyTag = (tag: TagType) => {
+      // Manager can edit any tag (Global or Private)
+      if (isManagerOrAdmin) return true;
+      // Agents can only edit their own private tags
+      return tag.ownerId === currentUser.id;
+  };
+
+  // Filter Tags for Modal List
+  const filteredTags = allSystemTags.filter(t => {
+      const matchSearch = t.name.toLowerCase().includes(tagSearch.toLowerCase());
+      const isGlobal = t.ownerId === 'GLOBAL';
+      const matchTab = tagTab === 'global' ? isGlobal : !isGlobal;
+      // Managers see everything in "Personal" tab? No, "Personal" usually means theirs.
+      // But here "Personal" for manager means their private tags.
+      return matchSearch && matchTab;
+  });
+
   // Actions
   const handleDeleteClick = (contact: Contact) => {
-    if (currentUser.role !== 'manager') {
+    if (!isManagerOrAdmin) {
         if (!userPermissions.canDelete || contact.lockDelete) {
             showToast('Ação não permitida.', 'error');
             return;
         }
     }
-    setContactToDelete(contact);
+    setContactToDelete(contact); // Triggers Modal
   };
 
   const confirmDelete = async () => {
@@ -198,8 +231,8 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
   };
 
   const handleBulkDelete = async () => {
-      // In a real app, this would be a bulk API call
-      // For mock simplicity, we loop (not efficient for production but ok for demo)
+      if (!window.confirm(`Tem certeza que deseja excluir ${selectedContacts.size} contatos?`)) return;
+      
       setIsSubmitting(true);
       for (const id of selectedContacts) {
           await contactService.deleteContact(id);
@@ -247,11 +280,15 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
   };
 
   const processImport = async () => {
+      if (!isManagerOrAdmin) {
+          showToast('Apenas gestores podem importar contatos em massa.', 'error');
+          return;
+      }
+      
       if (!importFile) return;
       setIsProcessingImport(true);
       const reader = new FileReader();
       reader.onload = async (e) => {
-          // ... (existing import logic preserved) ...
           const text = e.target?.result as string;
           const lines = text.split(/\r\n|\n|\r/).filter(l => l.trim());
           if (lines.length < 2) { showToast('Arquivo inválido.', 'error'); setIsProcessingImport(false); return; }
@@ -293,7 +330,8 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
     else setSelectedContacts(new Set(filteredContacts.map(c => c.id)));
   };
 
-  const getAgentName = (id: string) => availableAgents.find(a => a.id === id)?.name || 'Desconhecido';
+  const getAgentName = (id: string) => availableAgents.find(a => a.id === id)?.name || 'Sem Dono';
+  
   const getAvatarColor = (name: string) => {
       const colors = ['bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-green-500', 'bg-emerald-500', 'bg-teal-500', 'bg-cyan-500', 'bg-blue-500', 'bg-indigo-500', 'bg-violet-500', 'bg-purple-500', 'bg-fuchsia-500', 'bg-pink-500', 'bg-rose-500'];
       let hash = 0;
@@ -326,18 +364,20 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
                 <button onClick={() => setViewSegment('vip')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${viewSegment === 'vip' ? 'bg-white dark:bg-slate-600 text-amber-600 dark:text-amber-300 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>VIP</button>
             </div>
 
-            {userPermissions.canCreate ? (
+            {/* ACTION BUTTON: Only Manager/Admin can create */}
+            {isManagerOrAdmin ? (
                 <button onClick={() => openModal()} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-md transition-colors text-sm font-bold">
                     <Plus size={18} /> {t('add_contact')}
                 </button>
             ) : (
-                <button disabled className="bg-slate-200 dark:bg-slate-700 text-slate-400 px-4 py-2 rounded-lg flex items-center gap-2 cursor-not-allowed">
+                <button disabled className="bg-slate-200 dark:bg-slate-700 text-slate-400 px-4 py-2 rounded-lg flex items-center gap-2 cursor-not-allowed border border-slate-300 dark:border-slate-600" title="Apenas gestores podem criar contatos">
                     <Lock size={16} /> {t('add_contact')}
                 </button>
             )}
         </div>
       </div>
 
+      {/* Toolbar */}
       <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row gap-4 items-center justify-between transition-colors">
         <div className="flex items-center gap-2 w-full md:w-auto">
             <div className="relative flex-1 md:w-64">
@@ -348,7 +388,7 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
                 <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                 <select className="pl-9 pr-8 py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none appearance-none bg-white dark:bg-slate-700 dark:text-white text-sm" value={selectedTag} onChange={e => setSelectedTag(e.target.value)}>
                     <option value="all">Todas as Tags</option>
-                    {allSystemTags.map(tag => <option key={tag} value={tag}>{tag}</option>)}
+                    {allSystemTags.map(tag => <option key={tag.id} value={tag.name}>{tag.name}</option>)}
                 </select>
                 <button onClick={() => setIsTagManagerOpen(true)} className="p-2 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors" title="Gerenciar Tags">
                     <Settings size={18} />
@@ -356,7 +396,14 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
             </div>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+             {filteredContacts.length > 0 && (
+                 <button onClick={toggleSelectAll} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold transition-colors">
+                     {selectedContacts.size === filteredContacts.length ? <CheckSquare size={16} className="text-blue-600"/> : <Square size={16}/>}
+                     Selecionar Todos
+                 </button>
+             )}
+             <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
              <button onClick={contactService.downloadCSVTemplate} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg" title="Baixar Modelo">
                 <Download size={18} />
              </button>
@@ -366,85 +413,127 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors">
+      {/* --- REFACTORED LIST (MATCHING TEAM.TSX LAYOUT) --- */}
+      <div className="space-y-3">
         {loading ? (
             <div className="p-20 flex justify-center"><Loader2 className="animate-spin text-blue-600" size={32}/></div>
         ) : filteredContacts.length === 0 ? (
-            <div className="p-20 text-center text-slate-500 flex flex-col items-center">
+            <div className="p-20 text-center text-slate-500 flex flex-col items-center bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 border-dashed">
                 <div className="w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mb-4">
                     <UserIcon size={32} className="text-slate-400" />
                 </div>
-                <h3 className="font-bold text-lg mb-1">Nenhum contato encontrado</h3>
-                <p className="text-sm">Tente ajustar seus filtros ou adicione novos contatos.</p>
+                <h3 className="font-bold text-lg mb-1 dark:text-white">Nenhum contato encontrado</h3>
+                <p className="text-sm">
+                    {isManagerOrAdmin ? 'Tente ajustar seus filtros ou adicione novos contatos.' : 'Você não possui contatos atribuídos.'}
+                </p>
             </div>
         ) : (
-            <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                    <thead className="bg-slate-50 dark:bg-slate-700 text-slate-500 dark:text-slate-300 font-semibold border-b border-slate-100 dark:border-slate-600">
-                        <tr>
-                            <th className="px-6 py-4 w-12"><input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4" checked={selectedContacts.size === filteredContacts.length && filteredContacts.length > 0} onChange={toggleSelectAll} /></th>
-                            <th className="px-6 py-4">{t('name')}</th>
-                            <th className="px-6 py-4">{t('tags')}</th>
-                            <th className="px-6 py-4 hidden md:table-cell">Responsável</th>
-                            <th className="px-6 py-4 hidden lg:table-cell">Criado em</th>
-                            <th className="px-6 py-4 text-right">{t('actions')}</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                        {filteredContacts.map(contact => (
-                            <tr key={contact.id} className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group ${selectedContacts.has(contact.id) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
-                                <td className="px-6 py-4"><input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4" checked={selectedContacts.has(contact.id)} onChange={() => toggleSelection(contact.id)} /></td>
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm ${getAvatarColor(contact.name)}`}>
-                                            {contact.name.substring(0, 2).toUpperCase()}
-                                        </div>
-                                        <div>
-                                            <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                                {contact.name}
-                                                {contact.lockEdit && <Lock size={10} className="text-amber-500" />}
-                                            </div>
-                                            <div className="text-slate-500 dark:text-slate-400 text-xs flex items-center gap-2 font-mono mt-0.5">
-                                                <Phone size={10} /> {contact.phone}
-                                                <button onClick={() => copyToClipboard(contact.phone)} className="opacity-0 group-hover:opacity-100 hover:text-blue-500 transition-opacity"><Copy size={10}/></button>
-                                            </div>
-                                            {contact.email && <div className="text-slate-400 text-[10px] flex items-center gap-1 mt-0.5"><Mail size={10}/> {contact.email}</div>}
-                                        </div>
+            filteredContacts.map(contact => {
+                const isSelected = selectedContacts.has(contact.id);
+                return (
+                    <div 
+                        key={contact.id} 
+                        className={`group bg-white dark:bg-slate-800 rounded-2xl border p-5 shadow-sm hover:shadow-md transition-all flex flex-col lg:flex-row items-start lg:items-center gap-6 relative overflow-hidden ${
+                            isSelected 
+                            ? 'border-blue-500 ring-1 ring-blue-500 bg-blue-50/10' 
+                            : 'border-slate-200 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-600'
+                        }`}
+                    >
+                        {/* Selection Strip (Matches Team left border logic but for selection) */}
+                        <div className={`absolute left-0 top-0 bottom-0 w-1.5 transition-colors ${isSelected ? 'bg-blue-600' : 'bg-transparent group-hover:bg-blue-200 dark:group-hover:bg-slate-600'}`}></div>
+
+                        {/* 1. Identity Section (Avatar + Info) */}
+                        <div className="flex items-center gap-4 flex-1 min-w-[250px] pl-2 cursor-pointer" onClick={() => toggleSelection(contact.id)}>
+                            <div className="relative shrink-0">
+                                <div className={`w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-sm border-2 border-white dark:border-slate-700 ${getAvatarColor(contact.name)}`}>
+                                    {contact.name.substring(0, 2).toUpperCase()}
+                                </div>
+                                {isSelected && (
+                                    <div className="absolute -top-1 -right-1 bg-blue-600 text-white rounded-full p-0.5 border-2 border-white dark:border-slate-800 shadow-sm">
+                                        <CheckCircle size={14} fill="currentColor" />
                                     </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <div className="flex flex-wrap gap-1.5 max-w-[200px]">
-                                        {contact.tags.slice(0, 3).map((tag, idx) => (
-                                            <span key={idx} className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-md text-[10px] font-bold border border-slate-200 dark:border-slate-600 uppercase tracking-wide">{tag}</span>
-                                        ))}
-                                        {contact.tags.length > 3 && <span className="text-xs text-slate-400 self-center">+{contact.tags.length - 3}</span>}
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4 hidden md:table-cell">
-                                    <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-700/50 rounded-full pr-3 pl-1 py-1 w-fit border border-slate-100 dark:border-slate-600">
-                                        <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-[10px] font-bold">
-                                            {getAgentName(contact.ownerId).charAt(0)}
-                                        </div>
-                                        <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate max-w-[100px]">{getAgentName(contact.ownerId)}</span>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4 hidden lg:table-cell text-xs text-slate-500">
-                                    <div className="flex items-center gap-1">
-                                        <Calendar size={12}/>
-                                        {new Date(contact.createdAt).toLocaleDateString()}
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4 text-right">
-                                    <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => openModal(contact)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg"><Edit2 size={16} /></button>
-                                        <button onClick={() => handleDeleteClick(contact)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"><Trash2 size={16} /></button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                                )}
+                            </div>
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <h4 className="font-bold text-lg text-slate-800 dark:text-white leading-tight truncate">{contact.name}</h4>
+                                    {contact.lockEdit && <Lock size={12} className="text-amber-500 shrink-0" title="Edição Bloqueada"/>}
+                                </div>
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+                                    <span className="flex items-center gap-1 font-mono cursor-pointer hover:text-blue-500 transition-colors" onClick={(e) => {e.stopPropagation(); copyToClipboard(contact.phone)}}>
+                                        <Phone size={12}/> {contact.phone}
+                                    </span>
+                                    {contact.email && (
+                                        <span className="hidden sm:inline text-slate-300 dark:text-slate-600">•</span>
+                                    )}
+                                    {contact.email && (
+                                        <span className="flex items-center gap-1 truncate max-w-[150px]" title={contact.email}>
+                                            <Mail size={12}/> {contact.email}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 2. Tags Section (Similar position to Role Badge in Team) */}
+                        <div className="w-full lg:w-auto flex flex-wrap gap-1.5 pl-2 lg:pl-0 min-w-[200px]">
+                            {contact.tags.length > 0 ? (
+                                contact.tags.slice(0, 3).map((tag, idx) => (
+                                    <span key={idx} className="px-2.5 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-600 uppercase tracking-wide">
+                                        {tag}
+                                    </span>
+                                ))
+                            ) : (
+                                <span className="text-xs text-slate-400 italic pl-1">Sem tags</span>
+                            )}
+                            {contact.tags.length > 3 && (
+                                <span className="px-2 py-1 text-xs text-slate-400 font-bold">+{contact.tags.length - 3}</span>
+                            )}
+                        </div>
+
+                        {/* 3. Owner & Info (Similar to Permissions in Team) */}
+                        <div className="w-full lg:w-auto flex items-center gap-4 pl-2 lg:pl-0">
+                            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg px-3 py-1.5 border border-slate-100 dark:border-slate-600 w-fit">
+                                <div className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-[10px] font-bold">
+                                    {getAgentName(contact.ownerId).charAt(0)}
+                                </div>
+                                <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate max-w-[100px]">
+                                    {getAgentName(contact.ownerId)}
+                                </span>
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-medium flex flex-col items-end">
+                                <span>Criado em</span>
+                                <span>{new Date(contact.createdAt).toLocaleDateString()}</span>
+                            </div>
+                        </div>
+
+                        {/* 4. Actions (Matching Button Style from Team) */}
+                        <div className="w-full lg:w-auto flex items-center justify-end gap-2 pl-2 lg:pl-0 border-t lg:border-t-0 border-slate-100 dark:border-slate-700 pt-4 lg:pt-0">
+                            <button 
+                                onClick={() => handleTransferClick(contact)}
+                                className="bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500 px-3 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all"
+                                title="Transferir"
+                            >
+                                <ArrowRight size={16}/>
+                            </button>
+                            <button 
+                                onClick={() => openModal(contact)} 
+                                className="bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-500 px-3 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all"
+                                title="Editar"
+                            >
+                                <Edit2 size={16} />
+                            </button>
+                            <button 
+                                onClick={() => handleDeleteClick(contact)} 
+                                className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 px-3 py-2 rounded-lg transition-all"
+                                title="Excluir"
+                            >
+                                <Trash2 size={16} />
+                            </button>
+                        </div>
+                    </div>
+                );
+            })
         )}
       </div>
 
@@ -473,32 +562,119 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
       )}
 
       {/* --- MODALS (Reused/Improved) --- */}
+      <Modal isOpen={isTransferModalOpen} onClose={() => setIsTransferModalOpen(false)} title="Transferir Contato">
+          <div className="space-y-4">
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                  Transferir <strong>{contactToTransfer?.name}</strong> para:
+              </p>
+              <select className="w-full p-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600" value={targetAgentId} onChange={e => setTargetAgentId(e.target.value)}>
+                  <option value="">Selecione um agente...</option>
+                  {availableAgents.filter(a => a.id !== contactToTransfer?.ownerId).map(a => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+              </select>
+              <div className="flex justify-end pt-2">
+                  <button onClick={confirmTransfer} disabled={!targetAgentId} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold disabled:opacity-50">Transferir Agora</button>
+              </div>
+          </div>
+      </Modal>
+
       <Modal isOpen={isTagManagerOpen} onClose={() => setIsTagManagerOpen(false)} title="Gestão de Tags" footer={<button onClick={() => setIsTagManagerOpen(false)} className="px-4 py-2 bg-slate-100 dark:bg-slate-700 rounded-lg">Fechar</button>}>
           <div className="space-y-4">
-              <div className="flex gap-2">
-                  <input type="text" placeholder="Nova tag..." className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg outline-none" value={newTagInput} onChange={e => setNewTagInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleCreateTag()} />
-                  <button onClick={handleCreateTag} className="bg-blue-600 text-white p-2 rounded-lg"><Plus/></button>
-              </div>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {allSystemTags.map(tag => (
-                      <div key={tag} className="flex justify-between items-center p-2 bg-slate-50 dark:bg-slate-700/50 rounded hover:bg-slate-100">
-                          {editingTag?.old === tag ? (
-                              <div className="flex flex-1 gap-2"><input autoFocus value={editingTag.new} onChange={e => setEditingTag({...editingTag, new: e.target.value})} className="flex-1 text-sm bg-white dark:bg-slate-600 border rounded px-1"/><button onClick={handleRenameTag} className="text-green-500"><CheckCircle size={14}/></button></div>
-                          ) : (
-                              <span className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200"><Tag size={14}/> {tag}</span>
-                          )}
-                          <div className="flex gap-1">
-                              {!editingTag && <button onClick={() => setEditingTag({old: tag, new: tag})} className="p-1 text-blue-500"><Edit2 size={14}/></button>}
-                              {!editingTag && <button onClick={() => setTagToDelete(tag)} className="p-1 text-red-500"><Trash2 size={14}/></button>}
-                          </div>
+              {/* Creation Area */}
+              <div className="flex flex-col gap-2 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                  <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Nova Tag</h4>
+                  <div className="flex gap-2">
+                      <input 
+                          type="text" 
+                          placeholder="Nome da tag..." 
+                          className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg outline-none text-sm" 
+                          value={newTagInput} 
+                          onChange={e => setNewTagInput(e.target.value)} 
+                          onKeyDown={e => e.key === 'Enter' && handleCreateTag()} 
+                      />
+                      <button onClick={handleCreateTag} className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"><Plus/></button>
+                  </div>
+                  
+                  {/* Manager Option: Global vs Private */}
+                  {isManagerOrAdmin && (
+                      <div className="flex items-center gap-2 mt-1">
+                          <button 
+                            onClick={() => setNewTagIsGlobal(!newTagIsGlobal)}
+                            className="flex items-center gap-2 cursor-pointer group"
+                          >
+                              {newTagIsGlobal ? <ToggleRight size={24} className="text-blue-600"/> : <ToggleLeft size={24} className="text-slate-400"/>}
+                              <span className={`text-xs font-medium ${newTagIsGlobal ? 'text-blue-700 dark:text-blue-300' : 'text-slate-500'}`}>
+                                  {newTagIsGlobal ? 'Tag Global (Visível para todos)' : 'Tag Privada (Apenas para mim)'}
+                              </span>
+                          </button>
                       </div>
-                  ))}
+                  )}
+                  {!isManagerOrAdmin && (
+                      <p className="text-[10px] text-slate-400 flex items-center gap-1"><Lock size={10}/> Sua tag será privada (visível apenas para você).</p>
+                  )}
+              </div>
+
+              {/* Tag Tabs & Search */}
+              <div className="space-y-2">
+                  <div className="flex gap-2 border-b border-slate-200 dark:border-slate-700 pb-2">
+                      <button onClick={() => setTagTab('global')} className={`text-sm font-bold px-3 py-1.5 rounded-lg transition-colors ${tagTab === 'global' ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+                          Globais
+                      </button>
+                      <button onClick={() => setTagTab('personal')} className={`text-sm font-bold px-3 py-1.5 rounded-lg transition-colors ${tagTab === 'personal' ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+                          Pessoais
+                      </button>
+                  </div>
+                  
+                  <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14}/>
+                      <input 
+                        type="text" 
+                        placeholder="Buscar tags..." 
+                        className="w-full pl-9 pr-4 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none"
+                        value={tagSearch}
+                        onChange={e => setTagSearch(e.target.value)}
+                      />
+                  </div>
+              </div>
+
+              {/* Tag List */}
+              <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+                  {filteredTags.length === 0 ? (
+                      <div className="text-center py-8 text-slate-400 text-xs">
+                          Nenhuma tag encontrada neste filtro.
+                      </div>
+                  ) : (
+                      filteredTags.map(tag => {
+                          const isOwner = canModifyTag(tag);
+                          const isGlobal = tag.ownerId === 'GLOBAL';
+                          
+                          return (
+                          <div key={tag.id} className="flex justify-between items-center p-2.5 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors group">
+                              {editingTag?.old.id === tag.id ? (
+                                  <div className="flex flex-1 gap-2"><input autoFocus value={editingTag.newName} onChange={e => setEditingTag({...editingTag, newName: e.target.value})} className="flex-1 text-sm bg-white dark:bg-slate-600 border rounded px-2 outline-none"/><button onClick={handleRenameTag} className="text-green-500 hover:bg-green-100 p-1 rounded"><CheckCircle size={14}/></button></div>
+                              ) : (
+                                  <div className="flex items-center gap-3">
+                                      <div className={`p-1.5 rounded-md ${isGlobal ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600' : 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300'}`}>
+                                          {isGlobal ? <Globe size={14}/> : <UserIcon size={14}/>}
+                                      </div>
+                                      <span className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 font-bold">{tag.name}</span>
+                                  </div>
+                              )}
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  {isOwner && !editingTag && <button onClick={() => setEditingTag({old: tag, newName: tag.name})} className="p-1.5 text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded" title="Renomear"><Edit2 size={14}/></button>}
+                                  {isOwner && !editingTag && <button onClick={() => setTagToDelete(tag)} className="p-1.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded" title="Excluir"><Trash2 size={14}/></button>}
+                                  {!isOwner && <Lock size={12} className="text-slate-300 mx-2" title="Gerenciado pelo Gestor"/>}
+                              </div>
+                          </div>
+                      )})
+                  )}
               </div>
           </div>
       </Modal>
 
       <Modal isOpen={!!tagToDelete} onClose={() => setTagToDelete(null)} title="Excluir Tag?" type="danger" zIndex={60} footer={<><button onClick={() => setTagToDelete(null)} className="px-4 py-2 bg-slate-100 dark:bg-slate-700 rounded-lg">Cancelar</button><button onClick={confirmDeleteTag} className="px-4 py-2 bg-red-600 text-white rounded-lg">Excluir</button></>}>
-          Tem certeza? A tag <strong>{tagToDelete}</strong> será removida de todos os contatos.
+          Tem certeza? A tag <strong>{tagToDelete?.name}</strong> será removida de todos os contatos.
       </Modal>
 
       <Modal isOpen={!!contactToDelete} onClose={() => setContactToDelete(null)} title="Excluir Contato" type="danger" footer={<><button onClick={() => setContactToDelete(null)} className="px-4 py-2 bg-slate-100 dark:bg-slate-700 rounded-lg">Cancelar</button><button onClick={confirmDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg">Excluir Definitivamente</button></>}>
@@ -538,7 +714,7 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
                                 <div>
                                     <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Tags</label>
                                     <input type="text" className="w-full mt-1 px-4 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white" value={formData.tags} onChange={e => setFormData({...formData, tags: e.target.value})} placeholder="Ex: Vip, Lead" />
-                                    <div className="flex flex-wrap gap-1 mt-2">{allSystemTags.map(tag => <button key={tag} onClick={() => toggleTagSelection(tag)} className={`text-[10px] px-2 py-1 rounded border ${formData.tags.includes(tag) ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-500'}`}>{tag}</button>)}</div>
+                                    <div className="flex flex-wrap gap-1 mt-2">{allSystemTags.map(tag => <button key={tag.id} onClick={() => toggleTagSelection(tag.name)} className={`text-[10px] px-2 py-1 rounded border ${formData.tags.includes(tag.name) ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-500'}`}>{tag.name}</button>)}</div>
                                 </div>
                                 <div><label className="text-sm font-bold text-slate-700 dark:text-slate-300">Notas</label><textarea rows={3} className="w-full mt-1 px-4 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white resize-none" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})}></textarea></div>
                                 {currentUser.role === 'manager' && (

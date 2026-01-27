@@ -1,5 +1,5 @@
 
-import { Contact } from '../types';
+import { Contact, Tag } from '../types';
 import { supabase } from './supabaseClient';
 import { mockStore } from './mockDataStore';
 
@@ -15,7 +15,6 @@ export const formatPhoneForEvolution = (phone: string): string => {
 
 export const getContacts = async (userId: string, role: string): Promise<Contact[]> => {
   if (mockStore.isMockMode()) {
-      // Mock Delay Simulation
       await new Promise(r => setTimeout(r, 600)); 
       return mockStore.getContacts(userId, role);
   }
@@ -37,36 +36,68 @@ export const getContacts = async (userId: string, role: string): Promise<Contact
     campaignHistory: c.campaign_history || [],
     notes: c.notes,
     createdAt: c.created_at,
-    ownerId: c.owner_id,
+    ownerId: c.owner_id, 
     lockEdit: c.lock_edit,
     lockDelete: c.lock_delete
   }));
 };
 
-export const getTags = async (): Promise<string[]> => {
-  if (mockStore.isMockMode()) return ['Lead', 'Vip', 'Novo', 'Boleto', 'Suporte', 'Frio'];
-  const { data, error } = await supabase.from('tags').select('name');
+export const getTags = async (userId: string, role: string): Promise<Tag[]> => {
+  if (mockStore.isMockMode()) {
+      await new Promise(r => setTimeout(r, 300));
+      return mockStore.getTags(userId, role);
+  }
+  
+  // Real: Buscar tags Globais (owner_id is null) OU Tags privadas do usuário
+  const { data, error } = await supabase
+    .from('tags')
+    .select('*')
+    .or(`owner_id.is.null,owner_id.eq.${userId}`);
+
   if (error) return [];
-  return data.map((t: any) => t.name);
+  return data.map((t: any) => ({
+      id: t.id,
+      name: t.name,
+      ownerId: t.owner_id ? t.owner_id : 'GLOBAL'
+  }));
 };
 
-export const createTag = async (tagName: string): Promise<string[]> => {
-  if (mockStore.isMockMode()) return ['Lead', 'Vip', tagName]; // Simplificado para mock
-  const { error } = await supabase.from('tags').insert({ name: tagName, owner_id: (await supabase.auth.getUser()).data.user?.id });
+// Updated: Accepts isGlobal flag
+export const createTag = async (tagName: string, userId: string, role: string, isGlobal: boolean = false): Promise<Tag[]> => {
+  // Lógica: 
+  // Se isGlobal for true E usuario for manager/admin -> ownerId = 'GLOBAL'
+  // Caso contrário -> ownerId = userId
+  
+  const canMakeGlobal = role === 'manager' || role === 'super_admin';
+  const ownerId = (canMakeGlobal && isGlobal) ? 'GLOBAL' : userId;
+
+  if (mockStore.isMockMode()) {
+      mockStore.addTag(tagName, ownerId);
+      return mockStore.getTags(userId, role);
+  }
+
+  const dbOwnerId = ownerId === 'GLOBAL' ? null : ownerId;
+  const { error } = await supabase.from('tags').insert({ name: tagName, owner_id: dbOwnerId });
   if (error) throw error;
-  return getTags();
+  return getTags(userId, role);
 };
 
-export const updateTag = async (oldName: string, newName: string): Promise<string[]> => {
-  if (mockStore.isMockMode()) return getTags();
-  await supabase.from('tags').update({ name: newName }).eq('name', oldName);
-  return getTags();
+export const updateTag = async (id: string, newName: string, userId: string, role: string): Promise<Tag[]> => {
+  if (mockStore.isMockMode()) {
+      mockStore.updateTag(id, newName);
+      return mockStore.getTags(userId, role);
+  }
+  await supabase.from('tags').update({ name: newName }).eq('id', id);
+  return getTags(userId, role);
 };
 
-export const deleteTag = async (tagName: string): Promise<string[]> => {
-  if (mockStore.isMockMode()) return getTags();
-  await supabase.from('tags').delete().eq('name', tagName);
-  return getTags();
+export const deleteTag = async (id: string, userId: string, role: string): Promise<Tag[]> => {
+  if (mockStore.isMockMode()) {
+      mockStore.deleteTag(id);
+      return mockStore.getTags(userId, role);
+  }
+  await supabase.from('tags').delete().eq('id', id);
+  return getTags(userId, role);
 };
 
 export const saveContact = async (
@@ -117,8 +148,6 @@ export const updateContact = async (id: string, updates: Partial<Contact>): Prom
   const payload: any = { ...updates };
   if (updates.phone) payload.phone = formatPhoneForEvolution(updates.phone);
   if (updates.tags) payload.tags = updates.tags;
-  if (updates.lockEdit !== undefined) payload.lock_edit = updates.lockEdit;
-  if (updates.lockDelete !== undefined) payload.lock_delete = updates.lockDelete;
   
   Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
 
@@ -150,9 +179,27 @@ export const deleteContact = async (id: string): Promise<void> => {
 };
 
 export const assignContact = async (contactId: string, newOwnerId: string): Promise<void> => {
-  if (mockStore.isMockMode()) return;
+  if (mockStore.isMockMode()) {
+      mockStore.updateContact(contactId, { ownerId: newOwnerId });
+      return;
+  }
   const { error } = await supabase.from('contacts').update({ owner_id: newOwnerId }).eq('id', contactId);
   if (error) throw error;
+};
+
+export const bulkAssignContacts = async (contactIds: string[], newOwnerId: string | null): Promise<void> => {
+    if (mockStore.isMockMode()) {
+        await new Promise(r => setTimeout(r, 800));
+        contactIds.forEach(id => mockStore.updateContact(id, { ownerId: newOwnerId || '' }));
+        return;
+    }
+    
+    const { error } = await supabase
+        .from('contacts')
+        .update({ owner_id: newOwnerId })
+        .in('id', contactIds);
+    
+    if (error) throw error;
 };
 
 export const bulkImportContacts = async (
@@ -180,7 +227,7 @@ export const bulkImportContacts = async (
   return contactsToInsert.length;
 };
 
-// ... (CSV export functions remain the same as they are purely client side logic)
+// ... export functions ...
 export const downloadCSVTemplate = () => {
     const csvContent = "Nome,Telefone,Email,Tags\nMaria Silva,5511999998888,maria@email.com,Lead;Vip\nJoao Souza,11988887777,,Outubro";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
