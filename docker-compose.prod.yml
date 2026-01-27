@@ -1,0 +1,24 @@
+
+version: '3'
+
+services:
+  frontend:
+    container_name: disparai-app
+    image: disparai-app:latest
+    build: .
+    restart: always
+    # Conecta à rede criada pelo Traefik (padrão Orion Setup)
+    networks:
+      - traefik_public
+    labels:
+      - "traefik.enable=true"
+      # Router para HTTP (Redireciona para HTTPS se configurado globalmente no Traefik)
+      - "traefik.http.routers.disparai.rule=Host(`app.seudominio.com`)"
+      - "traefik.http.routers.disparai.entrypoints=websecure"
+      - "traefik.http.routers.disparai.tls.certresolver=myresolver"
+      # Aponta para a porta interna do container (80 do Nginx)
+      - "traefik.http.services.disparai.loadbalancer.server.port=80"
+
+networks:
+  traefik_public:
+    external: true

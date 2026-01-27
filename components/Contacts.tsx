@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Search, Plus, Filter, Tag, Trash2, Edit2, Mail, 
-  MessageSquare, Save, X, Database, CheckCircle, AlertCircle, Loader2, Download, Upload, UserPlus, ArrowRight, FileDown, ShieldCheck, Lock, Phone, User as UserIcon, FileText, Briefcase, Settings, Copy, Calendar, MoreHorizontal, Layers, CheckSquare, Square, Globe, User
+  MessageSquare, Save, X, Database, CheckCircle, AlertCircle, Loader2, Download, Upload, UserPlus, ArrowRight, FileDown, ShieldCheck, Lock, Phone, User as UserIcon, FileText, Briefcase, Settings, Copy, Calendar, MoreHorizontal, Layers, CheckSquare, Square, Globe, User, Shield
 } from 'lucide-react';
 import { Contact, User as UserType, AgentPermissions, Tag as TagType } from '../types';
 import * as contactService from '../services/contactService';
@@ -76,19 +76,16 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
         setAllSystemTags(tagsData);
         
         const agentList = agentsData.map(a => ({ id: a.id, name: a.name }));
+        // Mock fallback to ensure owner logic works if teamService returns empty in specific states
         if (!agentList.find(a => a.id === 'manager-1')) {
             agentList.unshift({ id: 'manager-1', name: 'Gestor Admin' });
         }
         setAvailableAgents(agentList);
 
-        if (currentUser.role !== 'manager') {
+        // Fetch user specific permissions if not manager (Mock or Real)
+        if (currentUser.role !== 'manager' && currentUser.role !== 'super_admin') {
             const myAgentProfile = await teamService.getAgentById(currentUser.id);
             if (myAgentProfile && myAgentProfile.permissions) setUserPermissions(myAgentProfile.permissions);
-        } else {
-            setUserPermissions({ 
-                canCreate: true, canEdit: true, canDelete: true,
-                canCreateTags: true, canEditTags: true, canDeleteTags: true
-            });
         }
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
@@ -114,8 +111,8 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
 
   const handleSave = async () => {
     // Security check
-    if (!editingContact && !isManagerOrAdmin) {
-        showToast('Permissão negada. Apenas gestores podem criar contatos.', 'error');
+    if (!editingContact && !isManagerOrAdmin && !userPermissions.canCreate) {
+        showToast('Permissão negada. Você não pode criar contatos.', 'error');
         return;
     }
 
@@ -152,12 +149,10 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
   // Actions
   const handleDeleteClick = (contact: Contact) => {
     if (!isManagerOrAdmin) {
-        if (!userPermissions.canDelete || contact.lockDelete) {
-            showToast('Ação não permitida.', 'error');
-            return;
-        }
+        if (!userPermissions.canDelete) { showToast('Sem permissão para deletar.', 'error'); return; }
+        if (contact.lockDelete) { showToast('Este contato está protegido contra exclusão.', 'error'); return; }
     }
-    setContactToDelete(contact); // Triggers Modal
+    setContactToDelete(contact);
   };
 
   const confirmDelete = async () => {
@@ -174,6 +169,10 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
   };
 
   const handleBulkDelete = async () => {
+      if (!isManagerOrAdmin && !userPermissions.canDelete) {
+          showToast('Permissão negada para exclusão em massa.', 'error');
+          return;
+      }
       if (!window.confirm(`Tem certeza que deseja excluir ${selectedContacts.size} contatos?`)) return;
       
       setIsSubmitting(true);
@@ -205,6 +204,7 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
   const closeModal = () => { setIsModalOpen(false); setEditingContact(null); setImportFile(null); };
 
   const handleTransferClick = (contact: Contact) => {
+      if (!isManagerOrAdmin) { showToast('Apenas gestores podem transferir contatos.', 'error'); return; }
       setContactToTransfer(contact);
       const defaultTarget = availableAgents.find(a => a.id !== contact.ownerId);
       setTargetAgentId(defaultTarget ? defaultTarget.id : '');
@@ -223,37 +223,42 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
   };
 
   const processImport = async () => {
-      if (!isManagerOrAdmin) {
-          showToast('Apenas gestores podem importar contatos em massa.', 'error');
-          return;
-      }
-      
       if (!importFile) return;
       setIsProcessingImport(true);
       const reader = new FileReader();
       reader.onload = async (e) => {
           const text = e.target?.result as string;
           const lines = text.split(/\r\n|\n|\r/).filter(l => l.trim());
-          if (lines.length < 2) { showToast('Arquivo inválido.', 'error'); setIsProcessingImport(false); return; }
+          if (lines.length < 2) { showToast('Arquivo inválido ou vazio.', 'error'); setIsProcessingImport(false); return; }
+          
           const header = lines[0];
           const delimiter = header.includes(';') ? ';' : ',';
+          
           const parsedContacts = lines.slice(1).map(line => {
               if (!line.trim()) return null;
               const parts = line.split(delimiter);
               const clean = (val: string) => val ? val.trim().replace(/^["']|["']$/g, '') : '';
+              
               const name = clean(parts[0]);
               const phoneRaw = clean(parts[1]);
               const email = clean(parts[2]);
               const tagsStr = clean(parts[3]);
+              
               if (!name || !phoneRaw) return null;
-              const phone = phoneRaw.replace(/\D/g, '');
-              if (phone.length < 8) return null;
-              return { name, phone, email, tags: tagsStr ? tagsStr.split(';').map(t => clean(t)) : [] };
+              const phone = phoneRaw.replace(/\D/g, ''); // Basic clean
+              
+              return { name, phone, email, tags: tagsStr ? tagsStr.split(/[,;]/).map(t => clean(t)) : [] };
           }).filter((c): c is NonNullable<typeof c> => c !== null);
+
+          if (parsedContacts.length === 0) {
+              showToast('Nenhum contato válido encontrado.', 'error');
+              setIsProcessingImport(false);
+              return;
+          }
 
           try {
               const count = await contactService.bulkImportContacts(parsedContacts, formData.ownerId);
-              showToast(`${count} importados!`, 'success');
+              showToast(`${count} contatos importados com sucesso!`, 'success');
               closeModal();
               loadData();
           } catch (error: any) { showToast(error.message, 'error'); } 
@@ -307,16 +312,14 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
                 <button onClick={() => setViewSegment('vip')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${viewSegment === 'vip' ? 'bg-white dark:bg-slate-600 text-amber-600 dark:text-amber-300 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>VIP</button>
             </div>
 
-            {/* ACTION BUTTON: Only Manager/Admin can create */}
-            {isManagerOrAdmin ? (
-                <button onClick={() => openModal()} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-md transition-colors text-sm font-bold">
-                    <Plus size={18} /> {t('add_contact')}
-                </button>
-            ) : (
-                <button disabled className="bg-slate-200 dark:bg-slate-700 text-slate-400 px-4 py-2 rounded-lg flex items-center gap-2 cursor-not-allowed border border-slate-300 dark:border-slate-600" title="Apenas gestores podem criar contatos">
-                    <Lock size={16} /> {t('add_contact')}
-                </button>
-            )}
+            <button 
+                onClick={() => openModal()} 
+                disabled={!isManagerOrAdmin && !userPermissions.canCreate}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-md transition-colors text-sm font-bold"
+            >
+                {(!isManagerOrAdmin && !userPermissions.canCreate) ? <Lock size={16} /> : <Plus size={18} />} 
+                {t('add_contact')}
+            </button>
         </div>
       </div>
 
@@ -344,16 +347,16 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
                  </button>
              )}
              <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
-             <button onClick={contactService.downloadCSVTemplate} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg" title="Baixar Modelo">
+             <button onClick={contactService.downloadCSVTemplate} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg" title="Baixar Modelo CSV">
                 <Download size={18} />
              </button>
-             <button onClick={() => {contactService.exportContactsToCSV(filteredContacts); showToast('Exportando...', 'success')}} className="p-2 text-slate-500 hover:text-green-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg" title="Exportar Lista">
+             <button onClick={() => {contactService.exportContactsToCSV(filteredContacts); showToast('Exportando...', 'success')}} className="p-2 text-slate-500 hover:text-green-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg" title="Exportar Lista Atual">
                 <FileDown size={18} />
              </button>
         </div>
       </div>
 
-      {/* --- REFACTORED LIST (MATCHING TEAM.TSX LAYOUT) --- */}
+      {/* --- CRM LIST (Card Layout) --- */}
       <div className="space-y-3">
         {loading ? (
             <div className="p-20 flex justify-center"><Loader2 className="animate-spin text-blue-600" size={32}/></div>
@@ -370,19 +373,22 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
         ) : (
             filteredContacts.map(contact => {
                 const isSelected = selectedContacts.has(contact.id);
+                // Permissão para deletar especificamente este item
+                const canDeleteThis = isManagerOrAdmin || (userPermissions.canDelete && !contact.lockDelete);
+                
                 return (
                     <div 
                         key={contact.id} 
                         className={`group bg-white dark:bg-slate-800 rounded-2xl border p-5 shadow-sm hover:shadow-md transition-all flex flex-col lg:flex-row items-start lg:items-center gap-6 relative overflow-hidden ${
                             isSelected 
-                            ? 'border-blue-500 ring-1 ring-blue-500 bg-blue-50/10' 
+                            ? 'border-blue-500 ring-1 ring-blue-500 bg-blue-50/10 dark:bg-blue-900/10' 
                             : 'border-slate-200 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-600'
                         }`}
                     >
-                        {/* Selection Strip (Matches Team left border logic but for selection) */}
+                        {/* Selection Strip */}
                         <div className={`absolute left-0 top-0 bottom-0 w-1.5 transition-colors ${isSelected ? 'bg-blue-600' : 'bg-transparent group-hover:bg-blue-200 dark:group-hover:bg-slate-600'}`}></div>
 
-                        {/* 1. Identity Section (Avatar + Info) */}
+                        {/* 1. Identity Section */}
                         <div className="flex items-center gap-4 flex-1 min-w-[250px] pl-2 cursor-pointer" onClick={() => toggleSelection(contact.id)}>
                             <div className="relative shrink-0">
                                 <div className={`w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-sm border-2 border-white dark:border-slate-700 ${getAvatarColor(contact.name)}`}>
@@ -397,7 +403,9 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
                             <div className="min-w-0">
                                 <div className="flex items-center gap-2">
                                     <h4 className="font-bold text-lg text-slate-800 dark:text-white leading-tight truncate">{contact.name}</h4>
-                                    {contact.lockEdit && <Lock size={12} className="text-amber-500 shrink-0" title="Edição Bloqueada"/>}
+                                    {(contact.lockEdit || contact.lockDelete) && (
+                                        <Lock size={12} className="text-amber-500 shrink-0" title="Contato Protegido (Travas Ativas)"/>
+                                    )}
                                 </div>
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-0.5 text-sm text-slate-500 dark:text-slate-400">
                                     <span className="flex items-center gap-1 font-mono cursor-pointer hover:text-blue-500 transition-colors" onClick={(e) => {e.stopPropagation(); copyToClipboard(contact.phone)}}>
@@ -415,7 +423,7 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
                             </div>
                         </div>
 
-                        {/* 2. Tags Section (Similar position to Role Badge in Team) */}
+                        {/* 2. Tags Section */}
                         <div className="w-full lg:w-auto flex flex-wrap gap-1.5 pl-2 lg:pl-0 min-w-[200px]">
                             {contact.tags.length > 0 ? (
                                 contact.tags.slice(0, 3).map((tag, idx) => (
@@ -431,7 +439,7 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
                             )}
                         </div>
 
-                        {/* 3. Owner & Info (Similar to Permissions in Team) */}
+                        {/* 3. Owner & Info */}
                         <div className="w-full lg:w-auto flex items-center gap-4 pl-2 lg:pl-0">
                             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg px-3 py-1.5 border border-slate-100 dark:border-slate-600 w-fit">
                                 <div className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-[10px] font-bold">
@@ -447,28 +455,33 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
                             </div>
                         </div>
 
-                        {/* 4. Actions (Matching Button Style from Team) */}
+                        {/* 4. Actions */}
                         <div className="w-full lg:w-auto flex items-center justify-end gap-2 pl-2 lg:pl-0 border-t lg:border-t-0 border-slate-100 dark:border-slate-700 pt-4 lg:pt-0">
-                            <button 
-                                onClick={() => handleTransferClick(contact)}
-                                className="bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500 px-3 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all"
-                                title="Transferir"
-                            >
-                                <ArrowRight size={16}/>
-                            </button>
+                            {isManagerOrAdmin && (
+                                <button 
+                                    onClick={() => handleTransferClick(contact)}
+                                    className="bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500 px-3 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all"
+                                    title="Transferir Carteira"
+                                >
+                                    <ArrowRight size={16}/>
+                                </button>
+                            )}
                             <button 
                                 onClick={() => openModal(contact)} 
-                                className="bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-500 px-3 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all"
+                                disabled={!isManagerOrAdmin && (!userPermissions.canEdit || contact.lockEdit)}
+                                className="bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-500 px-3 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Editar"
                             >
                                 <Edit2 size={16} />
                             </button>
+                            
                             <button 
                                 onClick={() => handleDeleteClick(contact)} 
-                                className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 px-3 py-2 rounded-lg transition-all"
-                                title="Excluir"
+                                disabled={!canDeleteThis}
+                                className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 px-3 py-2 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                                title={canDeleteThis ? "Excluir" : "Exclusão Bloqueada"}
                             >
-                                <Trash2 size={16} />
+                                {canDeleteThis ? <Trash2 size={16} /> : <Lock size={16} />}
                             </button>
                         </div>
                     </div>
@@ -486,7 +499,7 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
               </div>
               
               <div className="flex items-center gap-2">
-                  <button onClick={handleBulkDelete} disabled={isSubmitting} className="flex items-center gap-2 px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium transition-colors">
+                  <button onClick={handleBulkDelete} disabled={isSubmitting || (!isManagerOrAdmin && !userPermissions.canDelete)} className="flex items-center gap-2 px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
                       {isSubmitting ? <Loader2 size={16} className="animate-spin"/> : <Trash2 size={16} />}
                       Excluir
                   </button>
@@ -501,13 +514,15 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
           </div>
       )}
 
-      {/* --- MODALS (Reused/Improved) --- */}
+      {/* --- MODALS --- */}
+      
+      {/* Transfer Modal */}
       <Modal isOpen={isTransferModalOpen} onClose={() => setIsTransferModalOpen(false)} title="Transferir Contato">
           <div className="space-y-4">
               <p className="text-sm text-slate-600 dark:text-slate-300">
-                  Transferir <strong>{contactToTransfer?.name}</strong> para:
+                  Transferir carteira de <strong>{contactToTransfer?.name}</strong> para:
               </p>
-              <select className="w-full p-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600" value={targetAgentId} onChange={e => setTargetAgentId(e.target.value)}>
+              <select className="w-full p-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white" value={targetAgentId} onChange={e => setTargetAgentId(e.target.value)}>
                   <option value="">Selecione um agente...</option>
                   {availableAgents.filter(a => a.id !== contactToTransfer?.ownerId).map(a => (
                       <option key={a.id} value={a.id}>{a.name}</option>
@@ -519,11 +534,12 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
           </div>
       </Modal>
 
+      {/* Delete Modal */}
       <Modal isOpen={!!contactToDelete} onClose={() => setContactToDelete(null)} title="Excluir Contato" type="danger" footer={<><button onClick={() => setContactToDelete(null)} className="px-4 py-2 bg-slate-100 dark:bg-slate-700 rounded-lg">Cancelar</button><button onClick={confirmDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg">Excluir Definitivamente</button></>}>
           Você está prestes a excluir <strong>{contactToDelete?.name}</strong>. Esta ação não pode ser desfeita.
       </Modal>
 
-      {/* Main Create/Edit Modal */}
+      {/* Create/Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
             <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700">
@@ -556,21 +572,43 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
                                 <div>
                                     <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Tags</label>
                                     <input type="text" className="w-full mt-1 px-4 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white" value={formData.tags} onChange={e => setFormData({...formData, tags: e.target.value})} placeholder="Ex: Vip, Lead" />
-                                    <div className="flex flex-wrap gap-1 mt-2">{allSystemTags.map(tag => <button key={tag.id} onClick={() => toggleTagSelection(tag.name)} className={`text-[10px] px-2 py-1 rounded border ${formData.tags.includes(tag.name) ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-500'}`}>{tag.name}</button>)}</div>
+                                    <div className="flex flex-wrap gap-1 mt-2">{allSystemTags.map(tag => <button key={tag.id} onClick={() => toggleTagSelection(tag.name)} className={`text-[10px] px-2 py-1 rounded border ${formData.tags.includes(tag.name) ? 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900 dark:text-blue-300' : 'bg-slate-50 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>{tag.name}</button>)}</div>
                                 </div>
                                 <div><label className="text-sm font-bold text-slate-700 dark:text-slate-300">Notas</label><textarea rows={3} className="w-full mt-1 px-4 py-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white resize-none" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})}></textarea></div>
-                                {currentUser.role === 'manager' && (
-                                    <div className="pt-2 space-y-2">
-                                        <label className="flex items-center gap-2"><input type="checkbox" checked={formData.lockEdit} onChange={e => setFormData({...formData, lockEdit: e.target.checked})}/><span className="text-sm text-slate-600 dark:text-slate-300">Bloquear Edição</span></label>
-                                        <label className="flex items-center gap-2"><input type="checkbox" checked={formData.lockDelete} onChange={e => setFormData({...formData, lockDelete: e.target.checked})}/><span className="text-sm text-slate-600 dark:text-slate-300">Bloquear Exclusão</span></label>
+                                
+                                {isManagerOrAdmin && (
+                                    <div className="pt-2 bg-slate-50 dark:bg-slate-700/30 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
+                                        <p className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-1"><Shield size={12}/> Travas de Segurança</p>
+                                        <div className="flex gap-4">
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input type="checkbox" className="rounded text-blue-600" checked={formData.lockEdit} onChange={e => setFormData({...formData, lockEdit: e.target.checked})}/>
+                                                <span className="text-xs text-slate-600 dark:text-slate-300">Bloquear Edição</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input type="checkbox" className="rounded text-blue-600" checked={formData.lockDelete} onChange={e => setFormData({...formData, lockDelete: e.target.checked})}/>
+                                                <span className="text-xs text-slate-600 dark:text-slate-300">Bloquear Exclusão</span>
+                                            </label>
+                                        </div>
                                     </div>
                                 )}
                             </div>
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center justify-center py-8 space-y-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-800 relative">
-                            <input type="file" accept=".csv" onChange={e => {if(e.target.files?.[0]) setImportFile(e.target.files[0])}} className="absolute inset-0 opacity-0 cursor-pointer"/>
-                            {importFile ? <div className="text-center"><FileText size={32} className="mx-auto text-blue-500 mb-2"/><p className="font-bold text-slate-700 dark:text-white">{importFile.name}</p></div> : <div className="text-center"><Upload size={32} className="mx-auto text-slate-400 mb-2"/><p className="font-bold text-slate-700 dark:text-white">Clique para selecionar CSV</p></div>}
+                        <div className="flex flex-col items-center justify-center py-8 space-y-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-800 relative hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors">
+                            <input type="file" accept=".csv" onChange={e => {if(e.target.files?.[0]) setImportFile(e.target.files[0])}} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"/>
+                            {importFile ? (
+                                <div className="text-center">
+                                    <FileText size={32} className="mx-auto text-blue-500 mb-2"/>
+                                    <p className="font-bold text-slate-700 dark:text-white">{importFile.name}</p>
+                                    <p className="text-xs text-slate-400">Pronto para importar</p>
+                                </div>
+                            ) : (
+                                <div className="text-center">
+                                    <Upload size={32} className="mx-auto text-slate-400 mb-2"/>
+                                    <p className="font-bold text-slate-700 dark:text-white">Clique para selecionar CSV</p>
+                                    <p className="text-xs text-slate-400">Formato: Nome, Telefone, Email, Tags</p>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -579,7 +617,7 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
                     {modalMode === 'create' ? (
                         <button onClick={handleSave} disabled={isSubmitting} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 flex items-center gap-2">{isSubmitting ? <Loader2 className="animate-spin" size={18}/> : <Save size={18}/>} Salvar</button>
                     ) : (
-                        <button onClick={processImport} disabled={!importFile || isProcessingImport} className="px-6 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 flex items-center gap-2">{isProcessingImport ? <Loader2 className="animate-spin" size={18}/> : <ArrowRight size={18}/>} Importar</button>
+                        <button onClick={processImport} disabled={!importFile || isProcessingImport} className="px-6 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 flex items-center gap-2">{isProcessingImport ? <Loader2 className="animate-spin" size={18}/> : <ArrowRight size={18}/>} Processar Arquivo</button>
                     )}
                 </div>
             </div>

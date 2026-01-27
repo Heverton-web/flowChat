@@ -80,8 +80,8 @@ export interface ModuleVisibility {
         reports: boolean;
         team: boolean;
         contacts: boolean;
-        tags: boolean; // NEW MODULE
-        base_assignment: boolean;
+        tags: boolean;
+        base_assignment: boolean; // NEW MODULE
         campaigns: boolean;
         instances: boolean;
         settings: boolean;
@@ -91,7 +91,7 @@ export interface ModuleVisibility {
         onboarding: boolean;
         dashboard: boolean; // Agent Dashboard ("Meu Desempenho")
         contacts: boolean;
-        tags: boolean; // NEW MODULE
+        tags: boolean;
         campaigns: boolean;
         instances: boolean;
         settings: boolean;
@@ -194,7 +194,7 @@ const DEFAULT_VISIBILITY: ModuleVisibility = {
         dashboard: true,
         reports: true,
         team: true,
-        base_assignment: true, // Added
+        base_assignment: true, // Enabled by default
         financial: true,
         financial_overview: true,
         financial_plans: true,
@@ -212,8 +212,8 @@ const DEFAULT_VISIBILITY: ModuleVisibility = {
         reports: true,
         team: true,
         contacts: true,
-        tags: true, // NEW
-        base_assignment: true,
+        tags: true, 
+        base_assignment: true, // Enabled by default
         campaigns: true,
         instances: true,
         settings: true
@@ -222,7 +222,7 @@ const DEFAULT_VISIBILITY: ModuleVisibility = {
         onboarding: true,
         dashboard: true,
         contacts: true,
-        tags: true, // NEW
+        tags: true,
         campaigns: true,
         instances: true,
         settings: true

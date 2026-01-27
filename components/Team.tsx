@@ -117,12 +117,14 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
       setIsSubmitting(true);
       try {
           if (modalMode === 'create') {
-              await teamService.addAgent({
+              const newAgent = await teamService.addAgent({
                   name: formData.name,
                   email: formData.email,
                   password: formData.password,
+                  role: formData.role,
                   permissions: formData.permissions
               });
+              setAgents([...agents, newAgent]); // Optimistic update
               showToast(`Usuário (${formData.role}) criado e credenciais geradas!`, 'success');
           } else if (modalMode === 'edit' && selectedAgent) {
               await teamService.updateAgent(selectedAgent.id, {
@@ -130,11 +132,12 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
                   role: formData.role,
                   permissions: formData.permissions,
               });
+              // Local update
+              setAgents(prev => prev.map(a => a.id === selectedAgent.id ? { ...a, ...formData } : a));
               showToast('Usuário atualizado com sucesso!', 'success');
           }
           
           closeModal();
-          loadData();
       } catch (e: any) {
           showToast(e.message || 'Erro ao salvar usuário.', 'error');
       } finally {
