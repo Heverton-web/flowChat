@@ -9,6 +9,7 @@ import { Campaign, CampaignObjective, WorkflowStep, WorkflowStepType, Contact, U
 import * as campaignService from '../services/campaignService';
 import * as contactService from '../services/contactService';
 import { useApp } from '../contexts/AppContext';
+import Modal from './Modal';
 
 // --- Subcomponent: Media Preview ---
 const StepMediaPreview = ({ step }: { step: WorkflowStep }) => {
@@ -147,6 +148,11 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   
+  // Delete Modal States
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // View State
   const [activeTab, setActiveTab] = useState<'all' | 'processing' | 'scheduled' | 'completed'>('all');
 
@@ -230,10 +236,29 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
   };
 
   const handleDeleteCampaign = (id: string) => {
-      // In real app, call API
-      const newCampaigns = campaigns.filter(c => c.id !== id);
-      setCampaigns(newCampaigns);
-      showToast('Campanha excluída.', 'success');
+      const campaign = campaigns.find(c => c.id === id);
+      if (campaign) {
+          setCampaignToDelete(campaign);
+          setIsDeleteModalOpen(true);
+      }
+  };
+
+  const confirmDelete = async () => {
+      if (!campaignToDelete) return;
+      setIsDeleting(true);
+      try {
+          // Simulate API call for now (or implement campaignService.deleteCampaign)
+          await new Promise(resolve => setTimeout(resolve, 500));
+          const newCampaigns = campaigns.filter(c => c.id !== campaignToDelete.id);
+          setCampaigns(newCampaigns);
+          showToast('Campanha excluída com sucesso.', 'success');
+          setIsDeleteModalOpen(false);
+          setCampaignToDelete(null);
+      } catch (e) {
+          showToast('Erro ao excluir campanha.', 'error');
+      } finally {
+          setIsDeleting(false);
+      }
   };
 
   const toggleContactSelection = (id: string) => {
@@ -498,23 +523,32 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                                 <h3 className="text-lg font-bold text-slate-800 dark:text-white leading-tight">{campaign.name}</h3>
                             </div>
                             
-                            <div className="relative group/menu">
-                                <button className="p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                                    <MoreVertical size={18} />
+                            {/* Fixed Action Buttons */}
+                            <div className="flex items-center gap-1">
+                                <button 
+                                    onClick={() => handleDuplicate(campaign)}
+                                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                    title="Duplicar Campanha"
+                                >
+                                    <Copy size={18} />
                                 </button>
-                                <div className="absolute right-0 top-full mt-1 w-32 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden hidden group-hover/menu:block z-20">
-                                    <button onClick={() => handleDuplicate(campaign)} className="w-full text-left px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2">
-                                        <Copy size={12}/> Duplicar
+                                
+                                {campaign.status === 'processing' && (
+                                    <button 
+                                        className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
+                                        title="Pausar Envio"
+                                    >
+                                        <Pause size={18} />
                                     </button>
-                                    {campaign.status === 'processing' && (
-                                        <button className="w-full text-left px-3 py-2 text-xs font-medium text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 flex items-center gap-2">
-                                            <Pause size={12}/> Pausar
-                                        </button>
-                                    )}
-                                    <button onClick={() => handleDeleteCampaign(campaign.id)} className="w-full text-left px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 border-t border-slate-100 dark:border-slate-700">
-                                        <Trash2 size={12}/> Excluir
-                                    </button>
-                                </div>
+                                )}
+
+                                <button 
+                                    onClick={() => handleDeleteCampaign(campaign.id)}
+                                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                    title="Excluir Campanha"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
                             </div>
                         </div>
 
@@ -594,6 +628,27 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
             </div>
           )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Excluir Campanha"
+        type="danger"
+        footer={
+            <>
+                <button onClick={() => setIsDeleteModalOpen(false)} className="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-bold">Cancelar</button>
+                <button onClick={confirmDelete} disabled={isDeleting} className="px-4 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 flex items-center gap-2">
+                    {isDeleting && <Loader2 className="animate-spin" size={16}/>} Sim, Excluir
+                </button>
+            </>
+        }
+      >
+        <p className="text-slate-600 dark:text-slate-300">
+            Tem certeza que deseja excluir a campanha <strong>{campaignToDelete?.name}</strong>? 
+            Esta ação é irreversível e removerá todo o histórico de envios associado.
+        </p>
+      </Modal>
 
       {/* Campaign Creation Modal */}
       {isCreating && (
