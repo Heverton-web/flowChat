@@ -259,6 +259,7 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onNavigate }) => {
                   )}
               </div>
           </section>
+      )}
     </div>
   );
 };
