@@ -110,7 +110,10 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onNavigate }) => {
   // Cálculo de Datas do Ciclo
   const getCycleDates = () => {
       if (!licenseStatus) return { start: '-', end: '-' };
-      const renewal = new Date(licenseStatus.license.renewalDate);
+      // Fallback seguro se renewalDate for inválida
+      const renewalDateStr = licenseStatus.license.renewalDate;
+      const renewal = renewalDateStr ? new Date(renewalDateStr) : new Date();
+      
       const start = new Date(renewal);
       start.setMonth(start.getMonth() - 1);
       
