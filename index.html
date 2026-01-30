@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Disparai</title>
-    <!-- Mantemos o Tailwind via CDN para não complicar a build com PostCSS agora -->
+    <!-- Tailwind via CDN para simplificar a build sem PostCSS neste momento -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -55,24 +55,23 @@
   <script type="importmap">
 {
   "imports": {
-    "recharts": "https://esm.sh/recharts@^3.7.0",
-    "react/": "https://esm.sh/react@^19.2.4/",
     "react": "https://esm.sh/react@^19.2.4",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.93.3",
-    "html2canvas": "https://esm.sh/html2canvas@^1.4.1",
-    "react-dom": "https://esm.sh/react-dom@^19.2.4",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "recharts": "https://esm.sh/recharts@^3.7.0",
     "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "react-dom": "https://esm.sh/react-dom@^19.2.4",
+    "html2canvas": "https://esm.sh/html2canvas@^1.4.1",
+    "jspdf": "https://esm.sh/jspdf@^4.0.0",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.93.3",
     "vite": "https://esm.sh/vite@^7.3.1",
-    "jspdf": "https://esm.sh/jspdf@^4.0.0"
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
 }
 </script>
 </head>
   <body class="bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100 transition-colors duration-300">
     <div id="root"></div>
-    <!-- Aponta para o arquivo .tsx principal -->
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>
