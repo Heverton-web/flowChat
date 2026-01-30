@@ -162,9 +162,9 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   
-  // React Flow States
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  // React Flow States - FIX: Added generic types to prevent implicit any errors
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   // Delete Modal States
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -359,8 +359,9 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
   };
 
   const removeNode = (id: string) => {
-      setNodes((nds) => nds.filter((node) => node.id !== id));
-      setEdges((eds) => eds.filter((edge) => edge.source !== id && edge.target !== id));
+      // FIX: Added explicit types to parameters to prevent TS7006
+      setNodes((nds: Node[]) => nds.filter((node) => node.id !== id));
+      setEdges((eds: Edge[]) => eds.filter((edge) => edge.source !== id && edge.target !== id));
   };
 
   // Conversão do Grafo para Lista Linear (Para salvar no backend simplificado)

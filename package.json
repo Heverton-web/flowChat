@@ -1,4 +1,3 @@
-
 {
   "name": "disparai-app",
   "private": true,
@@ -15,7 +14,8 @@
     "lucide-react": "^0.300.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "recharts": "^2.10.3"
+    "recharts": "^2.10.3",
+    "@xyflow/react": "^12.4.2"
   },
   "devDependencies": {
     "@types/jspdf": "^1.3.3",
