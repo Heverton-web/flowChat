@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { 
     Users, Shield, Plus, Trash2, Mail, CheckCircle, Search, Loader2, 
     Edit2, Eye, EyeOff, Key, User as UserIcon, Crown, RefreshCw, Tag,
-    Briefcase, Headset, MoreVertical, Lock, Unlock, Terminal, Copy, Check,
+    Briefcase, Headphones, MoreVertical, Lock, Unlock, Terminal, Copy, Check,
     FileEdit, LayoutGrid, List
 } from 'lucide-react';
 import { AgentPlan, AgentPermissions, LicenseStatus, ViewState, User, UserRole } from '../types';
@@ -209,7 +209,7 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
           case 'manager':
             return <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-xs font-bold w-fit"><Briefcase size={14}/> Gestor</div>;
           default:
-            return <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold w-fit"><Headset size={14}/> Atendente</div>;
+            return <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold w-fit"><Headphones size={14}/> Atendente</div>;
       }
   };
 
@@ -376,7 +376,7 @@ const Team: React.FC<TeamProps> = ({ onNavigate, currentUser }) => {
                         role="agent" 
                         label="Atendente" 
                         desc="Foco em chats/contatos." 
-                        icon={Headset} 
+                        icon={Headphones} 
                       />
                   </div>
               </div>

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
     Users, Database, Search, Filter, ArrowRight, Loader2, 
-    CheckCircle, Shield, Briefcase, Headset, Tag as TagIcon, UserPlus, Layers,
+    CheckCircle, Shield, Briefcase, Headphones, Tag as TagIcon, UserPlus, Layers,
     ChevronRight, UserMinus, UserX, LayoutGrid, AlertCircle
 } from 'lucide-react';
 import { User, Contact, AgentPlan, Tag } from '../types';

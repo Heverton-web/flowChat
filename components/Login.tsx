@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { 
     MessageCircle, Mail, Lock, ArrowRight, Loader2, ShieldCheck, AlertTriangle, 
-    Crown, Briefcase, Headset, Terminal, Rocket, Sparkles, CheckCircle, Bot,
+    Crown, Briefcase, Headphones, Terminal, Rocket, Sparkles, CheckCircle, Bot,
     Layout, Smartphone, Users, Zap, Play
 } from 'lucide-react';
 import { User } from '../types';
@@ -227,7 +227,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
                                 GESTOR
                             </button>
                             <button onClick={() => handleAutoFill('agent')} className="flex flex-col items-center justify-center py-2 rounded-xl text-[10px] font-bold transition-all hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-slate-600 dark:text-slate-300" title="Atendente">
-                                <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center mb-1"><Headset size={14} /></div>
+                                <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center mb-1"><Headphones size={14} /></div>
                                 AGENT
                             </button>
                         </div>

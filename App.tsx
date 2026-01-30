@@ -21,7 +21,7 @@ import BaseAssignment from './components/BaseAssignment';
 import Logo from './components/Logo';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { supabase } from './services/supabaseClient';
-import * as authService from '../services/authService';
+import * as authService from './services/authService';
 
 // Inner App Component to use the Context
 const FlowChatApp: React.FC = () => {
