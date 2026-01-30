@@ -1,9 +1,11 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Disparai</title>
+    <!-- Mantemos o Tailwind via CDN para não complicar a build com PostCSS agora -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -11,8 +13,6 @@
         theme: {
           extend: {
             colors: {
-              // Mapeamos 'blue' para nossa variável primária dinâmica
-              // Isso faz com que todo 'bg-blue-600', 'text-blue-500' mude com a configuração
               blue: {
                 50: 'rgb(var(--primary-rgb) / 0.05)',
                 100: 'rgb(var(--primary-rgb) / 0.1)',
@@ -20,8 +20,8 @@
                 300: 'rgb(var(--primary-rgb) / 0.3)',
                 400: 'rgb(var(--primary-rgb) / 0.5)',
                 500: 'rgb(var(--primary-rgb) / 0.8)',
-                600: 'rgb(var(--primary-rgb) / 1)', // Base Color
-                700: 'rgb(var(--primary-rgb) / 0.9)', // Simplificação: em prod usaríamos função de darken
+                600: 'rgb(var(--primary-rgb) / 1)',
+                700: 'rgb(var(--primary-rgb) / 0.9)',
                 800: 'rgb(var(--primary-rgb) / 0.95)',
                 900: 'rgb(var(--primary-rgb) / 1)',
               },
@@ -34,9 +34,9 @@
                 900: '#1e3a8a',
               },
               slate: {
-                750: '#293548', // Custom for dark mode
+                750: '#293548',
                 800: '#1e293b',
-                850: '#161f2f', // Custom for dark mode
+                850: '#161f2f',
                 900: '#0f172a',
               }
             }
@@ -46,7 +46,6 @@
     </script>
     <style>
       :root {
-        /* Default Primary Color (Blue-600 equivalent: 37 99 235) */
         --primary-rgb: 37 99 235;
       }
       body {
@@ -56,21 +55,24 @@
   <script type="importmap">
 {
   "imports": {
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "recharts": "https://esm.sh/recharts@^3.6.0",
-    "html2canvas": "https://esm.sh/html2canvas@1.4.1",
-    "jspdf": "https://esm.sh/jspdf@2.5.1",
-    "react-dom": "https://esm.sh/react-dom@^19.2.3",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.91.0"
+    "recharts": "https://esm.sh/recharts@^3.7.0",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.93.3",
+    "html2canvas": "https://esm.sh/html2canvas@^1.4.1",
+    "react-dom": "https://esm.sh/react-dom@^19.2.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "vite": "https://esm.sh/vite@^7.3.1",
+    "jspdf": "https://esm.sh/jspdf@^4.0.0"
   }
 }
 </script>
 </head>
   <body class="bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100 transition-colors duration-300">
     <div id="root"></div>
-    <script type="module" src="./index.js"></script>
+    <!-- Aponta para o arquivo .tsx principal -->
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
