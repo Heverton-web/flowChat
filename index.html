@@ -8,6 +8,9 @@
     <!-- Favicon SVG Base64 (Logo Disparai) -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSI+PHBhdGggZD0iTTM0IDIwQzM0IDI3LjczMiAyNy43MzIgMzQgMjAgMzRDMTIuMjY4IDM0IDYgMjcuNzMyIDYgMjBDNiAxMi4yNjggMTIuMjY4IDYgMjAgNkMyNy43MzIgNiAzNCAxMi4yNjggMzQgMjBaIiBmaWxsPSIjMjU2M2ViIiBvcGFjaXR5PSIwLjIiLz48cGF0aCBkPSJNMjAgMEM4Ljk1NDMxIDAgMCA4Ljk1NDMxIDAgMjBDMCAzMS4wNDU3IDguOTU0MzEgNDAgMjAgNDBDMzEuMDQ1NyA0MCA0MCAzMS4wNDU3IDQwIDIwQzQwIDguOTU0MzEgMzEuMDQ1NyAwIDIwIDBaTTIwIDM2QzExLjE2MzQgMzYgNCAyOC44MzY2IDQgMjBDNCAxMS4xNjM0IDExLjE2MzQgNCAyMCA0QzI4LjgzNjYgNCAzNiAxMS4xNjM0IDM2IDIwQzM2IDI4LjgzNjYgMjguODM2NiAzNiAyMCAzNloiIGZpbGw9IiMyNTYzZWIiLz48cGF0aCBkPSJNMTYgMTIuNUwyOCAyMEwxNiAyNy41VjEyLjVaIiBmaWxsPSIjMjU2M2ViIi8+PC9zdmc+" />
     
+    <!-- React Flow CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xyflow/react/dist/style.css" />
+
     <!-- Tailwind via CDN para simplificar a build sem PostCSS neste momento -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -54,6 +57,12 @@
       body {
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
       }
+      /* Custom React Flow Theme Overrides */
+      .react-flow__attribution { display: none; }
+      .dark .react-flow__node { color: white; }
+      .dark .react-flow__controls button { background: #1e293b; fill: white; border-bottom: 1px solid #334155; }
+      .dark .react-flow__controls button:hover { background: #334155; }
+      .dark .react-flow__minimap { background: #1e293b; }
     </style>
   <script type="importmap">
 {
@@ -68,7 +77,8 @@
     "jspdf": "https://esm.sh/jspdf@^4.0.0",
     "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.93.3",
     "vite": "https://esm.sh/vite@^7.3.1",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "@xyflow/react": "https://esm.sh/@xyflow/react@12.4.2"
   }
 }
 </script>
