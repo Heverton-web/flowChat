@@ -231,9 +231,9 @@ const DEFAULT_VISIBILITY: ModuleVisibility = {
 
 const DEFAULT_CONFIG: SystemConfig = {
     domains: {
-        frontend: 'app.disparai.com.br',
-        backend: 'api.disparai.com.br',
-        webhook: 'webhook.disparai.com.br'
+        frontend: 'empresa.disparai.com.br',
+        backend: 'evoapi.disparai.com.br',
+        webhook: 'flow.disparai.com.br'
     },
 
     evolution_url: '',
