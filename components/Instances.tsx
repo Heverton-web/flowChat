@@ -457,7 +457,7 @@ const Instances: React.FC<InstancesProps> = ({ currentUser }) => {
                             </div>
                         </div>
                         <p className="text-slate-500 dark:text-slate-400 text-xs px-4">
-                            1. Abra o WhatsApp > Menu > Aparelhos Conectados<br/>
+                            1. Abra o WhatsApp &gt; Menu &gt; Aparelhos Conectados<br/>
                             2. Toque em <strong>Conectar um aparelho</strong><br/>
                             3. Aponte a câmera para este código
                         </p>
