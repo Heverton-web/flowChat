@@ -1,4 +1,5 @@
 
+
 export type UserRole = 'super_admin' | 'manager' | 'agent';
 
 export interface User {
@@ -30,6 +31,7 @@ export interface AgentPlan {
   tempPassword?: string;
   extraContactPacks?: number;
   department?: string; // Optional for UI display
+  avatar?: string;
 }
 
 // --- TAG SYSTEM ---

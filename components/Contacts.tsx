@@ -404,7 +404,9 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
                                 <div className="flex items-center gap-2">
                                     <h4 className="font-bold text-lg text-slate-800 dark:text-white leading-tight truncate">{contact.name}</h4>
                                     {(contact.lockEdit || contact.lockDelete) && (
-                                        <Lock size={12} className="text-amber-500 shrink-0" title="Contato Protegido (Travas Ativas)"/>
+                                        <span title="Contato Protegido (Travas Ativas)">
+                                            <Lock size={12} className="text-amber-500 shrink-0"/>
+                                        </span>
                                     )}
                                 </div>
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-0.5 text-sm text-slate-500 dark:text-slate-400">

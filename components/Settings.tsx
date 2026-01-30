@@ -5,7 +5,7 @@ import {
   Save, Upload, Eye, EyeOff, Copy, CheckCircle, AlertTriangle,
   Monitor, Moon, Sun, Key, Plug, Bot, Loader2, Lock, Terminal, Code, Trash2, Server, Plus,
   ChevronDown, ChevronRight, BookOpen, Layers, Activity, Play, XCircle, Mail, MessageSquare, Zap,
-  LogOut, Laptop, Smartphone as MobileIcon, Hash, RefreshCw
+  LogOut, Laptop, Smartphone as MobileIcon, Hash, RefreshCw, Settings as SettingsIcon
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { supabase } from '../services/supabaseClient';
@@ -105,7 +105,7 @@ const Settings: React.FC<SettingsProps> = ({ currentUser }) => {
       {/* Header */}
       <div>
           <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <Settings className="text-blue-600" size={24}/>
+              <SettingsIcon className="text-blue-600" size={24}/>
               {t('settings')}
           </h2>
           <p className="text-slate-500 dark:text-slate-400">Gerencie suas preferências, segurança e integrações.</p>

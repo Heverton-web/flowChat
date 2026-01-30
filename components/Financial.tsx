@@ -47,8 +47,8 @@ const Financial: React.FC<FinancialProps> = ({ currentUser }) => {
   // Navigation
   const [activeTab, setActiveTab] = useState<'overview' | 'plans_addons' | 'invoices' | 'wallet'>('overview');
 
-  // Check visibility for current user role (defaults to Super Admin logic as this is admin component)
-  const roleVis = (config.visibility as any)[currentUser.role === 'developer' ? 'super_admin' : currentUser.role] || config.visibility.super_admin;
+  // Check visibility for current user role
+  const roleVis = (config.visibility as any)[currentUser.role] || config.visibility.super_admin;
 
   // Plan Display State
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
