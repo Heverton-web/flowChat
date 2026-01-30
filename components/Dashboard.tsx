@@ -70,7 +70,7 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ role, onNavigate }) => {
-  const { t, theme } = useApp();
+  const { theme } = useApp();
   const currentUserId = role === 'agent' ? 'agent-1' : 'manager-1'; 
   const isManagerOrAdmin = role === 'manager' || role === 'super_admin';
 
@@ -85,22 +85,26 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onNavigate }) => {
 
   const loadData = async () => {
       setLoading(true);
-      const promises: Promise<any>[] = [
-          contactService.getContacts(currentUserId, role),
-          financialService.getLicenseStatus()
-      ];
+      try {
+        const promises: Promise<any>[] = [
+            contactService.getContacts(currentUserId, role),
+            financialService.getLicenseStatus()
+        ];
 
-      if (isManagerOrAdmin) {
-          promises.push(teamService.getAgents() as any);
+        if (isManagerOrAdmin) {
+            promises.push(teamService.getAgents());
+        }
+
+        const [contacts, licStatus, agentsData] = await Promise.all(promises);
+        
+        setContactCount((contacts as Contact[]).length);
+        setLicenseStatus(licStatus as LicenseStatus);
+        if (agentsData) setAgents(agentsData as AgentPlan[]);
+      } catch (error) {
+        console.error("Failed to load dashboard data", error);
+      } finally {
+        setLoading(false);
       }
-
-      const [contacts, licStatus, agentsData] = await Promise.all(promises);
-      
-      setContactCount((contacts as Contact[]).length);
-      setLicenseStatus(licStatus as LicenseStatus);
-      if (agentsData) setAgents(agentsData as AgentPlan[]);
-      
-      setLoading(false);
   };
 
   // Cálculo de Datas do Ciclo
@@ -156,7 +160,7 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onNavigate }) => {
               <HealthProgress 
                   label="Instâncias Conectadas"
                   current={licenseStatus?.usage.usedInstances || 0}
-                  total={licenseStatus?.totalSeats || 0} // Assumindo 1 seat = 1 instância neste contexto visual
+                  total={licenseStatus?.totalSeats || 0} 
                   colorClass="bg-emerald-500"
                   icon={Smartphone}
               />
@@ -203,7 +207,7 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onNavigate }) => {
                 <Tooltip 
                     contentStyle={{borderRadius: '12px', border: 'none', backgroundColor: theme === 'dark' ? '#1e293b' : '#fff', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} 
                     itemStyle={{color: theme === 'dark' ? '#fff' : '#1e293b'}}
-                    formatter={(value) => [value, "Mensagens Enviadas"]}
+                    formatter={(value: any) => [value, "Mensagens Enviadas"]}
                 />
                 <Area type="monotone" dataKey="sent" stroke={chartColorSent} strokeWidth={3} fillOpacity={1} fill="url(#colorSent)" />
               </AreaChart>
@@ -226,7 +230,9 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onNavigate }) => {
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {loading ? (
-                      <p className="text-slate-400 text-sm py-4 col-span-3 text-center">Carregando dados...</p>
+                      <div className="col-span-3 text-center py-4">
+                          <p className="text-slate-400 text-sm">Carregando dados...</p>
+                      </div>
                   ) : topAgents.length === 0 ? (
                       <div className="col-span-3 text-center py-10 bg-slate-50 dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
                           <p className="text-slate-500">Nenhum dado de envio registrado.</p>
