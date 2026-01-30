@@ -175,7 +175,7 @@ const BaseAssignment: React.FC<BaseAssignmentProps> = ({ currentUser }) => {
             return;
         }
 
-        // Removido window.confirm para ação mais fluida e evitar bloqueios de navegador
+        // Removido window.confirm para garantir execução fluida
         setIsAssigning(true);
         try {
             // Pass null to unassign

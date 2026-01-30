@@ -4,10 +4,11 @@ version: '3'
 services:
   frontend:
     container_name: disparai-app
-    image: disparai-app:latest
+    # Se a imagem não existir localmente, o Docker irá construí-la usando o contexto atual
     build: .
+    image: disparai-app:latest
     restart: always
-    # Conecta à rede criada pelo Traefik (padrão Orion Setup)
+    # Conecta à rede criada pelo Traefik (padrão Orion Setup é traefik_public)
     networks:
       - traefik_public
     labels:
