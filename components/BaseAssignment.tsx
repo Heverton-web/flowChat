@@ -175,11 +175,7 @@ const BaseAssignment: React.FC<BaseAssignmentProps> = ({ currentUser }) => {
             return;
         }
 
-        // Use window.confirm for reliability
-        if (!window.confirm(`Deseja remover o responsável de ${selectedContactIds.size} contatos selecionados?`)) {
-            return;
-        }
-
+        // Removido window.confirm para ação mais fluida e evitar bloqueios de navegador
         setIsAssigning(true);
         try {
             // Pass null to unassign
@@ -204,8 +200,14 @@ const BaseAssignment: React.FC<BaseAssignmentProps> = ({ currentUser }) => {
 
     if (loading) return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin text-blue-600" size={40}/></div>;
 
+    // Helper to calc percentage for progress bars
+    const getPercentage = (count: number) => {
+        if (contacts.length === 0) return 0;
+        return (count / contacts.length) * 100;
+    };
+
     return (
-        <div className="space-y-6 pb-20 animate-in fade-in duration-500 h-[calc(100vh-140px)] flex flex-col">
+        <div className="space-y-6 animate-in fade-in duration-500 h-full flex flex-col flex-1">
             
             {/* Header */}
             <div className="flex justify-between items-center shrink-0">
@@ -219,7 +221,7 @@ const BaseAssignment: React.FC<BaseAssignmentProps> = ({ currentUser }) => {
             </div>
 
             {/* Main Content: Split View */}
-            <div className="flex flex-col lg:flex-row gap-6 h-full overflow-hidden">
+            <div className="flex flex-col lg:flex-row gap-6 flex-1 overflow-hidden min-h-0">
                 
                 {/* LEFT: Sidebar Filters (Sources) */}
                 <div className="w-full lg:w-80 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col overflow-hidden shrink-0">
@@ -275,35 +277,48 @@ const BaseAssignment: React.FC<BaseAssignmentProps> = ({ currentUser }) => {
                         <div className="h-px bg-slate-100 dark:bg-slate-700 my-2 mx-2"></div>
                         <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Carteiras de Agentes</p>
 
-                        {/* Agents List */}
-                        {agents.map(agent => (
-                            <button
-                                key={agent.id}
-                                onClick={() => setViewFilterId(agent.id)}
-                                className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left group ${
-                                    viewFilterId === agent.id
-                                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 ring-1 ring-blue-500'
-                                    : 'bg-transparent border-transparent hover:bg-slate-50 dark:hover:bg-slate-700'
-                                }`}
-                            >
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-                                    agent.role === 'manager' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-                                }`}>
-                                    {agent.name.charAt(0).toUpperCase()}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex justify-between items-center">
-                                        <h4 className={`text-sm font-bold truncate ${viewFilterId === agent.id ? 'text-blue-700 dark:text-blue-300' : 'text-slate-700 dark:text-white'}`}>{agent.name}</h4>
+                        {/* Agents List with Quota Visuals */}
+                        {agents.map(agent => {
+                            const count = agentStats[agent.id] || 0;
+                            const percent = getPercentage(count);
+                            return (
+                                <button
+                                    key={agent.id}
+                                    onClick={() => setViewFilterId(agent.id)}
+                                    className={`w-full flex flex-col gap-2 p-3 rounded-xl border transition-all text-left group ${
+                                        viewFilterId === agent.id
+                                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 ring-1 ring-blue-500'
+                                        : 'bg-transparent border-transparent hover:bg-slate-50 dark:hover:bg-slate-700'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3 w-full">
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
+                                            agent.role === 'manager' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                                        }`}>
+                                            {agent.name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-center">
+                                                <h4 className={`text-sm font-bold truncate ${viewFilterId === agent.id ? 'text-blue-700 dark:text-blue-300' : 'text-slate-700 dark:text-white'}`}>{agent.name}</h4>
+                                            </div>
+                                            <div className="flex justify-between items-center mt-0.5">
+                                                <span className="text-xs text-slate-500 capitalize">{agent.role === 'manager' ? 'Gestor' : 'Atendente'}</span>
+                                            </div>
+                                        </div>
+                                        <span className="text-xs font-bold bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full text-slate-600 dark:text-slate-300">
+                                            {count}
+                                        </span>
                                     </div>
-                                    <div className="flex justify-between items-center mt-0.5">
-                                        <span className="text-xs text-slate-500 capitalize">{agent.role === 'manager' ? 'Gestor' : 'Atendente'}</span>
+                                    {/* Mini Quota Bar */}
+                                    <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden mt-1">
+                                        <div 
+                                            className={`h-full rounded-full transition-all duration-500 ${viewFilterId === agent.id ? 'bg-blue-500' : 'bg-slate-400 dark:bg-slate-600'}`} 
+                                            style={{width: `${percent}%`}}
+                                        ></div>
                                     </div>
-                                </div>
-                                <span className="text-xs font-bold bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full text-slate-600 dark:text-slate-300">
-                                    {agentStats[agent.id] || 0}
-                                </span>
-                            </button>
-                        ))}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
@@ -337,11 +352,31 @@ const BaseAssignment: React.FC<BaseAssignmentProps> = ({ currentUser }) => {
                         </div>
                     </div>
 
-                    {/* Stats Bar */}
+                    {/* Stats Bar (Load Balance) */}
                     <div className="px-4 py-2 bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center text-xs shrink-0">
-                        <span className="text-slate-500 dark:text-slate-400">
-                            Exibindo <strong>{filteredContacts.length}</strong> contatos
-                        </span>
+                        <div className="flex items-center gap-4 flex-1 mr-4 overflow-hidden">
+                            <span className="text-slate-500 dark:text-slate-400 shrink-0">
+                                Exibindo <strong>{filteredContacts.length}</strong> contatos
+                            </span>
+                            
+                            {/* Visual Distribution Summary (Mini Dashboard) */}
+                            <div className="flex h-2 rounded-full overflow-hidden flex-1 max-w-xs bg-slate-200 dark:bg-slate-700">
+                                {agents.map((agent, i) => {
+                                    const p = getPercentage(agentStats[agent.id]);
+                                    if(p < 2) return null; // Don't show tiny slices
+                                    return (
+                                        <div 
+                                            key={agent.id} 
+                                            className={`${i % 2 === 0 ? 'bg-blue-400' : 'bg-indigo-400'} hover:opacity-80 transition-opacity`} 
+                                            style={{width: `${p}%`}} 
+                                            title={`${agent.name}: ${Math.round(p)}%`}
+                                        ></div>
+                                    );
+                                })}
+                                <div className="bg-amber-400" style={{width: `${getPercentage(agentStats['unassigned'])}%`}} title={`Sem dono: ${Math.round(getPercentage(agentStats['unassigned']))}%`}></div>
+                            </div>
+                        </div>
+
                         <button 
                             onClick={toggleSelectAll}
                             className="text-blue-600 font-bold hover:underline"
