@@ -149,7 +149,8 @@ const DEFAULT_BRANDING: BrandingConfig = {
     primaryColor: '#3b82f6', // Default Blue
     logoUrlLight: '',
     logoUrlDark: '',
-    faviconUrl: '',
+    // Favicon padrão (Logo SVG em Base64 para persistência sem hospedagem externa)
+    faviconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSI+PHBhdGggZD0iTTM0IDIwQzM0IDI3LjczMiAyNy43MzIgMzQgMjAgMzRDMTIuMjY4IDM0IDYgMjcuNzMyIDYgMjBDNiAxMi4yNjggMTIuMjY4IDYgMjAgNkMyNy43MzIgNiAzNCAxMi4yNjggMzQgMjBaIiBmaWxsPSIjMjU2M2ViIiBvcGFjaXR5PSIwLjIiLz48cGF0aCBkPSJNMjAgMEM4Ljk1NDMxIDAgMCA4Ljk1NDMxIDAgMjBDMCAzMS4wNDU3IDguOTU0MzEgNDAgMjAgNDBDMzEuMDQ1NyA0MCA0MCAzMS4wNDU3IDQwIDIwQzQwIDguOTU0MzEgMzEuMDQ1NyAwIDIwIDBaTTIwIDM2QzExLjE2MzQgMzYgNCAyOC44MzY2IDQgMjBDNCAxMS4xNjM0IDExLjE2MzQgNCAyMCA0QzI4LjgzNjYgNCAzNiAxMS4xNjM0IDM2IDIwQzM2IDI4LjgzNjYgMjguODM2NiAzNiAyMCAzNloiIGZpbGw9IiMyNTYzZWIiLz48cGF0aCBkPSJNMTYgMTIuNUwyOCAyMEwxNiAyNy41VjEyLjVaIiBmaWxsPSIjMjU2M2ViIi8+PC9zdmc+',
     
     loginTitle: 'Acessar Sistema',
     loginMessage: 'Entre com suas credenciais corporativas.',
@@ -289,7 +290,9 @@ export const getSystemConfig = (): SystemConfig => {
                 layoutVisibility: { ...DEFAULT_CONFIG.branding.layoutVisibility, ...(parsed.branding?.layoutVisibility || {}) },
                 loginBenefits: parsed.branding?.loginBenefits || DEFAULT_BRANDING.loginBenefits,
                 landingFeatures: parsed.branding?.landingFeatures || DEFAULT_BRANDING.landingFeatures,
-                loginLayout: parsed.branding?.loginLayout || DEFAULT_BRANDING.loginLayout
+                loginLayout: parsed.branding?.loginLayout || DEFAULT_BRANDING.loginLayout,
+                // Ensure favicon fallback
+                faviconUrl: parsed.branding?.faviconUrl || DEFAULT_BRANDING.faviconUrl
             },
             plans: { ...DEFAULT_CONFIG.plans, ...(parsed.plans || {}) }
         };
