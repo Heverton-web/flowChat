@@ -670,9 +670,10 @@ const MasterConsole: React.FC<DeveloperConsoleProps> = ({ initialTab = 'dashboar
                                             <ToggleRow label="Configurações (Menu)" checked={vault.visibility.super_admin.settings} onChange={(v: boolean) => updateVisibility('super_admin', 'settings', v)} />
                                             {vault.visibility.super_admin.settings && (
                                                 <div className="mt-1 space-y-1">
-                                                    <ToggleRow label="Meu Perfil" checked={vault.visibility.super_admin.settings_profile} onChange={(v: boolean) => updateVisibility('super_admin', 'settings_profile', v)} subItem />
-                                                    <ToggleRow label="Geral" checked={vault.visibility.super_admin.settings_general} onChange={(v: boolean) => updateVisibility('super_admin', 'settings_general', v)} subItem />
+                                                    <ToggleRow label="Perfil" checked={vault.visibility.super_admin.settings_profile} onChange={(v: boolean) => updateVisibility('super_admin', 'settings_profile', v)} subItem />
+                                                    <ToggleRow label="Segurança" checked={vault.visibility.super_admin.settings_security} onChange={(v: boolean) => updateVisibility('super_admin', 'settings_security', v)} subItem />
                                                     <ToggleRow label="Notificações" checked={vault.visibility.super_admin.settings_notifications} onChange={(v: boolean) => updateVisibility('super_admin', 'settings_notifications', v)} subItem />
+                                                    <ToggleRow label="Integrações" checked={vault.visibility.super_admin.settings_integrations} onChange={(v: boolean) => updateVisibility('super_admin', 'settings_integrations', v)} subItem />
                                                 </div>
                                             )}
                                         </div>
@@ -696,7 +697,18 @@ const MasterConsole: React.FC<DeveloperConsoleProps> = ({ initialTab = 'dashboar
                                         <ToggleRow label="Gestão de Equipe" checked={vault.visibility.manager.team} onChange={(v: boolean) => updateVisibility('manager', 'team', v)} />
                                         <ToggleRow label="Atribuição de Bases" checked={vault.visibility.manager.base_assignment} onChange={(v: boolean) => updateVisibility('manager', 'base_assignment', v)} />
                                         <ToggleRow label="Minha Instância" checked={vault.visibility.manager.instances} onChange={(v: boolean) => updateVisibility('manager', 'instances', v)} />
-                                        <ToggleRow label="Configurações" checked={vault.visibility.manager.settings} onChange={(v: boolean) => updateVisibility('manager', 'settings', v)} />
+                                        
+                                        <div className="py-2">
+                                            <ToggleRow label="Configurações (Menu)" checked={vault.visibility.manager.settings} onChange={(v: boolean) => updateVisibility('manager', 'settings', v)} />
+                                            {vault.visibility.manager.settings && (
+                                                <div className="mt-1 space-y-1">
+                                                    <ToggleRow label="Perfil" checked={vault.visibility.manager.settings_profile} onChange={(v: boolean) => updateVisibility('manager', 'settings_profile', v)} subItem />
+                                                    <ToggleRow label="Segurança" checked={vault.visibility.manager.settings_security} onChange={(v: boolean) => updateVisibility('manager', 'settings_security', v)} subItem />
+                                                    <ToggleRow label="Notificações" checked={vault.visibility.manager.settings_notifications} onChange={(v: boolean) => updateVisibility('manager', 'settings_notifications', v)} subItem />
+                                                    <ToggleRow label="Integrações" checked={vault.visibility.manager.settings_integrations} onChange={(v: boolean) => updateVisibility('manager', 'settings_integrations', v)} subItem />
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 
@@ -714,7 +726,18 @@ const MasterConsole: React.FC<DeveloperConsoleProps> = ({ initialTab = 'dashboar
                                         <ToggleRow label="Gestão de Tags" checked={vault.visibility.agent.tags} onChange={(v: boolean) => updateVisibility('agent', 'tags', v)} />
                                         <ToggleRow label="Campanhas" checked={vault.visibility.agent.campaigns} onChange={(v: boolean) => updateVisibility('agent', 'campaigns', v)} />
                                         <ToggleRow label="Minha Instância" checked={vault.visibility.agent.instances} onChange={(v: boolean) => updateVisibility('agent', 'instances', v)} />
-                                        <ToggleRow label="Configurações" checked={vault.visibility.agent.settings} onChange={(v: boolean) => updateVisibility('agent', 'settings', v)} />
+                                        
+                                        <div className="py-2">
+                                            <ToggleRow label="Configurações (Menu)" checked={vault.visibility.agent.settings} onChange={(v: boolean) => updateVisibility('agent', 'settings', v)} />
+                                            {vault.visibility.agent.settings && (
+                                                <div className="mt-1 space-y-1">
+                                                    <ToggleRow label="Perfil" checked={vault.visibility.agent.settings_profile} onChange={(v: boolean) => updateVisibility('agent', 'settings_profile', v)} subItem />
+                                                    <ToggleRow label="Segurança" checked={vault.visibility.agent.settings_security} onChange={(v: boolean) => updateVisibility('agent', 'settings_security', v)} subItem />
+                                                    <ToggleRow label="Notificações" checked={vault.visibility.agent.settings_notifications} onChange={(v: boolean) => updateVisibility('agent', 'settings_notifications', v)} subItem />
+                                                    <ToggleRow label="Integrações" checked={vault.visibility.agent.settings_integrations} onChange={(v: boolean) => updateVisibility('agent', 'settings_integrations', v)} subItem />
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 

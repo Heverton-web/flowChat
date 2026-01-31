@@ -61,17 +61,18 @@ export interface ModuleVisibility {
         dashboard: boolean;
         reports: boolean;
         team: boolean;
-        base_assignment: boolean; // Explicitly added
-        financial: boolean; // Parent Module
+        base_assignment: boolean;
+        financial: boolean;
         financial_overview: boolean;
         financial_plans: boolean;
         financial_invoices: boolean;
         financial_wallet: boolean;
         instances: boolean;
-        settings: boolean; // Parent Module
+        settings: boolean;
         settings_profile: boolean;
-        settings_general: boolean;
+        settings_security: boolean;
         settings_notifications: boolean;
+        settings_integrations: boolean;
     };
     // Manager Modules
     manager: {
@@ -81,20 +82,28 @@ export interface ModuleVisibility {
         team: boolean;
         contacts: boolean;
         tags: boolean;
-        base_assignment: boolean; // NEW MODULE
+        base_assignment: boolean;
         campaigns: boolean;
         instances: boolean;
         settings: boolean;
+        settings_profile: boolean;
+        settings_security: boolean;
+        settings_notifications: boolean;
+        settings_integrations: boolean;
     };
     // Agent Modules
     agent: {
         onboarding: boolean;
-        dashboard: boolean; // Agent Dashboard ("Meu Desempenho")
+        dashboard: boolean;
         contacts: boolean;
         tags: boolean;
         campaigns: boolean;
         instances: boolean;
         settings: boolean;
+        settings_profile: boolean;
+        settings_security: boolean;
+        settings_notifications: boolean;
+        settings_integrations: boolean;
     };
 }
 
@@ -195,7 +204,7 @@ const DEFAULT_VISIBILITY: ModuleVisibility = {
         dashboard: true,
         reports: true,
         team: true,
-        base_assignment: true, // Enabled by default
+        base_assignment: true, 
         financial: true,
         financial_overview: true,
         financial_plans: true,
@@ -204,8 +213,9 @@ const DEFAULT_VISIBILITY: ModuleVisibility = {
         instances: true,
         settings: true,
         settings_profile: true,
-        settings_general: true,
-        settings_notifications: true
+        settings_security: true,
+        settings_notifications: true,
+        settings_integrations: true
     },
     manager: {
         onboarding: true,
@@ -214,10 +224,14 @@ const DEFAULT_VISIBILITY: ModuleVisibility = {
         team: true,
         contacts: true,
         tags: true, 
-        base_assignment: true, // Enabled by default
+        base_assignment: true, 
         campaigns: true,
         instances: true,
-        settings: true
+        settings: true,
+        settings_profile: true,
+        settings_security: true,
+        settings_notifications: true,
+        settings_integrations: true
     },
     agent: {
         onboarding: true,
@@ -226,7 +240,11 @@ const DEFAULT_VISIBILITY: ModuleVisibility = {
         tags: true,
         campaigns: true,
         instances: true,
-        settings: true
+        settings: true,
+        settings_profile: true,
+        settings_security: true,
+        settings_notifications: true,
+        settings_integrations: false
     }
 };
 

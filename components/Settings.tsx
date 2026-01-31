@@ -25,16 +25,23 @@ const MOCK_SESSIONS = [
 const Settings: React.FC<SettingsProps> = ({ currentUser }) => {
   const { t, theme, toggleTheme, language, setLanguage, showToast, config } = useApp();
   
-  // Navigation State
-  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'integrations'>('profile');
+  // Permission Logic
+  const roleVis = (config.visibility as any)[currentUser.role] || config.visibility.super_admin;
+  
+  // Navigation State (Default to first available tab)
+  const getDefaultTab = () => {
+      if (roleVis.settings_profile) return 'profile';
+      if (roleVis.settings_security) return 'security';
+      if (roleVis.settings_notifications) return 'notifications';
+      if (roleVis.settings_integrations) return 'integrations';
+      return 'profile';
+  };
+
+  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'integrations'>(getDefaultTab());
   
   // Loading States
   const [isSaving, setIsSaving] = useState(false);
   const [isRevoking, setIsRevoking] = useState<number | null>(null);
-
-  // Permission Logic
-  const roleVis = (config.visibility as any)[currentUser.role] || config.visibility.super_admin;
-  const isManager = currentUser.role === 'manager' || currentUser.role === 'super_admin';
 
   // Forms State
   const [profileData, setProfileData] = useState({ name: currentUser.name, email: currentUser.email, phone: '5511999999999', bio: 'Gerente de Atendimento' });
@@ -130,12 +137,15 @@ const Settings: React.FC<SettingsProps> = ({ currentUser }) => {
                 </div>
 
                 <div className="p-2 space-y-1">
-                    <p className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Minha Conta</p>
-                    <SidebarItem id="profile" label="Perfil & Aparência" icon={User} description="Dados pessoais e tema" />
-                    <SidebarItem id="security" label="Login & Segurança" icon={Shield} description="Senha e sessões" />
-                    <SidebarItem id="notifications" label="Notificações" icon={Bell} description="Emails e alertas" />
+                    {(roleVis.settings_profile || roleVis.settings_security || roleVis.settings_notifications) && (
+                        <p className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Minha Conta</p>
+                    )}
                     
-                    {isManager && (
+                    {roleVis.settings_profile && <SidebarItem id="profile" label="Perfil & Aparência" icon={User} description="Dados pessoais e tema" />}
+                    {roleVis.settings_security && <SidebarItem id="security" label="Login & Segurança" icon={Shield} description="Senha e sessões" />}
+                    {roleVis.settings_notifications && <SidebarItem id="notifications" label="Notificações" icon={Bell} description="Emails e alertas" />}
+                    
+                    {roleVis.settings_integrations && (
                         <>
                             <div className="my-2 border-t border-slate-100 dark:border-slate-700 mx-2"></div>
                             <p className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Espaço de Trabalho</p>
@@ -150,7 +160,7 @@ const Settings: React.FC<SettingsProps> = ({ currentUser }) => {
         <div className="flex-1 min-w-0 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
             
             {/* --- TAB: PROFILE --- */}
-            {activeTab === 'profile' && (
+            {activeTab === 'profile' && roleVis.settings_profile && (
                 <div className="animate-in slide-in-from-right-4 fade-in">
                     <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
                         <h3 className="text-lg font-bold text-slate-800 dark:text-white">Perfil Público</h3>
@@ -231,7 +241,7 @@ const Settings: React.FC<SettingsProps> = ({ currentUser }) => {
             )}
 
             {/* --- TAB: SECURITY --- */}
-            {activeTab === 'security' && (
+            {activeTab === 'security' && roleVis.settings_security && (
                 <div className="animate-in slide-in-from-right-4 fade-in">
                     <div className="p-6 border-b border-slate-100 dark:border-slate-700">
                         <h3 className="text-lg font-bold text-slate-800 dark:text-white">Segurança e Login</h3>
@@ -301,7 +311,7 @@ const Settings: React.FC<SettingsProps> = ({ currentUser }) => {
             )}
 
             {/* --- TAB: NOTIFICATIONS --- */}
-            {activeTab === 'notifications' && (
+            {activeTab === 'notifications' && roleVis.settings_notifications && (
                 <div className="animate-in slide-in-from-right-4 fade-in">
                     <div className="p-6 border-b border-slate-100 dark:border-slate-700">
                         <h3 className="text-lg font-bold text-slate-800 dark:text-white">Preferências de Notificação</h3>
@@ -340,8 +350,8 @@ const Settings: React.FC<SettingsProps> = ({ currentUser }) => {
                 </div>
             )}
 
-            {/* --- TAB: INTEGRATIONS (MANAGER ONLY) --- */}
-            {activeTab === 'integrations' && isManager && (
+            {/* --- TAB: INTEGRATIONS (MANAGER ONLY OR ALLOWED) --- */}
+            {activeTab === 'integrations' && roleVis.settings_integrations && (
                 <div className="animate-in slide-in-from-right-4 fade-in">
                     <div className="p-6 border-b border-slate-100 dark:border-slate-700">
                         <h3 className="text-lg font-bold text-slate-800 dark:text-white">Integrações & API</h3>
