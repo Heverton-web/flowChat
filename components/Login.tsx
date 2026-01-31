@@ -101,6 +101,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
   const showBrand = branding.layoutVisibility?.showBrandContainer ?? true;
   const showLogin = branding.layoutVisibility?.showLoginContainer ?? true;
   const showLanding = branding.layoutVisibility?.showLandingContainer ?? true;
+  const showQuickAccess = branding.layoutVisibility?.showQuickAccess ?? true;
 
   const handleAutoFill = (role: 'super' | 'manager' | 'agent') => {
       setPassword('123456');
@@ -213,25 +214,27 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
                     </div>
 
                     {/* Quick Access Buttons (DEMO ONLY) */}
-                    <div className="mb-8 bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-2xl border border-slate-100 dark:border-slate-700/50">
-                        <div className="flex items-center justify-between px-2 mb-1.5">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Acesso Rápido (Demo)</p>
+                    {showQuickAccess && (
+                        <div className="mb-8 bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+                            <div className="flex items-center justify-between px-2 mb-1.5">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Acesso Rápido (Demo)</p>
+                            </div>
+                            <div className="grid grid-cols-3 gap-1">
+                                <button onClick={() => handleAutoFill('super')} className="flex flex-col items-center justify-center py-2 rounded-xl text-[10px] font-bold transition-all hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-slate-600 dark:text-slate-300" title="Super Admin">
+                                    <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-1"><Crown size={14} /></div>
+                                    SUPER
+                                </button>
+                                <button onClick={() => handleAutoFill('manager')} className="flex flex-col items-center justify-center py-2 rounded-xl text-[10px] font-bold transition-all hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-slate-600 dark:text-slate-300" title="Gestor">
+                                    <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-1"><Briefcase size={14} /></div>
+                                    GESTOR
+                                </button>
+                                <button onClick={() => handleAutoFill('agent')} className="flex flex-col items-center justify-center py-2 rounded-xl text-[10px] font-bold transition-all hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-slate-600 dark:text-slate-300" title="Atendente">
+                                    <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center mb-1"><Headphones size={14} /></div>
+                                    AGENT
+                                </button>
+                            </div>
                         </div>
-                        <div className="grid grid-cols-3 gap-1">
-                            <button onClick={() => handleAutoFill('super')} className="flex flex-col items-center justify-center py-2 rounded-xl text-[10px] font-bold transition-all hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-slate-600 dark:text-slate-300" title="Super Admin">
-                                <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-1"><Crown size={14} /></div>
-                                SUPER
-                            </button>
-                            <button onClick={() => handleAutoFill('manager')} className="flex flex-col items-center justify-center py-2 rounded-xl text-[10px] font-bold transition-all hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-slate-600 dark:text-slate-300" title="Gestor">
-                                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-1"><Briefcase size={14} /></div>
-                                GESTOR
-                            </button>
-                            <button onClick={() => handleAutoFill('agent')} className="flex flex-col items-center justify-center py-2 rounded-xl text-[10px] font-bold transition-all hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm text-slate-600 dark:text-slate-300" title="Atendente">
-                                <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center mb-1"><Headphones size={14} /></div>
-                                AGENT
-                            </button>
-                        </div>
-                    </div>
+                    )}
                     
                     {error && (
                     <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold p-3 rounded-xl mb-6 flex items-start gap-2 animate-in slide-in-from-top-2">

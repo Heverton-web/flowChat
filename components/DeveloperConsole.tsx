@@ -633,6 +633,11 @@ const MasterConsole: React.FC<DeveloperConsoleProps> = ({ initialTab = 'dashboar
                                         checked={vault.branding.layoutVisibility?.showLandingContainer ?? true} 
                                         onChange={(v: boolean) => updateBrandingLayout('showLandingContainer', v)} 
                                     />
+                                    <ToggleRow 
+                                        label="ACESSO RÁPIDO (Demo)" 
+                                        checked={vault.branding.layoutVisibility?.showQuickAccess ?? true} 
+                                        onChange={(v: boolean) => updateBrandingLayout('showQuickAccess', v)} 
+                                    />
                                 </div>
                             </div>
 

@@ -29,6 +29,7 @@ export interface BrandingConfig {
         showBrandContainer: boolean; // Container Disparai (Left)
         showLoginContainer: boolean; // Container Login (Middle)
         showLandingContainer: boolean; // Container Landing Page (Right)
+        showQuickAccess: boolean; // Botões de Demo (Super/Gestor/Agent)
     };
 
     // Landing Page
@@ -174,7 +175,8 @@ const DEFAULT_BRANDING: BrandingConfig = {
     layoutVisibility: {
         showBrandContainer: true,
         showLoginContainer: true,
-        showLandingContainer: true
+        showLandingContainer: true,
+        showQuickAccess: true
     },
 
     showSalesPage: true,
