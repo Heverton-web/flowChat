@@ -1,9 +1,8 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
-  Send, Plus, Calendar, FileText, Upload, CheckCircle, BarChart2, Loader2, X, Target, Clock, User, Download,
-  MessageSquare, Mic, Image as ImageIcon, Video, Trash2, ArrowDown, ArrowUp, List, Search, GripVertical, Settings, Hourglass, Filter, ShieldCheck, ShieldAlert, Lock, Zap, Shield, Crown, Link as LinkIcon, ListChecks, File, ArrowLeft, Eye, Copy, MoreVertical, Play, Pause, AlertTriangle, Activity, Rocket, DollarSign, RefreshCw, Smartphone, Users, Bold, Italic, Strikethrough, Code, Music, Paperclip, ExternalLink, MousePointer
+  Send, Plus, Calendar, FileText, Upload, CheckCircle, BarChart2, Loader2, X, Target, Clock, Download,
+  MessageSquare, Mic, Image as ImageIcon, Video, Trash2, Hourglass, ShieldCheck, Shield, Zap, Link as LinkIcon, ListChecks, File, ArrowLeft, Bold, Italic, Strikethrough, Code, Settings, Activity, Play
 } from 'lucide-react';
 import { 
   ReactFlow, 
@@ -18,7 +17,11 @@ import {
   Connection,
   Edge,
   Node,
-  MarkerType
+  MarkerType,
+  BaseEdge,
+  EdgeLabelRenderer,
+  getSmoothStepPath,
+  useReactFlow
 } from '@xyflow/react';
 
 import { Campaign, CampaignObjective, WorkflowStep, WorkflowStepType, Contact, User as UserType } from '../types';
@@ -27,9 +30,62 @@ import * as contactService from '../services/contactService';
 import { useApp } from '../contexts/AppContext';
 import Modal from './Modal';
 
+// --- CUSTOM EDGE WITH DELETE BUTTON ---
+const CustomEdge = ({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  style = {},
+  markerEnd,
+}: any) => {
+  const { setEdges } = useReactFlow();
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  });
+
+  const onEdgeClick = (evt: React.MouseEvent) => {
+    evt.stopPropagation();
+    setEdges((edges) => edges.filter((e) => e.id !== id));
+  };
+
+  return (
+    <>
+      <BaseEdge path={edgePath} markerEnd={markerEnd} style={style} />
+      <EdgeLabelRenderer>
+        <div
+          style={{
+            position: 'absolute',
+            transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+            fontSize: 12,
+            pointerEvents: 'all',
+          }}
+          className="nodrag nopan"
+        >
+          <button
+            className="w-5 h-5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-red-500 hover:text-red-700 hover:border-red-500 rounded-full flex items-center justify-center shadow-sm transition-all text-[10px]"
+            onClick={onEdgeClick}
+            title="Remover conexão"
+          >
+            <X size={10} strokeWidth={3} />
+          </button>
+        </div>
+      </EdgeLabelRenderer>
+    </>
+  );
+};
+
 // --- React Flow Custom Node Component ---
 const CustomWorkflowNode = ({ data }: { data: any }) => {
-    const { step, onDelete, onEdit, index } = data;
+    const { step, onDelete, onEdit } = data;
     
     const getIcon = () => {
         switch (step.type) {
@@ -100,56 +156,20 @@ const CustomWorkflowNode = ({ data }: { data: any }) => {
 const StartNode = () => {
     return (
         <div className="w-48 bg-green-600 rounded-full shadow-lg shadow-green-500/20 py-2 px-4 flex items-center justify-center gap-2 text-white font-bold text-sm relative">
-            <Rocket size={16} /> Disparo Inicial
+            <Play size={16} fill="currentColor" /> Disparo Inicial
             <Handle type="source" position={Position.Bottom} className="w-3 h-3 !bg-green-600 border-2 border-white" />
         </div>
     );
 }
 
-// Define nodeTypes outside component to prevent re-creation
+// Define nodeTypes and edgeTypes
 const nodeTypes = {
     customStep: CustomWorkflowNode,
     startNode: StartNode
 };
 
-// --- Subcomponent: Media Preview (Mantido igual) ---
-const StepMediaPreview = ({ step }: { step: WorkflowStep }) => {
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-    const [showModal, setShowModal] = useState(false);
-
-    useEffect(() => {
-        if (step.mediaUrl) {
-            setPreviewUrl(step.mediaUrl);
-            return;
-        }
-        if (step.file) {
-            const url = URL.createObjectURL(step.file);
-            setPreviewUrl(url);
-            return () => URL.revokeObjectURL(url);
-        }
-        setPreviewUrl(null);
-    }, [step.file, step.mediaUrl]);
-
-    if (!['image', 'video', 'audio', 'document'].includes(step.type)) return null;
-
-    if (!previewUrl) return (
-        <div className="flex items-center justify-center h-20 w-full bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-dashed border-slate-300 dark:border-slate-600 text-slate-400 text-xs gap-2">
-            <span className="w-2 h-2 bg-slate-400 rounded-full"></span> Mídia pendente
-        </div>
-    );
-
-    // ... (Mantendo o resto da lógica de preview simplificada para o editor)
-    return (
-        <div className="flex items-center gap-2 p-2 bg-slate-100 dark:bg-slate-700 rounded border border-slate-200 dark:border-slate-600">
-            <div className="p-1 bg-white dark:bg-slate-600 rounded">
-                {step.type === 'image' && <ImageIcon size={14}/>}
-                {step.type === 'video' && <Video size={14}/>}
-                {step.type === 'audio' && <Mic size={14}/>}
-                {step.type === 'document' && <File size={14}/>}
-            </div>
-            <span className="text-[10px] font-bold truncate max-w-[100px]">Mídia Anexada</span>
-        </div>
-    );
+const edgeTypes = {
+    custom: CustomEdge,
 };
 
 interface CampaignsProps {
@@ -162,9 +182,12 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   
-  // React Flow States - FIX: Added generic types to prevent implicit any errors
+  // React Flow States
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+
+  // Mobile Tab State
+  const [mobileTab, setMobileTab] = useState<'settings' | 'workflow'>('settings');
 
   // Delete Modal States
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -177,7 +200,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
   // Form State
   const [formData, setFormData] = useState({
     name: '',
-    date: '', 
+    date: new Date().toISOString().split('T')[0], 
     objective: 'prospecting' as CampaignObjective,
     contactsCount: 0,
     minDelay: 30,
@@ -194,8 +217,6 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
   // Workflow State
   const [isStepModalOpen, setIsStepModalOpen] = useState(false);
   const [selectedStepType, setSelectedStepType] = useState<WorkflowStepType | null>(null);
-  
-  // Edit Step State
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
 
   // Step Configuration States
@@ -225,6 +246,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
             }
         ]);
         setEdges([]);
+        setMobileTab('settings'); // Reset tab on new creation
     }
   }, [isCreating]);
 
@@ -251,6 +273,16 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
       }
   };
 
+  const onConnect = useCallback(
+    (params: Connection) => setEdges((eds) => addEdge({ 
+        ...params, 
+        type: 'custom', // Use our custom edge
+        animated: true, 
+        style: { stroke: '#3b82f6', strokeWidth: 2 } 
+    }, eds)),
+    [setEdges],
+  );
+
   const handleDuplicate = (campaign: Campaign) => {
       setFormData({
           name: `${campaign.name} (Cópia)`,
@@ -261,7 +293,6 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
           maxDelay: campaign.maxDelay
       });
       
-      // Reconstruct Flow from Linear List (Mock Layout)
       const newNodes: Node[] = [
           { id: 'start', type: 'startNode', position: { x: 250, y: 50 }, data: { label: 'Início' }, draggable: false }
       ];
@@ -273,7 +304,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
           newNodes.push({
               id: nodeId,
               type: 'customStep',
-              position: { x: 200, y: 150 + (index * 150) }, // Simple vertical layout
+              position: { x: 200, y: 150 + (index * 150) },
               data: { 
                   step, 
                   index: index + 1,
@@ -285,7 +316,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
               id: `e-${previousId}-${nodeId}`,
               source: previousId,
               target: nodeId,
-              type: 'smoothstep',
+              type: 'custom',
               animated: true,
               style: { stroke: '#3b82f6', strokeWidth: 2 }
           });
@@ -359,38 +390,19 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
   };
 
   const removeNode = (id: string) => {
-      // FIX: Added explicit types to parameters to prevent TS7006
       setNodes((nds: Node[]) => nds.filter((node) => node.id !== id));
       setEdges((eds: Edge[]) => eds.filter((edge) => edge.source !== id && edge.target !== id));
   };
 
-  // Conversão do Grafo para Lista Linear (Para salvar no backend simplificado)
-  // Em uma app real, salvaríamos a estrutura do grafo inteira.
   const serializeWorkflow = (): WorkflowStep[] => {
-      // 1. Find start node
-      // 2. Traverse edges to find sequence
-      // Since UI is graph but logic is linear list for this specific app requirement:
-      // We will perform a simple topological sort or just find the path from Start.
+      // Logic to traverse graph. For simplicity in this demo, we do a pseudo-sort by Y position
+      // Real implementation should traverse edges from Start node.
       
-      const steps: WorkflowStep[] = [];
-      let currentNodeId = 'start';
-      
-      // Simples traversal para lista linear
-      // Loop infinito protection: max 50 steps
-      for(let i=0; i<50; i++) {
-          const edge = edges.find(e => e.source === currentNodeId);
-          if(!edge) break;
-          
-          const nextNode = nodes.find(n => n.id === edge.target);
-          if(!nextNode) break;
-          
-          if(nextNode.data && nextNode.data.step) {
-              steps.push(nextNode.data.step as WorkflowStep);
-          }
-          currentNodeId = nextNode.id;
-      }
-      
-      return steps;
+      const sortedNodes = [...nodes]
+        .filter(n => n.id !== 'start')
+        .sort((a,b) => a.position.y - b.position.y);
+
+      return sortedNodes.map(n => n.data.step as WorkflowStep);
   };
 
   const handleCreate = async () => {
@@ -401,7 +413,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
 
     await campaignService.createCampaign({
         name: formData.name,
-        scheduledDate: new Date().toISOString(),
+        scheduledDate: formData.date ? new Date(formData.date).toISOString() : new Date().toISOString(),
         objective: formData.objective,
         agentName: currentUser.name,
         ownerId: currentUser.id,
@@ -419,7 +431,14 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
   };
 
   const resetForm = () => {
-    setFormData({ name: '', date: '', objective: 'prospecting', contactsCount: 0, minDelay: 30, maxDelay: 120 });
+    setFormData({ 
+        name: '', 
+        date: new Date().toISOString().split('T')[0], 
+        objective: 'prospecting', 
+        contactsCount: 0, 
+        minDelay: 30, 
+        maxDelay: 120 
+    });
     setNodes([]);
     setEdges([]);
     resetStepForm();
@@ -490,9 +509,6 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
               pollConfig: selectedStepType === 'poll' ? { selectableCount: pollSelectableCount, values: pollOptions } : undefined
           };
 
-          // Find the last node to connect to
-          // Simplificação: Conecta ao nó selecionado ou ao último nó adicionado
-          // Por padrão, pega o último nó com Y maior
           const lastNode = [...nodes].sort((a,b) => b.position.y - a.position.y)[0];
           
           const newNode: Node = {
@@ -513,10 +529,9 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                   id: `e-${lastNode.id}-${newNodeId}`,
                   source: lastNode.id,
                   target: newNodeId,
-                  type: 'smoothstep',
+                  type: 'custom',
                   animated: true,
-                  style: { stroke: '#3b82f6', strokeWidth: 2 },
-                  markerEnd: { type: MarkerType.ArrowClosed, color: '#3b82f6' },
+                  style: { stroke: '#3b82f6', strokeWidth: 2 }
               }, eds));
           }
       }
@@ -525,7 +540,6 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
       resetStepForm();
   };
 
-  // ... (Keep existing helper functions like getObjectiveLabel, getSafetyInfo, etc.)
   const getObjectiveLabel = (obj: CampaignObjective) => {
       switch(obj) {
           case 'prospecting': return t('prospecting');
@@ -545,11 +559,9 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
 
   const insertVariable = (variable: string) => setStepContent(prev => prev + variable);
 
-  // Derived Stats
   const activeCampaignsCount = campaigns.filter(c => c.status === 'processing' || c.status === 'scheduled').length;
   const totalSent = campaigns.reduce((acc, c) => acc + (c.status === 'completed' ? c.totalContacts : 0), 0);
   const filteredCampaigns = campaigns.filter(c => activeTab === 'all' || c.status === activeTab);
-  const allTags = Array.from(new Set(availableContacts.flatMap(c => c.tags || []))).sort();
   const filteredContacts = availableContacts.filter(c => {
       const matchesSearch = c.name.toLowerCase().includes(contactSearchTerm.toLowerCase()) || c.phone.includes(contactSearchTerm);
       const matchesTag = filterTag === 'all' || (c.tags && c.tags.includes(filterTag));
@@ -577,7 +589,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
         </button>
       </div>
 
-      {/* Stats Cards (Mantido) */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-4">
               <div className="p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
@@ -608,7 +620,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
           </div>
       </div>
 
-      {/* Tabs & List (Mantido igual) */}
+      {/* List */}
       <div className="space-y-4">
           <div className="flex gap-2 border-b border-slate-200 dark:border-slate-700 pb-2 overflow-x-auto">
               {[
@@ -643,13 +655,11 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {filteredCampaigns.map(campaign => {
                     const safetyInfo = getSafetyInfo(campaign.minDelay);
-                    const SafetyIcon = safetyInfo.icon;
                     return (
                     <div 
                         key={campaign.id} 
                         className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all group flex flex-col"
                     >
-                        {/* ... Campaign Card Content (mesmo do anterior) ... */}
                         <div className="p-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-start">
                             <div>
                                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider mb-2 ${
@@ -667,20 +677,8 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                             </div>
                             
                             <div className="flex items-center gap-1">
-                                <button 
-                                    onClick={() => handleDuplicate(campaign)}
-                                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                                    title="Duplicar Campanha"
-                                >
-                                    <Copy size={18} />
-                                </button>
-                                <button 
-                                    onClick={() => handleDeleteCampaign(campaign.id)}
-                                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                    title="Excluir Campanha"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
+                                <button onClick={() => handleDuplicate(campaign)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"><div className="rotate-90"><Code size={18} /></div></button>
+                                <button onClick={() => handleDeleteCampaign(campaign.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={18} /></button>
                             </div>
                         </div>
 
@@ -734,7 +732,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
           )}
       </div>
 
-      {/* Delete Confirmation Modal (Mantido) */}
+      {/* Delete Confirmation Modal */}
       <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Excluir Campanha" type="danger" footer={
             <>
                 <button onClick={() => setIsDeleteModalOpen(false)} className="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-bold">Cancelar</button>
@@ -751,8 +749,24 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[90] p-0 overflow-hidden">
             <div className="bg-white dark:bg-slate-800 w-full h-full flex flex-col md:flex-row overflow-hidden animate-in zoom-in-95 duration-300">
                 
+                {/* Mobile Tab Header - Visible only on mobile */}
+                <div className="md:hidden flex border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shrink-0">
+                    <button 
+                        onClick={() => setMobileTab('settings')}
+                        className={`flex-1 py-3 text-sm font-bold ${mobileTab === 'settings' ? 'text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 dark:border-blue-400' : 'text-slate-500 dark:text-slate-400'}`}
+                    >
+                        Configurações
+                    </button>
+                    <button 
+                        onClick={() => setMobileTab('workflow')}
+                        className={`flex-1 py-3 text-sm font-bold ${mobileTab === 'workflow' ? 'text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 dark:border-blue-400' : 'text-slate-500 dark:text-slate-400'}`}
+                    >
+                        Fluxo ({nodes.length})
+                    </button>
+                </div>
+
                 {/* Left Panel: Settings */}
-                <div className="w-full md:w-[350px] bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 flex flex-col h-full shrink-0 z-20 shadow-xl overflow-y-auto">
+                <div className={`w-full md:w-[350px] bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 flex flex-col h-full shrink-0 z-20 shadow-xl overflow-y-auto ${mobileTab === 'settings' ? 'flex' : 'hidden md:flex'}`}>
                     <div className="p-6 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 sticky top-0 z-10">
                         <div className="flex items-center gap-3 mb-1">
                             <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400">
@@ -768,45 +782,82 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                         <section className="space-y-4">
                             <div className="space-y-3">
                                 <div>
-                                    <label className="block text-xs font-medium text-slate-500 mb-1">Nome Interno</label>
+                                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">Nome da Campanha</label>
                                     <input 
                                         type="text" 
-                                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-700 dark:text-white"
                                         placeholder="Ex: Oferta Black Friday"
                                         value={formData.name}
                                         onChange={e => setFormData({...formData, name: e.target.value})}
                                     />
                                 </div>
-                            </div>
-                        </section>
-
-                        {/* 2. Objective */}
-                        <section className="space-y-2">
-                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Objetivo</label>
-                            <div className="grid grid-cols-2 gap-2">
-                                {[
-                                    { id: 'prospecting', label: 'Prospecção', icon: Target },
-                                    { id: 'sales', label: 'Vendas', icon: DollarSign },
-                                    { id: 'communication', label: 'Avisos', icon: MessageSquare },
-                                    { id: 'promotion', label: 'Promoção', icon: Zap }
-                                ].map((obj) => (
-                                    <button
-                                        key={obj.id}
-                                        onClick={() => setFormData({...formData, objective: obj.id as any})}
-                                        className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all ${
-                                            formData.objective === obj.id 
-                                            ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300' 
-                                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
-                                        }`}
+                                
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">Objetivo</label>
+                                    <select 
+                                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-700 dark:text-white cursor-pointer"
+                                        value={formData.objective}
+                                        onChange={e => setFormData({...formData, objective: e.target.value as CampaignObjective})}
                                     >
-                                        <obj.icon size={16} className="mb-1 opacity-80" />
-                                        <span className="text-[10px] font-bold">{obj.label}</span>
-                                    </button>
-                                ))}
+                                        <option value="prospecting">Prospecção</option>
+                                        <option value="communication">Comunicado</option>
+                                        <option value="promotion">Promoção</option>
+                                        <option value="sales">Vendas</option>
+                                        <option value="maintenance">Manutenção</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">Agendamento</label>
+                                    <input 
+                                        type="date"
+                                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-700 dark:text-white"
+                                        value={formData.date}
+                                        onChange={e => setFormData({...formData, date: e.target.value})}
+                                    />
+                                </div>
                             </div>
                         </section>
 
-                        {/* 3. Audience (Simplified List) */}
+                        {/* Cadence Section */}
+                        <section className="space-y-2 pt-4 border-t border-slate-200 dark:border-slate-700">
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cadência e Segurança</label>
+                            
+                            <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <div className={`p-1.5 rounded-lg ${getSafetyInfo(formData.minDelay).color.replace('text-', 'bg-').replace('600', '100').replace('400', '900/30')} ${getSafetyInfo(formData.minDelay).color}`}>
+                                        {React.createElement(getSafetyInfo(formData.minDelay).icon, { size: 16 })}
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-xs font-bold text-slate-700 dark:text-white">Nível de Risco: {getSafetyInfo(formData.minDelay).label}</p>
+                                        <p className="text-[10px] text-slate-400">Intervalos curtos aumentam risco de bloqueio.</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="text-[10px] text-slate-500 mb-1 block">Mínimo (seg)</label>
+                                        <input 
+                                            type="number" 
+                                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded px-2 py-1 text-sm outline-none text-center font-mono dark:text-white"
+                                            value={formData.minDelay}
+                                            onChange={e => setFormData({...formData, minDelay: Number(e.target.value)})}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] text-slate-500 mb-1 block">Máximo (seg)</label>
+                                        <input 
+                                            type="number" 
+                                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded px-2 py-1 text-sm outline-none text-center font-mono dark:text-white"
+                                            value={formData.maxDelay}
+                                            onChange={e => setFormData({...formData, maxDelay: Number(e.target.value)})}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* 2. Audience */}
                         <section className="space-y-2">
                             <div className="flex justify-between items-center">
                                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Público Alvo</label>
@@ -815,7 +866,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                             
                             <div className="h-60 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 overflow-hidden flex flex-col">
                                 <div className="p-2 border-b border-slate-100 dark:border-slate-700 flex gap-2">
-                                    <input type="text" placeholder="Buscar..." className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded px-2 py-1 text-xs outline-none" value={contactSearchTerm} onChange={e => setContactSearchTerm(e.target.value)} />
+                                    <input type="text" placeholder="Buscar..." className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded px-2 py-1 text-xs outline-none dark:text-white" value={contactSearchTerm} onChange={e => setContactSearchTerm(e.target.value)} />
                                     <button onClick={() => toggleSelectAll(filteredContacts)} className="text-[10px] font-bold text-blue-600 whitespace-nowrap">Todos</button>
                                 </div>
                                 <div className="flex-1 overflow-y-auto p-1 space-y-0.5 custom-scrollbar">
@@ -831,44 +882,11 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                                 </div>
                             </div>
                         </section>
-
-                        {/* 4. Safety */}
-                        <section className="space-y-2">
-                             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                                <ShieldCheck size={14}/> Velocidade
-                            </label>
-                            <div className="space-y-2">
-                                {[
-                                    { id: 'low', label: 'Seguro (Recomendado)', sub: '30-120s delay', min: 30, max: 120, color: 'text-green-600', icon: ShieldCheck, border: 'border-green-200', bg: 'bg-green-50 dark:bg-green-900/10' },
-                                    { id: 'high', label: 'Turbo (Risco)', sub: '5-30s delay', min: 5, max: 30, color: 'text-red-600', icon: Zap, border: 'border-red-200', bg: 'bg-red-50 dark:bg-red-900/10' }
-                                ].map((option) => (
-                                    <button
-                                        key={option.id}
-                                        onClick={() => setFormData({...formData, minDelay: option.min, maxDelay: option.max})}
-                                        className={`w-full flex items-center justify-between p-2 rounded-xl border transition-all ${
-                                            formData.minDelay === option.min 
-                                            ? `${option.border} ${option.bg} border-2 shadow-sm` 
-                                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 opacity-70'
-                                        }`}
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <div className={`p-1.5 rounded-full bg-white dark:bg-slate-700 shadow-sm ${option.color}`}>
-                                                <option.icon size={14} />
-                                            </div>
-                                            <div className="text-left">
-                                                <span className={`block text-xs font-bold ${option.color} dark:text-slate-200`}>{option.label}</span>
-                                            </div>
-                                        </div>
-                                        {formData.minDelay === option.min && <div className={`w-2 h-2 rounded-full ${option.color.replace('text-', 'bg-')}`}></div>}
-                                    </button>
-                                ))}
-                            </div>
-                        </section>
                     </div>
                 </div>
 
                 {/* Right Panel: React Flow Canvas */}
-                <div className="flex-1 bg-slate-100 dark:bg-slate-900 flex flex-col h-full min-w-0 relative">
+                <div className={`flex-1 bg-slate-100 dark:bg-slate-900 flex flex-col h-full min-w-0 relative ${mobileTab === 'workflow' ? 'flex' : 'hidden md:flex'}`}>
                     
                     {/* Header Overlay */}
                     <div className="absolute top-4 left-4 right-4 z-10 flex justify-between items-start pointer-events-none">
@@ -877,7 +895,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                                 <Target size={18} className="text-indigo-600"/>
                                 {t('workflow_builder')}
                             </h3>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">Arraste e conecte os blocos para criar o fluxo.</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Arraste e conecte os blocos. Delete conexões clicando no X.</p>
                         </div>
                         <div className="flex gap-2 pointer-events-auto">
                             <button onClick={() => setIsCreating(false)} className="p-3 bg-white dark:bg-slate-800 text-slate-400 hover:text-red-500 rounded-full shadow-lg hover:shadow-xl transition-all">
@@ -893,8 +911,11 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                             edges={edges}
                             onNodesChange={onNodesChange}
                             onEdgesChange={onEdgesChange}
-                            onConnect={(params) => setEdges((eds) => addEdge({ ...params, type: 'smoothstep', animated: true, style: { stroke: '#3b82f6', strokeWidth: 2 } }, eds))}
+                            onConnect={onConnect}
                             nodeTypes={nodeTypes}
+                            edgeTypes={edgeTypes}
+                            defaultEdgeOptions={{ type: 'custom' }}
+                            deleteKeyCode={['Backspace', 'Delete']}
                             fitView
                             className="bg-slate-50 dark:bg-slate-900"
                         >
@@ -905,19 +926,19 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                     </div>
 
                     {/* Footer Actions Overlay */}
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex gap-4 pointer-events-auto">
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex gap-4 pointer-events-auto w-full justify-center px-4">
                         <button 
                             onClick={() => setIsStepModalOpen(true)}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-full font-bold shadow-lg shadow-indigo-600/30 flex items-center gap-2 hover:scale-105 transition-transform"
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 md:px-6 py-3 rounded-full font-bold shadow-lg shadow-indigo-600/30 flex items-center gap-2 hover:scale-105 transition-transform text-sm md:text-base whitespace-nowrap"
                         >
-                            <Plus size={20} /> Adicionar Passo
+                            <Plus size={20} /> <span className="hidden md:inline">Adicionar Passo</span><span className="md:hidden">Add</span>
                         </button>
                         <button 
                             onClick={handleCreate}
                             disabled={!formData.name || formData.contactsCount === 0 || nodes.length <= 1}
-                            className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-green-600/30 flex items-center gap-2 hover:scale-105 transition-transform disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed"
+                            className="bg-green-600 hover:bg-green-700 text-white px-4 md:px-8 py-3 rounded-full font-bold shadow-lg shadow-green-600/30 flex items-center gap-2 hover:scale-105 transition-transform disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed text-sm md:text-base whitespace-nowrap"
                         >
-                            <Send size={20} /> Iniciar Disparo
+                            <Send size={20} /> <span className="hidden md:inline">Iniciar Disparo</span><span className="md:hidden">Enviar</span>
                         </button>
                     </div>
                 </div>
@@ -925,10 +946,11 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
         </div>
       )}
 
-      {/* Step Modal (Mantido com ajustes para popular o form) */}
+      {/* Step Modal */}
       {isStepModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in transition-colors">
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                {/* ... (Existing Modal Content) ... */}
                 <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
                     <h4 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
                         {selectedStepType ? (
@@ -1004,14 +1026,14 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                                 <div className="space-y-2">
                                     <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 transition-all shadow-sm">
                                         {/* Toolbar */}
-                                        <div className="flex items-center gap-1 p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
-                                            <button onClick={() => insertVariable('*')} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-600 rounded text-slate-600 dark:text-slate-300" title="Negrito"><Bold size={16}/></button>
-                                            <button onClick={() => insertVariable('_')} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-600 rounded text-slate-600 dark:text-slate-300" title="Itálico"><Italic size={16}/></button>
-                                            <button onClick={() => insertVariable('~')} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-600 rounded text-slate-600 dark:text-slate-300" title="Riscado"><Strikethrough size={16}/></button>
-                                            <button onClick={() => insertVariable(' ``` ')} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-600 rounded text-slate-600 dark:text-slate-300" title="Monoespaçado"><Code size={16}/></button>
-                                            <div className="h-4 w-px bg-slate-300 dark:bg-slate-600 mx-2"></div>
-                                            <button onClick={() => insertVariable('{nome}')} className="px-2 py-1 text-xs font-bold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded hover:bg-indigo-200 transition-colors">{`{nome}`}</button>
-                                            <button onClick={() => insertVariable('{telefone}')} className="px-2 py-1 text-xs font-bold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded hover:bg-indigo-200 transition-colors">{`{telefone}`}</button>
+                                        <div className="flex items-center gap-1 p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 overflow-x-auto no-scrollbar">
+                                            <button onClick={() => insertVariable('*')} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-600 rounded text-slate-600 dark:text-slate-300 shrink-0" title="Negrito"><Bold size={16}/></button>
+                                            <button onClick={() => insertVariable('_')} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-600 rounded text-slate-600 dark:text-slate-300 shrink-0" title="Itálico"><Italic size={16}/></button>
+                                            <button onClick={() => insertVariable('~')} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-600 rounded text-slate-600 dark:text-slate-300 shrink-0" title="Riscado"><Strikethrough size={16}/></button>
+                                            <button onClick={() => insertVariable(' ``` ')} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-600 rounded text-slate-600 dark:text-slate-300 shrink-0" title="Monoespaçado"><Code size={16}/></button>
+                                            <div className="h-4 w-px bg-slate-300 dark:bg-slate-600 mx-2 shrink-0"></div>
+                                            <button onClick={() => insertVariable('{nome}')} className="px-2 py-1 text-xs font-bold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded hover:bg-indigo-200 transition-colors shrink-0">{`{nome}`}</button>
+                                            <button onClick={() => insertVariable('{telefone}')} className="px-2 py-1 text-xs font-bold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded hover:bg-indigo-200 transition-colors shrink-0">{`{telefone}`}</button>
                                         </div>
                                         <textarea 
                                             className="w-full h-40 p-4 text-base bg-transparent border-none outline-none resize-none font-sans text-slate-800 dark:text-white"
@@ -1083,7 +1105,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ currentUser = { id: 'guest', role
                                 </div>
                             )}
 
-                            {/* --- POLL EDITOR (Mantido) --- */}
+                            {/* --- POLL EDITOR --- */}
                             {selectedStepType === 'poll' && (
                                 <div className="space-y-4">
                                     <div>

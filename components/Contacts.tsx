@@ -305,17 +305,17 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
         
         <div className="flex gap-2">
             {/* Quick Filter Tabs */}
-            <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-lg flex">
-                <button onClick={() => setViewSegment('all')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${viewSegment === 'all' ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>Todos</button>
-                <button onClick={() => setViewSegment('mine')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${viewSegment === 'mine' ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-300 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>Meus</button>
-                <button onClick={() => setViewSegment('leads')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${viewSegment === 'leads' ? 'bg-white dark:bg-slate-600 text-green-600 dark:text-green-300 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>Leads</button>
-                <button onClick={() => setViewSegment('vip')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${viewSegment === 'vip' ? 'bg-white dark:bg-slate-600 text-amber-600 dark:text-amber-300 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>VIP</button>
+            <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-lg flex overflow-x-auto">
+                <button onClick={() => setViewSegment('all')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all whitespace-nowrap ${viewSegment === 'all' ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>Todos</button>
+                <button onClick={() => setViewSegment('mine')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all whitespace-nowrap ${viewSegment === 'mine' ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-300 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>Meus</button>
+                <button onClick={() => setViewSegment('leads')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all whitespace-nowrap ${viewSegment === 'leads' ? 'bg-white dark:bg-slate-600 text-green-600 dark:text-green-300 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>Leads</button>
+                <button onClick={() => setViewSegment('vip')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all whitespace-nowrap ${viewSegment === 'vip' ? 'bg-white dark:bg-slate-600 text-amber-600 dark:text-amber-300 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>VIP</button>
             </div>
 
             <button 
                 onClick={() => openModal()} 
                 disabled={!isManagerOrAdmin && !userPermissions.canCreate}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-md transition-colors text-sm font-bold"
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-md transition-colors text-sm font-bold whitespace-nowrap"
             >
                 {(!isManagerOrAdmin && !userPermissions.canCreate) ? <Lock size={16} /> : <Plus size={18} />} 
                 {t('add_contact')}
@@ -339,11 +339,11 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
             </div>
         </div>
         
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center w-full md:w-auto justify-end">
              {filteredContacts.length > 0 && (
-                 <button onClick={toggleSelectAll} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold transition-colors">
+                 <button onClick={toggleSelectAll} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold transition-colors whitespace-nowrap">
                      {selectedContacts.size === filteredContacts.length ? <CheckSquare size={16} className="text-blue-600"/> : <Square size={16}/>}
-                     Selecionar Todos
+                     <span className="hidden sm:inline">Selecionar Todos</span>
                  </button>
              )}
              <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
@@ -389,7 +389,7 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
                         <div className={`absolute left-0 top-0 bottom-0 w-1.5 transition-colors ${isSelected ? 'bg-blue-600' : 'bg-transparent group-hover:bg-blue-200 dark:group-hover:bg-slate-600'}`}></div>
 
                         {/* 1. Identity Section */}
-                        <div className="flex items-center gap-4 flex-1 min-w-[250px] pl-2 cursor-pointer" onClick={() => toggleSelection(contact.id)}>
+                        <div className="flex items-center gap-4 flex-1 min-w-[250px] pl-2 cursor-pointer w-full" onClick={() => toggleSelection(contact.id)}>
                             <div className="relative shrink-0">
                                 <div className={`w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-sm border-2 border-white dark:border-slate-700 ${getAvatarColor(contact.name)}`}>
                                     {contact.name.substring(0, 2).toUpperCase()}
@@ -400,7 +400,7 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
                                     </div>
                                 )}
                             </div>
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2">
                                     <h4 className="font-bold text-lg text-slate-800 dark:text-white leading-tight truncate">{contact.name}</h4>
                                     {(contact.lockEdit || contact.lockDelete) && (
@@ -442,7 +442,7 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
                         </div>
 
                         {/* 3. Owner & Info */}
-                        <div className="w-full lg:w-auto flex items-center gap-4 pl-2 lg:pl-0">
+                        <div className="w-full lg:w-auto flex items-center justify-between lg:justify-start gap-4 pl-2 lg:pl-0">
                             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg px-3 py-1.5 border border-slate-100 dark:border-slate-600 w-fit">
                                 <div className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-[10px] font-bold">
                                     {getAgentName(contact.ownerId).charAt(0)}
@@ -492,25 +492,25 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
         )}
       </div>
 
-      {/* Floating Bulk Actions Bar */}
+      {/* Floating Bulk Actions Bar - Mobile Optimized */}
       {selectedContacts.size > 0 && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-800 rounded-full shadow-2xl border border-slate-200 dark:border-slate-700 py-3 px-6 flex items-center gap-6 animate-in slide-in-from-bottom-10 z-40">
-              <div className="flex items-center gap-2 border-r border-slate-200 dark:border-slate-700 pr-6">
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] md:w-auto max-w-2xl bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 py-3 px-4 md:px-6 flex items-center justify-between gap-4 animate-in slide-in-from-bottom-10 z-40">
+              <div className="flex items-center gap-2 md:border-r md:border-slate-200 md:dark:border-slate-700 md:pr-6 shrink-0">
                   <div className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">{selectedContacts.size}</div>
-                  <span className="text-sm font-bold text-slate-700 dark:text-white">Selecionados</span>
+                  <span className="text-sm font-bold text-slate-700 dark:text-white hidden md:inline">Selecionados</span>
               </div>
               
-              <div className="flex items-center gap-2">
-                  <button onClick={handleBulkDelete} disabled={isSubmitting || (!isManagerOrAdmin && !userPermissions.canDelete)} className="flex items-center gap-2 px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
+              <div className="flex items-center gap-2 flex-1 justify-end md:justify-start">
+                  <button onClick={handleBulkDelete} disabled={isSubmitting || (!isManagerOrAdmin && !userPermissions.canDelete)} className="flex items-center gap-2 px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 whitespace-nowrap">
                       {isSubmitting ? <Loader2 size={16} className="animate-spin"/> : <Trash2 size={16} />}
-                      Excluir
+                      <span className="hidden sm:inline">Excluir</span>
                   </button>
-                  <button onClick={() => {contactService.exportContactsToCSV(contacts.filter(c => selectedContacts.has(c.id))); showToast('Exportando seleção...', 'success')}} className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-sm font-medium transition-colors">
-                      <FileDown size={16} /> Exportar
+                  <button onClick={() => {contactService.exportContactsToCSV(contacts.filter(c => selectedContacts.has(c.id))); showToast('Exportando seleção...', 'success')}} className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-sm font-medium transition-colors whitespace-nowrap">
+                      <FileDown size={16} /> <span className="hidden sm:inline">Exportar</span>
                   </button>
               </div>
 
-              <button onClick={() => setSelectedContacts(new Set())} className="ml-2 p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-400">
+              <button onClick={() => setSelectedContacts(new Set())} className="ml-2 p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-400 shrink-0">
                   <X size={16} />
               </button>
           </div>
@@ -556,9 +556,9 @@ const Contacts: React.FC<ContactsProps> = ({ currentUser = { id: 'guest', role: 
                 </div>
 
                 {!editingContact && (
-                    <div className="flex border-b border-slate-100 dark:border-slate-700 px-6 gap-6">
-                        <button onClick={() => setModalMode('create')} className={`py-3 text-sm font-bold border-b-2 ${modalMode === 'create' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500'}`}>Manual</button>
-                        <button onClick={() => setModalMode('import')} className={`py-3 text-sm font-bold border-b-2 ${modalMode === 'import' ? 'border-green-600 text-green-600' : 'border-transparent text-slate-500'}`}>Importação CSV</button>
+                    <div className="flex border-b border-slate-100 dark:border-slate-700 px-6 gap-6 overflow-x-auto">
+                        <button onClick={() => setModalMode('create')} className={`py-3 text-sm font-bold border-b-2 whitespace-nowrap ${modalMode === 'create' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500'}`}>Manual</button>
+                        <button onClick={() => setModalMode('import')} className={`py-3 text-sm font-bold border-b-2 whitespace-nowrap ${modalMode === 'import' ? 'border-green-600 text-green-600' : 'border-transparent text-slate-500'}`}>Importação CSV</button>
                     </div>
                 )}
 

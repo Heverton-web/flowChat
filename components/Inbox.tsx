@@ -47,6 +47,9 @@ const Inbox: React.FC<InboxProps> = ({ currentUser }) => {
     // Context Sidebar
     const [showRightSidebar, setShowRightSidebar] = useState(true);
 
+    // Mobile View State
+    const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
+
     // Composer
     const [inputText, setInputText] = useState('');
     const [isPrivateNote, setIsPrivateNote] = useState(false);
@@ -66,6 +69,9 @@ const Inbox: React.FC<InboxProps> = ({ currentUser }) => {
     useEffect(() => {
         if (activeConversationId) {
             loadMessages(activeConversationId);
+            setMobileView('chat'); // Switch to chat view on mobile when conversation selected
+        } else {
+            setMobileView('list'); // Switch back to list if cleared
         }
     }, [activeConversationId]);
 
@@ -142,6 +148,11 @@ const Inbox: React.FC<InboxProps> = ({ currentUser }) => {
 
     // --- ACTIONS ---
 
+    const handleBackToList = () => {
+        setActiveConversationId(null);
+        setMobileView('list');
+    };
+
     const handleSendMessage = async (file?: File) => {
         if ((!inputText.trim() && !file) || !activeConversationId) return;
         setIsSending(true);
@@ -172,7 +183,9 @@ const Inbox: React.FC<InboxProps> = ({ currentUser }) => {
         await chatService.updateConversationStatus(activeConversationId, 'resolved');
         setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, status: 'resolved' } : c));
         showToast('Conversa resolvida!', 'success');
-        if (filterStatus === 'open') setActiveConversationId(null);
+        if (filterStatus === 'open') {
+            handleBackToList();
+        }
     };
 
     const handleReopen = async () => {
@@ -221,8 +234,8 @@ const Inbox: React.FC<InboxProps> = ({ currentUser }) => {
     return (
         <div className="flex h-full w-full bg-white dark:bg-slate-900 overflow-hidden relative">
             
-            {/* 1. LEFT SIDEBAR: CONVERSATION LIST */}
-            <div className="w-80 md:w-96 flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 z-10">
+            {/* 1. LEFT SIDEBAR: CONVERSATION LIST (Hidden on mobile if chat is active) */}
+            <div className={`${mobileView === 'chat' ? 'hidden md:flex' : 'flex'} w-full md:w-80 lg:w-96 flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 z-10`}>
                 
                 {/* Header / Filter Tabs */}
                 <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex flex-col gap-2">
@@ -314,31 +327,41 @@ const Inbox: React.FC<InboxProps> = ({ currentUser }) => {
                 </div>
             </div>
 
-            {/* 2. CENTER: CHAT AREA */}
-            <div className="flex-1 flex flex-col min-w-0 bg-slate-50/50 dark:bg-slate-900/50 relative">
+            {/* 2. CENTER: CHAT AREA (Full width on mobile when active) */}
+            <div className={`${mobileView === 'list' ? 'hidden md:flex' : 'flex'} flex-1 flex-col min-w-0 bg-slate-50/50 dark:bg-slate-900/50 relative`}>
                 {activeConversationId && activeConversation ? (
                     <>
                         {/* Chat Header */}
-                        <div className="h-16 px-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center shrink-0 shadow-sm z-20">
+                        <div className="h-16 px-4 md:px-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center shrink-0 shadow-sm z-20">
                             <div className="flex items-center gap-3">
+                                {/* Back Button (Mobile Only) */}
+                                <button 
+                                    onClick={handleBackToList}
+                                    className="md:hidden p-1 mr-1 text-slate-500 hover:text-slate-800 dark:hover:text-white rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                >
+                                    <ChevronLeft size={24} />
+                                </button>
+
                                 <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold ${getAvatarColor(activeConversation.contactName)}`}>
                                     {activeConversation.contactName.substring(0, 2).toUpperCase()}
                                 </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                <div className="min-w-0">
+                                    <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2 truncate text-sm md:text-base">
                                         {activeConversation.contactName}
-                                        {activeConversation.status === 'resolved' && <span className="text-[10px] bg-green-100 text-green-700 px-2 rounded-full border border-green-200">Resolvido</span>}
+                                        {activeConversation.status === 'resolved' && <span className="hidden md:inline text-[10px] bg-green-100 text-green-700 px-2 rounded-full border border-green-200">Resolvido</span>}
                                     </h3>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400">via WhatsApp • +{activeConversation.contactPhone}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">via WhatsApp</p>
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1 md:gap-3">
                                 {/* Assignment Dropdown */}
                                 <div className="relative group">
-                                    <button className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 transition-colors border border-slate-200 dark:border-slate-700">
-                                        <User size={14}/>
-                                        {activeConversation.assignedTo ? agents.find(a => a.id === activeConversation.assignedTo)?.name.split(' ')[0] : 'Atribuir'}
+                                    <button className="flex items-center gap-2 px-2 md:px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 transition-colors border border-slate-200 dark:border-slate-700">
+                                        <User size={14} className="hidden md:block"/>
+                                        <span className="max-w-[60px] md:max-w-none truncate">
+                                            {activeConversation.assignedTo ? agents.find(a => a.id === activeConversation.assignedTo)?.name.split(' ')[0] : 'Atribuir'}
+                                        </span>
                                         <ChevronDown size={12}/>
                                     </button>
                                     <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden hidden group-hover:block z-50">
@@ -357,25 +380,25 @@ const Inbox: React.FC<InboxProps> = ({ currentUser }) => {
 
                                 {/* Status Toggle */}
                                 {activeConversation.status === 'open' ? (
-                                    <button onClick={handleResolve} className="flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors">
-                                        <CheckCircle size={14}/> Resolver
+                                    <button onClick={handleResolve} className="flex items-center gap-1 md:gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors">
+                                        <CheckCircle size={14}/> <span className="hidden md:inline">Resolver</span>
                                     </button>
                                 ) : (
-                                    <button onClick={handleReopen} className="flex items-center gap-2 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold shadow-sm transition-colors">
-                                        <RefreshCw size={14}/> Reabrir
+                                    <button onClick={handleReopen} className="flex items-center gap-1 md:gap-2 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold shadow-sm transition-colors">
+                                        <RefreshCw size={14}/> <span className="hidden md:inline">Reabrir</span>
                                     </button>
                                 )}
 
-                                <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
+                                <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 hidden md:block"></div>
 
-                                <button onClick={() => setShowRightSidebar(!showRightSidebar)} className={`p-2 rounded-lg transition-colors ${showRightSidebar ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
+                                <button onClick={() => setShowRightSidebar(!showRightSidebar)} className={`hidden md:block p-2 rounded-lg transition-colors ${showRightSidebar ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
                                     <Sidebar size={18} />
                                 </button>
                             </div>
                         </div>
 
                         {/* Chat Messages */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth bg-[#f0f2f5] dark:bg-[#0b1120]" ref={scrollContainerRef}>
+                        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth bg-[#f0f2f5] dark:bg-[#0b1120]" ref={scrollContainerRef}>
                             {/* Encryption Notice */}
                             <div className="flex justify-center mb-6">
                                 <div className="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-800/30 px-3 py-1.5 rounded-lg text-[10px] text-yellow-700 dark:text-yellow-500 flex items-center gap-2 shadow-sm">
@@ -389,8 +412,6 @@ const Inbox: React.FC<InboxProps> = ({ currentUser }) => {
                                 const isMe = msg.sender === 'agent';
                                 const isPrivate = msg.isPrivate;
                                 
-                                // Grouping logic could go here (check if previous msg same sender)
-
                                 if (isPrivate) {
                                     return (
                                         <div key={msg.id} className="flex flex-col items-center animate-in fade-in slide-in-from-bottom-2">
@@ -407,13 +428,13 @@ const Inbox: React.FC<InboxProps> = ({ currentUser }) => {
 
                                 return (
                                     <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 group`}>
-                                        <div className={`max-w-[70%] rounded-2xl p-3.5 shadow-sm relative ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-bl-none border border-slate-100 dark:border-slate-700'}`}>
+                                        <div className={`max-w-[85%] md:max-w-[70%] rounded-2xl p-3 md:p-3.5 shadow-sm relative ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-bl-none border border-slate-100 dark:border-slate-700'}`}>
                                             {/* Media Rendering */}
                                             {msg.type === 'image' && msg.attachmentUrl && (
                                                 <img src={msg.attachmentUrl} alt="anexo" className="rounded-lg mb-2 max-h-60 object-cover cursor-pointer hover:opacity-90 transition-opacity" />
                                             )}
                                             {msg.type === 'audio' && msg.attachmentUrl && (
-                                                <audio controls src={msg.attachmentUrl} className="w-64 mb-2" />
+                                                <audio controls src={msg.attachmentUrl} className="w-full md:w-64 mb-2" />
                                             )}
 
                                             <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
@@ -434,7 +455,7 @@ const Inbox: React.FC<InboxProps> = ({ currentUser }) => {
                         </div>
 
                         {/* Composer Area */}
-                        <div className={`p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shrink-0 relative transition-colors ${isPrivateNote ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''}`}>
+                        <div className={`p-3 md:p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shrink-0 relative transition-colors ${isPrivateNote ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''}`}>
                             
                             {/* Private Note Toggle Indicator */}
                             {isPrivateNote && (
@@ -463,10 +484,10 @@ const Inbox: React.FC<InboxProps> = ({ currentUser }) => {
                             <div className="flex flex-col gap-3">
                                 {/* Toolbar */}
                                 <div className="flex items-center justify-between">
-                                    <div className="flex gap-1">
+                                    <div className="flex gap-1 overflow-x-auto no-scrollbar">
                                         <button 
                                             onClick={() => setIsPrivateNote(!isPrivateNote)}
-                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${isPrivateNote ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${isPrivateNote ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
                                         >
                                             {isPrivateNote ? <Lock size={12}/> : <MessageSquare size={12}/>}
                                             {isPrivateNote ? 'Nota Privada' : 'Público'}
@@ -479,9 +500,6 @@ const Inbox: React.FC<InboxProps> = ({ currentUser }) => {
                                             </>
                                         )}
                                     </div>
-                                    <div className="text-[10px] text-slate-400 hidden sm:block">
-                                        <strong>Shift + Enter</strong> nova linha
-                                    </div>
                                 </div>
 
                                 {/* Input */}
@@ -491,10 +509,10 @@ const Inbox: React.FC<InboxProps> = ({ currentUser }) => {
                                         value={inputText}
                                         onChange={e => setInputText(e.target.value)}
                                         onKeyDown={handleKeyDown}
-                                        placeholder={isPrivateNote ? "Escreva uma nota interna para a equipe..." : "Digite sua mensagem... (Use / para respostas rápidas)"}
+                                        placeholder={isPrivateNote ? "Escreva uma nota interna..." : "Digite sua mensagem..."}
                                         className="w-full bg-transparent border-none outline-none text-sm resize-none max-h-32 min-h-[40px] py-2 px-2 text-slate-800 dark:text-white placeholder:text-slate-400"
                                         rows={1}
-                                        style={{ height: 'auto' }} // Auto-grow logic would go here
+                                        style={{ height: 'auto' }} 
                                     />
                                     <button 
                                         onClick={() => handleSendMessage()}
@@ -508,22 +526,22 @@ const Inbox: React.FC<InboxProps> = ({ currentUser }) => {
                         </div>
                     </>
                 ) : (
-                    /* Empty State */
+                    /* Empty State (Visible only on desktop when no chat is selected) */
                     <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-slate-50 dark:bg-slate-900/50">
                         <div className="w-32 h-32 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mb-6 shadow-sm animate-in zoom-in duration-500">
                             <MessageSquare size={64} className="text-slate-300 dark:text-slate-600"/>
                         </div>
                         <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Nenhuma conversa selecionada</h2>
                         <p className="text-slate-500 dark:text-slate-400 max-w-sm">
-                            Selecione um contato na lista à esquerda para iniciar o atendimento ou ver o histórico.
+                            Selecione um contato na lista para iniciar o atendimento.
                         </p>
                     </div>
                 )}
             </div>
 
-            {/* 3. RIGHT SIDEBAR: CONTEXT (Collapsible) */}
+            {/* 3. RIGHT SIDEBAR: CONTEXT (Collapsible, hidden on mobile) */}
             {activeConversationId && activeConversation && showRightSidebar && (
-                <div className="w-72 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col shrink-0 animate-in slide-in-from-right-10 z-10 overflow-y-auto custom-scrollbar">
+                <div className="hidden lg:flex w-72 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex-col shrink-0 animate-in slide-in-from-right-10 z-10 overflow-y-auto custom-scrollbar">
                     
                     {/* Profile Header */}
                     <div className="p-6 flex flex-col items-center text-center border-b border-slate-100 dark:border-slate-800">

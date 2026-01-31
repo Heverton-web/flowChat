@@ -38,29 +38,25 @@ const FlowChatApp: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // --- Role Constants ---
-  const isOwner = currentUser?.email === 'owner@disparai.com.br'; // CRITICAL: Only this specific email sees the hidden zone
+  const isOwner = currentUser?.email === 'owner@disparai.com.br'; 
   const isSuperAdmin = currentUser?.role === 'super_admin';
   const isManager = currentUser?.role === 'manager';
   const isAgent = currentUser?.role === 'agent';
   
-  // Helper to check visibility from config based on role
   const checkVisibility = (module: string) => {
-      if (isOwner) return true; // Owner always sees standard menu (though they have Master Console)
+      if (isOwner) return true; 
       if (!currentUser) return false;
       const roleKey = currentUser.role; 
-      // Safe check if visibility config exists
       const roleVisibility = (config.visibility as any)[roleKey];
-      if (!roleVisibility) return true; // Default to visible if config missing
+      if (!roleVisibility) return true; 
       return roleVisibility[module] !== false; 
   };
 
-  // --- Auth & Session Handling ---
   useEffect(() => {
     checkSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
-        // Small delay to ensure DB triggers have finished if it's a new signup
         if (event === 'SIGNED_IN') await new Promise(r => setTimeout(r, 500));
         
         try {
@@ -68,7 +64,6 @@ const FlowChatApp: React.FC = () => {
             setCurrentUser(user);
             setIsAuthenticated(true);
             
-            // Redirect Owner directly to their console
             if (user.email === 'owner@disparai.com.br') setActiveView('master_console');
             else setActiveView('dashboard');
             
@@ -138,7 +133,6 @@ const FlowChatApp: React.FC = () => {
       }
   };
 
-  // --- Loading Screen ---
   if (isAuthLoading) {
       return (
           <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 transition-colors gap-4">
@@ -148,7 +142,6 @@ const FlowChatApp: React.FC = () => {
       );
   }
 
-  // --- Render Auth Views ---
   if (!isAuthenticated || !currentUser) {
       if (authView === 'sales') {
           return <SalesPage onBack={() => setAuthView('login')} onSuccess={handleLogin} />;
@@ -160,31 +153,28 @@ const FlowChatApp: React.FC = () => {
       }
   }
 
-  // --- Main Application ---
-  
-  const NavItem = ({ view, icon: Icon, label }: { view: ViewState, icon: any, label: string }) => (
+  const NavItem = ({ view, icon: Icon, label, mobile = false }: { view: ViewState, icon: any, label: string, mobile?: boolean }) => (
     <button
       onClick={() => {
         setActiveView(view);
-        setMobileMenuOpen(false);
+        if (mobile) setMobileMenuOpen(false);
       }}
-      title={isSidebarCollapsed ? label : ''}
+      title={isSidebarCollapsed && !mobile ? label : ''}
       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group relative ${
         activeView === view 
           ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' 
-          : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50 hover:text-slate-900 dark:hover:text-white'
-      } ${isSidebarCollapsed ? 'justify-center' : ''}`}
+          : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
+      } ${(isSidebarCollapsed && !mobile) ? 'justify-center' : ''}`}
     >
       <Icon size={20} className={`${activeView === view ? 'text-white' : ''} shrink-0`} />
       
-      {!isSidebarCollapsed && (
+      {(!isSidebarCollapsed || mobile) && (
         <span className="font-medium text-sm whitespace-nowrap overflow-hidden transition-all duration-300 origin-left">
             {label}
         </span>
       )}
 
-      {/* Mini Sidebar Active Indicator */}
-      {isSidebarCollapsed && activeView === view && (
+      {isSidebarCollapsed && !mobile && activeView === view && (
           <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white/20 rounded-r-full"></div>
       )}
     </button>
@@ -199,25 +189,124 @@ const FlowChatApp: React.FC = () => {
       );
   };
 
+  const NavigationContent = ({ mobile = false }: { mobile?: boolean }) => (
+      <>
+          {/* COMMON FOR EVERYONE EXCEPT OWNER */}
+          {!isOwner && checkVisibility('onboarding') && <NavItem mobile={mobile} view="onboarding" icon={PlayCircle} label={t('onboarding')} />}
+
+          {/* AMBIENTE OPERACIONAL */}
+          {(isAgent || isManager) && !isOwner && (
+              <>
+                <SectionHeader label="Operacional" />
+                {checkVisibility('contacts') && <NavItem mobile={mobile} view="contacts" icon={Users} label="Contatos" />}
+                {checkVisibility('tags') && <NavItem mobile={mobile} view="tags" icon={Tag} label={t('nav_tags')} />}
+                {checkVisibility('campaigns') && <NavItem mobile={mobile} view="campaigns" icon={Send} label="Campanhas" />}
+                {checkVisibility('instances') && <NavItem mobile={mobile} view="instances" icon={Smartphone} label="Minha Instância" />}
+              </>
+          )}
+
+          {/* AMBIENTE DE GESTÃO */}
+          {(isManager || isSuperAdmin) && !isOwner && (
+              <>
+                <SectionHeader label="Gestão da Operação" />
+                {checkVisibility('dashboard') && <NavItem mobile={mobile} view="dashboard" icon={LayoutDashboard} label="Painel de Controle" />}
+                {checkVisibility('reports') && <NavItem mobile={mobile} view="reports" icon={PieChart} label="Relatórios" />}
+                {checkVisibility('team') && <NavItem mobile={mobile} view="team" icon={Users} label="Gestão de Equipe" />}
+                {checkVisibility('base_assignment') && <NavItem mobile={mobile} view="base_assignment" icon={Layers} label="Atribuição de Bases" />}
+              </>
+          )}
+
+          {/* AMBIENTE ADMINISTRATIVO */}
+          {isSuperAdmin && !isOwner && (
+              <>
+                <SectionHeader label="Admin Global" />
+                {checkVisibility('financial') && <NavItem mobile={mobile} view="financial" icon={DollarSign} label="Assinatura & Custos" />}
+                {checkVisibility('instances') && <NavItem mobile={mobile} view="instances" icon={Server} label="Todas Instâncias" />}
+              </>
+          )}
+
+          {/* SETTINGS */}
+          {(isManager || isAgent || isSuperAdmin) && !isOwner && checkVisibility('settings') && (
+              <>
+                <SectionHeader label="Sistema" />
+                <NavItem mobile={mobile} view="settings" icon={SettingsIcon} label={t('settings')} />
+              </>
+          )}
+
+          {/* OWNER ONLY */}
+          {isOwner && (
+              <>
+                <SectionHeader label="System" />
+                <NavItem mobile={mobile} view="master_console" icon={ShieldCheck} label="Master Console" />
+              </>
+          )}
+      </>
+  );
+
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-300 overflow-hidden">
       
-      {/* Sidebar - Desktop (Collapsible) */}
+      {/* MOBILE HEADER (Visible only on small screens) */}
+      <div className="md:hidden fixed top-0 w-full z-40 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 h-16 flex items-center justify-between px-4 shadow-sm">
+          <button onClick={() => setMobileMenuOpen(true)} className="p-2 text-slate-500 dark:text-slate-300">
+              <Menu size={24} />
+          </button>
+          <Logo className="h-6" />
+          <div className="w-8"></div> {/* Spacer for center alignment */}
+      </div>
+
+      {/* MOBILE DRAWER (Overlay) */}
+      {mobileMenuOpen && (
+          <div className="fixed inset-0 z-50 md:hidden">
+              {/* Backdrop */}
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)}></div>
+              
+              {/* Drawer Content */}
+              <div className="absolute left-0 top-0 bottom-0 w-64 bg-white dark:bg-slate-900 shadow-2xl flex flex-col animate-in slide-in-from-left-full duration-300 border-r border-slate-200 dark:border-slate-800">
+                  <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                      <Logo className="h-6" />
+                      <button onClick={() => setMobileMenuOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                          <X size={20} />
+                      </button>
+                  </div>
+                  <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+                      <NavigationContent mobile={true} />
+                  </nav>
+                  <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-3 mb-4">
+                          <img src={currentUser.avatar} alt="Avatar" className="w-10 h-10 rounded-full border-2 border-white dark:border-slate-700 shadow-sm" />
+                          <div className="min-w-0">
+                              <p className="text-sm font-bold text-slate-800 dark:text-white truncate">{currentUser.name}</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{currentUser.role.replace('_', ' ')}</p>
+                          </div>
+                      </div>
+                      <div className="flex gap-2">
+                          <button onClick={toggleTheme} className="flex-1 p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-300 flex justify-center">
+                              {theme === 'dark' ? <Sun size={18}/> : <Moon size={18}/>}
+                          </button>
+                          <button onClick={handleLogout} className="flex-1 p-2 bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 rounded-lg flex justify-center">
+                              <LogOut size={18}/>
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* DESKTOP SIDEBAR (Collapsible) */}
       <aside 
         className={`${
             isSidebarCollapsed ? 'w-20' : 'w-64'
-        } hidden md:flex flex-col bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 h-full transition-all duration-300 ease-in-out relative z-30 shadow-sm`}
+        } hidden md:flex flex-col bg-white dark:bg-slate-900/50 border-r border-slate-200 dark:border-slate-800 h-full transition-all duration-300 ease-in-out relative z-30`}
       >
-        {/* Toggle Button */}
         <button 
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="absolute -right-3 top-9 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-300 p-1 rounded-full shadow-sm hover:text-blue-600 dark:hover:text-blue-400 transition-colors z-50"
+            className="absolute -right-3 top-9 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 p-1 rounded-full shadow-sm hover:text-blue-600 dark:hover:text-blue-400 transition-colors z-50"
         >
             {isSidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>
 
-        {/* Brand Header */}
-        <div className={`p-5 border-b border-slate-100 dark:border-slate-700 flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
+        <div className={`p-5 border-b border-slate-100 dark:border-slate-800 flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
             {!isSidebarCollapsed ? (
                 <div className="animate-in fade-in slide-in-from-left-2 duration-300">
                     <Logo className="h-8" />
@@ -227,75 +316,22 @@ const FlowChatApp: React.FC = () => {
             )}
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
-          
-          {/* COMMON FOR EVERYONE EXCEPT OWNER (Owner needs clean nav) */}
-          {!isOwner && checkVisibility('onboarding') && <NavItem view="onboarding" icon={PlayCircle} label={t('onboarding')} />}
-
-          {/* AMBIENTE OPERACIONAL (Atendentes & Gestores) */}
-          {(isAgent || isManager) && !isOwner && (
-              <>
-                <SectionHeader label="Operacional" />
-                {checkVisibility('contacts') && <NavItem view="contacts" icon={Users} label="Contatos" />}
-                {checkVisibility('tags') && <NavItem view="tags" icon={Tag} label={t('nav_tags')} />}
-                {checkVisibility('campaigns') && <NavItem view="campaigns" icon={Send} label="Campanhas" />}
-                {checkVisibility('instances') && <NavItem view="instances" icon={Smartphone} label="Minha Instância" />}
-              </>
-          )}
-
-          {/* AMBIENTE DE GESTÃO (Apenas Gestores & Super Admin) */}
-          {(isManager || isSuperAdmin) && !isOwner && (
-              <>
-                <SectionHeader label="Gestão da Operação" />
-                {checkVisibility('dashboard') && <NavItem view="dashboard" icon={LayoutDashboard} label="Painel de Controle" />}
-                {checkVisibility('reports') && <NavItem view="reports" icon={PieChart} label="Relatórios" />}
-                {checkVisibility('team') && <NavItem view="team" icon={Users} label="Gestão de Equipe" />}
-                {checkVisibility('base_assignment') && <NavItem view="base_assignment" icon={Layers} label="Atribuição de Bases" />}
-              </>
-          )}
-
-          {/* AMBIENTE ADMINISTRATIVO (Apenas Super Admin) */}
-          {isSuperAdmin && !isOwner && (
-              <>
-                <SectionHeader label="Admin Global" />
-                {checkVisibility('financial') && <NavItem view="financial" icon={DollarSign} label="Assinatura & Custos" />}
-                {checkVisibility('instances') && <NavItem view="instances" icon={Server} label="Todas Instâncias" />}
-              </>
-          )}
-
-          {/* SETTINGS FOR AGENTS, MANAGERS & SUPER ADMIN */}
-          {(isManager || isAgent || isSuperAdmin) && !isOwner && checkVisibility('settings') && (
-              <>
-                <SectionHeader label="Sistema" />
-                <NavItem view="settings" icon={SettingsIcon} label={t('settings')} />
-              </>
-          )}
-
-          {/* OWNER ONLY MENU - SINGLE ENTRY POINT */}
-          {isOwner && (
-              <>
-                <SectionHeader label="System" />
-                <NavItem view="master_console" icon={ShieldCheck} label="Master Console" />
-              </>
-          )}
+            <NavigationContent />
         </nav>
 
-        {/* Footer / User Profile */}
-        <div className="p-3 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
-          
-          {/* Controls (Theme/Lang) - Only show if expanded or cleverly collapsed */}
-          <div className={`flex items-center gap-2 mb-3 bg-white dark:bg-slate-700/50 p-1 rounded-lg border border-slate-200 dark:border-slate-600 ${isSidebarCollapsed ? 'flex-col' : ''}`}>
+        <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
+          <div className={`flex items-center gap-2 mb-3 bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 ${isSidebarCollapsed ? 'flex-col' : ''}`}>
              <button 
                 onClick={toggleTheme}
-                className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-500 dark:text-slate-300 transition-colors flex-1 w-full flex justify-center"
+                className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 transition-colors flex-1 w-full flex justify-center"
                 title={theme === 'dark' ? t('light') : t('dark')}
              >
                 {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
              </button>
 
-             {!isSidebarCollapsed && <div className="w-px h-4 bg-slate-200 dark:bg-slate-600 mx-1"></div>}
-             {isSidebarCollapsed && <div className="h-px w-4 bg-slate-200 dark:bg-slate-600 my-1"></div>}
+             {!isSidebarCollapsed && <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>}
+             {isSidebarCollapsed && <div className="h-px w-4 bg-slate-200 dark:bg-slate-700 my-1"></div>}
 
              {!isSidebarCollapsed ? (
                  <div className="flex-1 flex items-center gap-1 px-1 relative">
@@ -311,17 +347,16 @@ const FlowChatApp: React.FC = () => {
                     </select>
                  </div>
              ) : (
-                 <button className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-500 dark:text-slate-300 flex-1 w-full flex justify-center text-[10px] font-bold" onClick={() => setIsSidebarCollapsed(false)}>
+                 <button className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 flex-1 w-full flex justify-center text-[10px] font-bold" onClick={() => setIsSidebarCollapsed(false)}>
                      {language.split('-')[0].toUpperCase()}
                  </button>
              )}
           </div>
 
-          {/* User Profile */}
           <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center flex-col gap-2' : 'gap-3'} px-1`}>
               <div className="relative group cursor-pointer">
-                  <img src={currentUser.avatar} alt="Avatar" className="w-9 h-9 rounded-full border-2 border-white dark:border-slate-600 shadow-sm" />
-                  <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white dark:border-slate-800 rounded-full"></div>
+                  <img src={currentUser.avatar} alt="Avatar" className="w-9 h-9 rounded-full border-2 border-white dark:border-slate-700 shadow-sm" />
+                  <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white dark:border-slate-900 rounded-full"></div>
               </div>
               
               {!isSidebarCollapsed ? (
@@ -353,8 +388,8 @@ const FlowChatApp: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-hidden h-full w-full pt-16 md:pt-0 bg-slate-50 dark:bg-slate-900">
-        <div className="h-full w-full flex flex-col p-6 md:p-10 max-w-screen-2xl mx-auto">
+      <main className="flex-1 overflow-hidden h-full w-full pt-16 md:pt-0 bg-slate-50 dark:bg-slate-900 relative">
+        <div className="h-full w-full flex flex-col p-4 md:p-10 max-w-screen-2xl mx-auto overflow-y-auto">
           {activeView === 'dashboard' && <Dashboard role={currentUser.role} onNavigate={setActiveView} />}
           {activeView === 'onboarding' && <Onboarding onNavigate={setActiveView} currentUser={currentUser} />}
           
@@ -368,7 +403,7 @@ const FlowChatApp: React.FC = () => {
           
           {activeView === 'team' && (isSuperAdmin || isManager) && <Team onNavigate={setActiveView} currentUser={currentUser} />}
           
-          {/* New Module: Base Assignment */}
+          {/* Base Assignment */}
           {activeView === 'base_assignment' && (isSuperAdmin || isManager) && <BaseAssignment currentUser={currentUser} />}
 
           {activeView === 'settings' && <Settings currentUser={currentUser} />}
@@ -384,7 +419,6 @@ const FlowChatApp: React.FC = () => {
   );
 };
 
-// Root App Component
 const App: React.FC = () => {
   return (
     <AppProvider>

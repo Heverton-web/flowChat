@@ -795,7 +795,7 @@ const MasterConsole: React.FC<DeveloperConsoleProps> = ({ initialTab = 'dashboar
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-bold text-slate-400 uppercase">Project URL</label>
-                                        <input type="text" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 text-xs font-mono focus:border-amber-500 outline-none" value={vault.supabase_url} onChange={(e) => updateVal('supabase_url', e.target.value)} disabled />
+                                        <input type="text" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 text-xs font-mono focus:border-amber-500 outline-none" value={vault.supabase_url} onChange={(e) => updateVal('supabase_url', e.target.value)} />
                                     </div>
                                     <SecretField label="Service Role Key" objKey="supabase_key" />
                                 </div>
