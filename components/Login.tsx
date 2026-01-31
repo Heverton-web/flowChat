@@ -289,15 +289,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onNavigate
                         {loading ? <Loader2 className="animate-spin" /> : <>{t('enter_button')} <ArrowRight size={18} /></>}
                     </button>
                     </form>
-
-                    <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700/50 text-center">
-                    <p className="text-slate-500 dark:text-slate-400 text-sm">
-                        Primeiro acesso?{' '}
-                        <button onClick={onNavigateToRegister} className="text-blue-600 font-bold hover:underline">
-                        Setup Admin
-                        </button>
-                    </p>
-                    </div>
                 </div>
             </div>
         )}
